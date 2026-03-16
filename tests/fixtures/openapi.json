@@ -3872,6 +3872,42 @@
             "description": "SIC code filter"
           },
           {
+            "name": "max_net_income",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum net income (USD). Use 0 to screen for loss-making companies.",
+              "title": "Max Net Income"
+            },
+            "description": "Maximum net income (USD). Use 0 to screen for loss-making companies."
+          },
+          {
+            "name": "min_institutional_ownership_pct",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum institutional ownership percentage (0-100+). Values above 100 are valid.",
+              "title": "Min Institutional Ownership Pct"
+            },
+            "description": "Minimum institutional ownership percentage (0-100+). Values above 100 are valid."
+          },
+          {
             "name": "has_insider_buying",
             "in": "query",
             "required": false,
@@ -3888,6 +3924,25 @@
               "title": "Has Insider Buying"
             },
             "description": "Companies with insider purchases in last 90 days"
+          },
+          {
+            "name": "insider_buying_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["7", "14", "30", "60", "90", "180", "365"]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Lookback window for insider buying filter. Requires has_insider_buying=true.",
+              "title": "Insider Buying Days"
+            },
+            "description": "Lookback window for insider buying filter. Requires has_insider_buying=true."
           },
           {
             "name": "has_institutional_increase",
@@ -9215,6 +9270,97 @@
         "title": "RatioValues",
         "description": "All computed financial ratios."
       },
+      "ScreenerFinancials": {
+        "properties": {
+          "revenue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue",
+            "description": "Total revenue (USD) for the company's latest annual fiscal year."
+          },
+          "net_income": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Income",
+            "description": "Net income (USD) for the company's latest annual fiscal year."
+          },
+          "eps_diluted": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eps Diluted",
+            "description": "Diluted earnings per share (USD). Uses weighted average diluted share count."
+          },
+          "common_shares_outstanding": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Common Shares Outstanding",
+            "description": "Balance sheet period-end common shares outstanding."
+          },
+          "total_equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Equity",
+            "description": "Total stockholders' equity (USD)."
+          },
+          "dividends_paid": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dividends Paid",
+            "description": "Cash dividends paid (USD). Negative values indicate cash outflow, per SEC cash flow statement sign convention."
+          },
+          "institutional_ownership_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institutional Ownership Pct",
+            "description": "Percentage of common shares held by 13F-reporting institutions. Values above 100% are valid."
+          }
+        },
+        "type": "object",
+        "title": "ScreenerFinancials",
+        "description": "Raw financial fields from the company's latest annual fiscal year."
+      },
       "ScreenerResultItem": {
         "properties": {
           "cik": {
@@ -9255,6 +9401,10 @@
             "title": "Fiscal Year",
             "description": "Fiscal year of the most recent annual ratio data for this company."
           },
+          "financials": {
+            "$ref": "#/components/schemas/ScreenerFinancials",
+            "description": "Raw financial fields from the company's latest annual fiscal year."
+          },
           "ratios": {
             "$ref": "#/components/schemas/RatioValues",
             "description": "Computed financial ratios for this company."
@@ -9266,6 +9416,7 @@
           "name",
           "company_tier",
           "fiscal_year",
+          "financials",
           "ratios"
         ],
         "title": "ScreenerResultItem",
