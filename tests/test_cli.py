@@ -57,6 +57,13 @@ def _make_mock_client() -> MagicMock:
     ]
     client.census.compare.return_value = compare_response
 
+    # screener.screen() returns PaginatedResponse with .data as list of dicts
+    screener_response = MagicMock()
+    screener_response.data = [
+        {"ticker": "AAPL", "name": "Apple Inc.", "company_tier": "sp500", "fiscal_year": 2024},
+    ]
+    client.screener.screen.return_value = screener_response
+
     return client
 
 
@@ -206,3 +213,46 @@ class TestCensusCompare:
         # fips should be a list
         fips_arg = call_kwargs.kwargs.get("fips") or call_kwargs[1].get("fips")
         assert fips_arg == ["35620", "31080"]
+
+
+# --- Screener screen ---
+
+
+class TestScreenerScreen:
+    def test_screener_screen_passes_max_net_income(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--max-net-income", "0"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("max_net_income") == 0.0
+
+    def test_screener_screen_passes_min_institutional_ownership_pct(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--min-institutional-ownership-pct", "50"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("min_institutional_ownership_pct") == 50.0
+
+    def test_screener_screen_passes_insider_buying_days(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--has-insider-buying", "true", "--insider-buying-days", "30"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("has_insider_buying") is True
+        assert call_kwargs.kwargs.get("insider_buying_days") == "30"
+
+    def test_screener_screen_insider_buying_days_invalid_rejected(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--insider-buying-days", "42"], mock_client)
+        assert result.exit_code != 0
+
+    def test_screener_screen_has_institutional_increase(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--has-institutional-increase", "true"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("has_institutional_increase") is True

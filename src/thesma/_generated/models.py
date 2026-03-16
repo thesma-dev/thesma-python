@@ -1297,6 +1297,37 @@ class RatioValues(BaseModel):
     """
 
 
+class ScreenerFinancials(BaseModel):
+    revenue: Annotated[float | None, Field(title="Revenue")] = None
+    """
+    Total revenue (USD) for the company's latest annual fiscal year.
+    """
+    net_income: Annotated[float | None, Field(title="Net Income")] = None
+    """
+    Net income (USD) for the company's latest annual fiscal year.
+    """
+    eps_diluted: Annotated[float | None, Field(title="Eps Diluted")] = None
+    """
+    Diluted earnings per share (USD). Uses weighted average diluted share count.
+    """
+    common_shares_outstanding: Annotated[float | None, Field(title="Common Shares Outstanding")] = None
+    """
+    Balance sheet period-end common shares outstanding.
+    """
+    total_equity: Annotated[float | None, Field(title="Total Equity")] = None
+    """
+    Total stockholders' equity (USD).
+    """
+    dividends_paid: Annotated[float | None, Field(title="Dividends Paid")] = None
+    """
+    Cash dividends paid (USD). Negative values indicate cash outflow, per SEC cash flow statement sign convention.
+    """
+    institutional_ownership_pct: Annotated[float | None, Field(title="Institutional Ownership Pct")] = None
+    """
+    Percentage of common shares held by 13F-reporting institutions. Values above 100% are valid.
+    """
+
+
 class ScreenerResultItem(BaseModel):
     cik: Annotated[str, Field(title="Cik")]
     """
@@ -1317,6 +1348,10 @@ class ScreenerResultItem(BaseModel):
     fiscal_year: Annotated[int, Field(title="Fiscal Year")]
     """
     Fiscal year of the most recent annual ratio data for this company.
+    """
+    financials: ScreenerFinancials
+    """
+    Raw financial fields from the company's latest annual fiscal year.
     """
     ratios: RatioValues
     """

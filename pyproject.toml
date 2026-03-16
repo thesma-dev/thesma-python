@@ -30,6 +30,7 @@ dependencies = [
     "pydantic>=2.0,<3.0",
     "click>=8.0,<9.0",
     "tabulate>=0.9,<1.0",
+    "eval-type-backport>=0.2.0; python_version < '3.10'",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +40,7 @@ dev = [
     "respx>=0.20",
     "ruff>=0.4",
     "mypy>=1.0",
+    "types-tabulate>=0.9",
     "datamodel-code-generator>=0.25",
 ]
 
