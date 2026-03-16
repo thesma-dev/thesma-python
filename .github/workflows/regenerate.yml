@@ -13,16 +13,42 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install -e ".[dev]"
-      - run: python scripts/regenerate.py
+      - name: Regenerate models
+        id: regen
+        run: |
+          output=$(python scripts/regenerate.py)
+          echo "$output"
+          version=$(echo "$output" | grep -oP 'API v\K[0-9.]+')
+          echo "api_version=$version" >> "$GITHUB_OUTPUT"
+      - name: Run tests
+        id: tests
+        run: pytest
       - name: Check for changes
         id: changes
         run: |
           git diff --exit-code src/thesma/_generated/ || echo "changed=true" >> "$GITHUB_OUTPUT"
-      - name: Create PR
+      - name: Create or update PR
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          title: "chore: regenerate models from API schema"
-          body: "Auto-generated model update triggered by API schema change."
-          branch: chore/regenerate-models
-          commit-message: "chore: regenerate models from API schema"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B chore/regenerate-models
+          git add src/thesma/_generated/models.py tests/fixtures/openapi.json
+          git commit -m "chore: regenerate models from API v${{ steps.regen.outputs.api_version }}"
+          git push -u origin chore/regenerate-models --force
+          existing_pr=$(gh pr list --head chore/regenerate-models --json number --jq '.[0].number // empty')
+          if [ -z "$existing_pr" ]; then
+            gh pr create \
+              --title "chore: regenerate models from API v${{ steps.regen.outputs.api_version }}" \
+              --body "Auto-generated model update triggered by API schema change (v${{ steps.regen.outputs.api_version }})."
+          fi
+      - name: Open issue on test failure
+        if: failure() && steps.tests.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Model regeneration test failure (API v${{ steps.regen.outputs.api_version }})" \
+            --body "The model regeneration workflow failed during testing. Please investigate the test failures."

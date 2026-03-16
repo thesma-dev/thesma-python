@@ -2,35 +2,35 @@
 
 from __future__ import annotations
 
+from thesma._types import DataResponse, PaginatedResponse, PaginationMeta
 from thesma._version import __version__
-
-
-class ThesmaClient:
-    """Synchronous client for the Thesma API.
-
-    Placeholder — real implementation in SDK-03.
-    """
-
-    def __init__(self, api_key: str, *, base_url: str = "https://api.thesma.dev", timeout: int = 30) -> None:
-        self.api_key = api_key
-        self.base_url = base_url
-        self.timeout = timeout
-
-
-class AsyncThesmaClient:
-    """Asynchronous client for the Thesma API.
-
-    Placeholder — real implementation in SDK-03.
-    """
-
-    def __init__(self, api_key: str, *, base_url: str = "https://api.thesma.dev", timeout: int = 30) -> None:
-        self.api_key = api_key
-        self.base_url = base_url
-        self.timeout = timeout
-
+from thesma.client import AsyncThesmaClient, ThesmaClient
+from thesma.errors import (
+    AuthenticationError,
+    BadRequestError,
+    ConnectionError,
+    ForbiddenError,
+    NotFoundError,
+    RateLimitError,
+    ServerError,
+    ThesmaError,
+    TimeoutError,
+)
 
 __all__ = [
     "AsyncThesmaClient",
+    "AuthenticationError",
+    "BadRequestError",
+    "ConnectionError",
+    "DataResponse",
+    "ForbiddenError",
+    "NotFoundError",
+    "PaginatedResponse",
+    "PaginationMeta",
+    "RateLimitError",
+    "ServerError",
     "ThesmaClient",
+    "ThesmaError",
+    "TimeoutError",
     "__version__",
 ]

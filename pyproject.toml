@@ -56,9 +56,16 @@ packages = ["src/thesma"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "contract: contract tests that verify generated models match the OpenAPI spec",
+]
 
 [tool.mypy]
 strict = true
 python_version = "3.9"
 packages = ["thesma"]
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "thesma._generated.*"
+ignore_errors = true
