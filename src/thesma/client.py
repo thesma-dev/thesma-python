@@ -10,6 +10,11 @@ import httpx
 
 from thesma._auth import auth_headers, validate_api_key
 from thesma._base_client import AsyncAPIClient, SyncAPIClient
+from thesma.resources.companies import Companies
+from thesma.resources.filings import Filings
+from thesma.resources.financials import Financials
+from thesma.resources.ratios import Ratios
+from thesma.resources.screener import Screener
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -47,6 +52,12 @@ class ThesmaClient:
         self.timeout = timeout
         self._client: httpx.Client | None = None
         self._lock = threading.Lock()
+
+        self.companies = Companies(self)
+        self.filings = Filings(self)
+        self.financials = Financials(self)
+        self.ratios = Ratios(self)
+        self.screener = Screener(self)
 
     # -- lazy httpx.Client init (thread-safe) --
 
@@ -127,6 +138,12 @@ class AsyncThesmaClient:
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
         self._closed = False
+
+        self.companies = Companies(self)
+        self.filings = Filings(self)
+        self.financials = Financials(self)
+        self.ratios = Ratios(self)
+        self.screener = Screener(self)
 
     # -- lazy httpx.AsyncClient init --
 
