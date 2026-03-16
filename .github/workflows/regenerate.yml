@@ -1,0 +1,28 @@
+name: Regenerate Models
+
+on:
+  repository_dispatch:
+    types: [api-updated]
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev]"
+      - run: python scripts/regenerate.py
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --exit-code src/thesma/_generated/ || echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Create PR
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "chore: regenerate models from API schema"
+          body: "Auto-generated model update triggered by API schema change."
+          branch: chore/regenerate-models
+          commit-message: "chore: regenerate models from API schema"
