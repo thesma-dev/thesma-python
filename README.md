@@ -46,7 +46,7 @@ thesma financials list AAPL --period annual --format json
 
 ## Documentation
 
-Full API documentation is available at [docs.thesma.dev](https://docs.thesma.dev).
+Full API documentation is available at [api.thesma.dev/docs](https://api.thesma.dev/docs).
 
 ## License
 

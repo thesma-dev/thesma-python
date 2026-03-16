@@ -49,7 +49,7 @@ thesma = "thesma.cli.main:cli"
 
 [project.urls]
 Homepage = "https://thesma.dev"
-Documentation = "https://docs.thesma.dev"
+Documentation = "https://api.thesma.dev/docs"
 Repository = "https://github.com/thesma-dev/thesma-python"
 
 [tool.hatch.build.targets.wheel]
