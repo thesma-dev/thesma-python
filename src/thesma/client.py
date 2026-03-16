@@ -10,11 +10,22 @@ import httpx
 
 from thesma._auth import auth_headers, validate_api_key
 from thesma._base_client import AsyncAPIClient, SyncAPIClient
+from thesma._types import PaginatedResponse
+from thesma.resources.beneficial_ownership import BeneficialOwnership
+from thesma.resources.census import Census
 from thesma.resources.companies import Companies
+from thesma.resources.compensation import Compensation
+from thesma.resources.events import Events
 from thesma.resources.filings import Filings
 from thesma.resources.financials import Financials
+from thesma.resources.holdings import Holdings
+from thesma.resources.insider_holdings import InsiderHoldings
+from thesma.resources.insider_trades import InsiderTrades
+from thesma.resources.proxy_votes import ProxyVotes
 from thesma.resources.ratios import Ratios
 from thesma.resources.screener import Screener
+from thesma.resources.sections import Sections
+from thesma.resources.webhooks import Webhooks
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -46,18 +57,32 @@ class ThesmaClient:
         *,
         base_url: str = "https://api.thesma.dev",
         timeout: int = 30,
+        auto_retry: bool = False,
+        max_retries: int = 0,
     ) -> None:
         self.api_key = validate_api_key(api_key)
         self.base_url = base_url
         self.timeout = timeout
+        self.auto_retry = auto_retry
+        self.max_retries = max_retries
         self._client: httpx.Client | None = None
         self._lock = threading.Lock()
 
+        self.beneficial_ownership = BeneficialOwnership(self)
+        self.census = Census(self)
         self.companies = Companies(self)
+        self.compensation = Compensation(self)
+        self.events = Events(self)
         self.filings = Filings(self)
         self.financials = Financials(self)
+        self.holdings = Holdings(self)
+        self.insider_holdings = InsiderHoldings(self)
+        self.insider_trades = InsiderTrades(self)
+        self.proxy_votes = ProxyVotes(self)
         self.ratios = Ratios(self)
         self.screener = Screener(self)
+        self.sections = Sections(self)
+        self.webhooks = Webhooks(self)
 
     # -- lazy httpx.Client init (thread-safe) --
 
@@ -74,7 +99,11 @@ class ThesmaClient:
 
     @property
     def _api(self) -> SyncAPIClient:
-        return SyncAPIClient(self._ensure_client())
+        return SyncAPIClient(
+            self._ensure_client(),
+            auto_retry=self.auto_retry,
+            max_retries=self.max_retries,
+        )
 
     # -- context manager --
 
@@ -108,13 +137,21 @@ class ThesmaClient:
         response_model: type[T] | None = None,
     ) -> T | None:
         """Send an HTTP request via the sync API client."""
-        return self._api.request(
+        result = self._api.request(
             method,
             path,
             params=params,
             json=json,
             response_model=response_model,
         )
+        if isinstance(result, PaginatedResponse):
+
+            def _fetch_page(page: int) -> Any:
+                new_params = {**(params or {}), "page": page}
+                return self.request(method, path, params=new_params, json=json, response_model=response_model)
+
+            result._fetch_page = _fetch_page
+        return result
 
 
 class AsyncThesmaClient:
@@ -132,18 +169,32 @@ class AsyncThesmaClient:
         *,
         base_url: str = "https://api.thesma.dev",
         timeout: int = 30,
+        auto_retry: bool = False,
+        max_retries: int = 0,
     ) -> None:
         self.api_key = validate_api_key(api_key)
         self.base_url = base_url
         self.timeout = timeout
+        self.auto_retry = auto_retry
+        self.max_retries = max_retries
         self._client: httpx.AsyncClient | None = None
         self._closed = False
 
+        self.beneficial_ownership = BeneficialOwnership(self)
+        self.census = Census(self)
         self.companies = Companies(self)
+        self.compensation = Compensation(self)
+        self.events = Events(self)
         self.filings = Filings(self)
         self.financials = Financials(self)
+        self.holdings = Holdings(self)
+        self.insider_holdings = InsiderHoldings(self)
+        self.insider_trades = InsiderTrades(self)
+        self.proxy_votes = ProxyVotes(self)
         self.ratios = Ratios(self)
         self.screener = Screener(self)
+        self.sections = Sections(self)
+        self.webhooks = Webhooks(self)
 
     # -- lazy httpx.AsyncClient init --
 
@@ -158,7 +209,11 @@ class AsyncThesmaClient:
 
     @property
     def _api(self) -> AsyncAPIClient:
-        return AsyncAPIClient(self._ensure_client())
+        return AsyncAPIClient(
+            self._ensure_client(),
+            auto_retry=self.auto_retry,
+            max_retries=self.max_retries,
+        )
 
     # -- async context manager --
 
@@ -201,10 +256,19 @@ class AsyncThesmaClient:
         response_model: type[T] | None = None,
     ) -> T | None:
         """Send an HTTP request via the async API client."""
-        return await self._api.request(
+        result = await self._api.request(
             method,
             path,
             params=params,
             json=json,
             response_model=response_model,
         )
+        if isinstance(result, PaginatedResponse):
+
+            async def _fetch_page(page: int) -> Any:
+                new_params = {**(params or {}), "page": page}
+                return await self.request(method, path, params=new_params, json=json, response_model=response_model)
+
+            result._fetch_page = _fetch_page
+            result._is_async = True
+        return result

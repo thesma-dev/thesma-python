@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 import httpx
 
 from thesma._auth import auth_headers
+from thesma._retry import async_retry, sync_retry
 from thesma.errors import ConnectionError as ThesmaConnectionError
 from thesma.errors import TimeoutError as ThesmaTimeoutError
 from thesma.errors import raise_for_status
@@ -28,10 +29,18 @@ def _strip_none(params: dict[str, Any] | None) -> dict[str, Any] | None:
 class SyncAPIClient:
     """Synchronous HTTP client used by :class:`ThesmaClient`."""
 
-    def __init__(self, httpx_client: httpx.Client) -> None:
+    def __init__(
+        self,
+        httpx_client: httpx.Client,
+        *,
+        auto_retry: bool = False,
+        max_retries: int = 0,
+    ) -> None:
         self._client = httpx_client
+        self._auto_retry = auto_retry
+        self._max_retries = max_retries
 
-    def request(
+    def _do_request(
         self,
         method: str,
         path: str,
@@ -40,7 +49,7 @@ class SyncAPIClient:
         json: Any | None = None,
         response_model: type[T] | None = None,
     ) -> T | None:
-        """Send an HTTP request and return the parsed response model."""
+        """Execute a single HTTP request (no retry)."""
         try:
             response = self._client.request(
                 method,
@@ -60,14 +69,7 @@ class SyncAPIClient:
 
         return response_model.model_validate(response.json())
 
-
-class AsyncAPIClient:
-    """Asynchronous HTTP client used by :class:`AsyncThesmaClient`."""
-
-    def __init__(self, httpx_client: httpx.AsyncClient) -> None:
-        self._client = httpx_client
-
-    async def request(
+    def request(
         self,
         method: str,
         path: str,
@@ -77,6 +79,38 @@ class AsyncAPIClient:
         response_model: type[T] | None = None,
     ) -> T | None:
         """Send an HTTP request and return the parsed response model."""
+        if self._auto_retry:
+            return sync_retry(
+                lambda: self._do_request(method, path, params=params, json=json, response_model=response_model),
+                self._max_retries,
+            )
+        return self._do_request(method, path, params=params, json=json, response_model=response_model)
+
+
+class AsyncAPIClient:
+    """Asynchronous HTTP client used by :class:`AsyncThesmaClient`."""
+
+    def __init__(
+        self,
+        httpx_client: httpx.AsyncClient,
+        *,
+        auto_retry: bool = False,
+        max_retries: int = 0,
+    ) -> None:
+        self._client = httpx_client
+        self._auto_retry = auto_retry
+        self._max_retries = max_retries
+
+    async def _do_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: Any | None = None,
+        response_model: type[T] | None = None,
+    ) -> T | None:
+        """Execute a single HTTP request (no retry)."""
         try:
             response = await self._client.request(
                 method,
@@ -95,6 +129,23 @@ class AsyncAPIClient:
             return None
 
         return response_model.model_validate(response.json())
+
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: Any | None = None,
+        response_model: type[T] | None = None,
+    ) -> T | None:
+        """Send an HTTP request and return the parsed response model."""
+        if self._auto_retry:
+            return await async_retry(
+                lambda: self._do_request(method, path, params=params, json=json, response_model=response_model),
+                self._max_retries,
+            )
+        return await self._do_request(method, path, params=params, json=json, response_model=response_model)
 
 
 __all__ = ["AsyncAPIClient", "SyncAPIClient", "auth_headers"]
