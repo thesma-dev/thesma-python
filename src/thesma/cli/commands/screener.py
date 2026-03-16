@@ -24,10 +24,15 @@ def screener_group() -> None:
 @click.option("--min-return-on-equity", default=None, type=float, help="Minimum return on equity (%).")
 @click.option("--max-debt-to-equity", default=None, type=float, help="Maximum debt to equity ratio.")
 @click.option("--max-net-income", default=None, type=float, help="Maximum net income (USD). Use 0 for loss-making.")
-@click.option("--min-institutional-ownership-pct", default=None, type=float, help="Minimum institutional ownership (%%).")
-@click.option("--has-insider-buying", default=None, type=bool, help="Filter for companies with recent insider buying.")
-@click.option("--insider-buying-days", default=None, type=click.Choice(["7", "14", "30", "60", "90", "180", "365"]), help="Insider buying lookback days. Requires --has-insider-buying.")
-@click.option("--has-institutional-increase", default=None, type=bool, help="Filter for companies with recent institutional ownership increase.")
+@click.option("--min-institutional-ownership-pct", default=None, type=float, help="Min institutional ownership (%%).")
+@click.option("--has-insider-buying", default=None, type=bool, help="Filter for insider buying.")
+@click.option(
+    "--insider-buying-days",
+    default=None,
+    type=click.Choice(["7", "14", "30", "60", "90", "180", "365"]),
+    help="Insider buying lookback days. Requires --has-insider-buying.",
+)
+@click.option("--has-institutional-increase", default=None, type=bool, help="Filter for institutional increase.")
 @click.option("--sort-by", default=None, help="Sort by field.")
 @click.option("--order", default=None, help="Sort order (asc, desc).")
 @click.option("--page", default=1, type=int, help="Page number.")
