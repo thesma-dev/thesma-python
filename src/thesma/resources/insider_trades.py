@@ -18,6 +18,8 @@ class InsiderTrades:
         self,
         cik: str,
         *,
+        from_date: str | None = None,
+        person: str | None = None,
         trade_type: str | None = None,
         page: int = 1,
         per_page: int = 25,
@@ -27,6 +29,8 @@ class InsiderTrades:
         ``GET /v1/us/sec/companies/{cik}/insider-trades``
         """
         params: dict[str, Any] = {
+            "from": from_date,
+            "person": person,
             "type": trade_type,
             "page": page,
             "per_page": per_page,
@@ -41,6 +45,7 @@ class InsiderTrades:
     def list_all(
         self,
         *,
+        from_date: str | None = None,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[InsiderTradeListItem]:
@@ -49,6 +54,7 @@ class InsiderTrades:
         ``GET /v1/us/sec/insider-trades``
         """
         params: dict[str, Any] = {
+            "from": from_date,
             "page": page,
             "per_page": per_page,
         }

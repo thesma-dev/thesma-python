@@ -83,6 +83,67 @@ class TestInsiderTradesList:
         assert "type=" not in str(request.url)
         client.close()
 
+    @respx.mock
+    def test_list_with_from_date(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193", from_date="2024-01-01")
+
+        request = route.calls.last.request
+        assert "from=2024-01-01" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_person(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193", person="John")
+
+        request = route.calls.last.request
+        assert "person=John" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_none_from_date_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193")
+
+        request = route.calls.last.request
+        assert "from=" not in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_none_person_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193")
+
+        request = route.calls.last.request
+        assert "person=" not in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_from_date_and_person(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193", from_date="2024-01-01", person="John")
+
+        request = route.calls.last.request
+        assert "from=2024-01-01" in str(request.url)
+        assert "person=John" in str(request.url)
+        client.close()
+
 
 class TestInsiderTradesListAll:
     @respx.mock
@@ -109,4 +170,28 @@ class TestInsiderTradesListAll:
 
         assert route.called
         assert "/companies/" not in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_with_from_date(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list_all(from_date="2024-01-01")
+
+        request = route.calls.last.request
+        assert "from=2024-01-01" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_none_from_date_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list_all()
+
+        request = route.calls.last.request
+        assert "from=" not in str(request.url)
         client.close()

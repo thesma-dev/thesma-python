@@ -256,3 +256,46 @@ class TestScreenerScreen:
         assert result.exit_code == 0
         call_kwargs = mock_client.screener.screen.call_args
         assert call_kwargs.kwargs.get("has_institutional_increase") is True
+
+
+# --- Insider trades CLI ---
+
+
+class TestInsiderTradesCli:
+    def test_insider_trades_list_from_flag(self, runner: CliRunner) -> None:
+        mock_client = MagicMock()
+        response = MagicMock()
+        response.data = []
+        mock_client.insider_trades.list.return_value = response
+        result = _invoke(runner, ["insider-trades", "list", "0000320193", "--from", "2024-01-01"], mock_client)
+        assert result.exit_code == 0
+        mock_client.insider_trades.list.assert_called_once()
+        call_kwargs = mock_client.insider_trades.list.call_args
+        assert call_kwargs.kwargs.get("from_date") == "2024-01-01"
+
+    def test_insider_trades_list_person_flag(self, runner: CliRunner) -> None:
+        mock_client = MagicMock()
+        response = MagicMock()
+        response.data = []
+        mock_client.insider_trades.list.return_value = response
+        result = _invoke(runner, ["insider-trades", "list", "0000320193", "--person", "Jane"], mock_client)
+        assert result.exit_code == 0
+        mock_client.insider_trades.list.assert_called_once()
+        call_kwargs = mock_client.insider_trades.list.call_args
+        assert call_kwargs.kwargs.get("person") == "Jane"
+
+
+# --- Events CLI ---
+
+
+class TestEventsCli:
+    def test_events_list_from_flag(self, runner: CliRunner) -> None:
+        mock_client = MagicMock()
+        response = MagicMock()
+        response.data = []
+        mock_client.events.list.return_value = response
+        result = _invoke(runner, ["events", "list", "0000320193", "--from", "2024-01-01"], mock_client)
+        assert result.exit_code == 0
+        mock_client.events.list.assert_called_once()
+        call_kwargs = mock_client.events.list.call_args
+        assert call_kwargs.kwargs.get("from_date") == "2024-01-01"

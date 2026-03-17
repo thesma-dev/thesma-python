@@ -18,6 +18,7 @@ class InsiderHoldings:
         self,
         cik: str,
         *,
+        as_of: str | None = None,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[InsiderHoldingListItem]:
@@ -26,6 +27,7 @@ class InsiderHoldings:
         ``GET /v1/us/sec/companies/{cik}/insider-holdings``
         """
         params: dict[str, Any] = {
+            "as_of": as_of,
             "page": page,
             "per_page": per_page,
         }

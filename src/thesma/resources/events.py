@@ -19,6 +19,7 @@ class Events:
         self,
         cik: str,
         *,
+        from_date: str | None = None,
         category: str | None = None,
         page: int = 1,
         per_page: int = 25,
@@ -28,6 +29,7 @@ class Events:
         ``GET /v1/us/sec/companies/{cik}/events``
         """
         params: dict[str, Any] = {
+            "from": from_date,
             "category": category,
             "page": page,
             "per_page": per_page,
@@ -42,6 +44,7 @@ class Events:
     def list_all(
         self,
         *,
+        from_date: str | None = None,
         category: str | None = None,
         page: int = 1,
         per_page: int = 25,
@@ -51,6 +54,7 @@ class Events:
         ``GET /v1/us/sec/events``
         """
         params: dict[str, Any] = {
+            "from": from_date,
             "category": category,
             "page": page,
             "per_page": per_page,

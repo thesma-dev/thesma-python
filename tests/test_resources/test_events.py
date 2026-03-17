@@ -86,6 +86,30 @@ class TestEventsList:
         assert result.data[0].cik == "0000320193"
         client.close()
 
+    @respx.mock
+    def test_list_with_from_date(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/events").mock(
+            return_value=httpx.Response(200, json=PAGINATED_EVENTS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.events.list("0000320193", from_date="2024-01-01")
+
+        request = route.calls.last.request
+        assert "from=2024-01-01" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_none_from_date_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/events").mock(
+            return_value=httpx.Response(200, json=PAGINATED_EVENTS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.events.list("0000320193")
+
+        request = route.calls.last.request
+        assert "from=" not in str(request.url)
+        client.close()
+
 
 class TestEventsListAll:
     @respx.mock
@@ -100,6 +124,31 @@ class TestEventsListAll:
         request = route.calls.last.request
         assert "category=earnings" in str(request.url)
         assert isinstance(result, PaginatedResponse)
+        client.close()
+
+
+    @respx.mock
+    def test_list_all_with_from_date(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/events").mock(
+            return_value=httpx.Response(200, json=PAGINATED_EVENTS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.events.list_all(from_date="2024-01-01")
+
+        request = route.calls.last.request
+        assert "from=2024-01-01" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_none_from_date_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/events").mock(
+            return_value=httpx.Response(200, json=PAGINATED_EVENTS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.events.list_all()
+
+        request = route.calls.last.request
+        assert "from=" not in str(request.url)
         client.close()
 
 
