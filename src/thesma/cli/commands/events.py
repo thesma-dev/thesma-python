@@ -18,14 +18,17 @@ def events_group() -> None:
 
 @events_group.command("list")
 @click.argument("cik")
+@click.option("--from", "from_date", default=None, help="Filter events on or after this date (YYYY-MM-DD).")
 @click.option("--category", default=None, help="Filter by event category.")
 @click.option("--page", default=1, type=int, help="Page number.")
 @click.option("--per-page", default=25, type=int, help="Results per page.")
 @click.pass_context
-def events_list(ctx: click.Context, cik: str, category: str | None, page: int, per_page: int) -> None:
+def events_list(
+    ctx: click.Context, cik: str, from_date: str | None, category: str | None, page: int, per_page: int
+) -> None:
     """List events for a company."""
     client = get_client(ctx)
-    result = client.events.list(cik, category=category, page=page, per_page=per_page)
+    result = client.events.list(cik, from_date=from_date, category=category, page=page, per_page=per_page)
     output(result.data, ctx.obj["format"], EVENT_LIST_COLUMNS)
 
 

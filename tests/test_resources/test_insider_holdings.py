@@ -86,3 +86,27 @@ class TestInsiderHoldingsList:
         assert "page=3" in str(request.url)
         assert "per_page=10" in str(request.url)
         client.close()
+
+    @respx.mock
+    def test_list_with_as_of(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-holdings").mock(
+            return_value=httpx.Response(200, json=PAGINATED_HOLDINGS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_holdings.list("0000320193", as_of="2024-06-30")
+
+        request = route.calls.last.request
+        assert "as_of=2024-06-30" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_none_as_of_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-holdings").mock(
+            return_value=httpx.Response(200, json=PAGINATED_HOLDINGS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_holdings.list("0000320193")
+
+        request = route.calls.last.request
+        assert "as_of=" not in str(request.url)
+        client.close()

@@ -19,13 +19,17 @@ def insider_trades_group() -> None:
 
 @insider_trades_group.command("list")
 @click.argument("cik")
+@click.option("--from", "from_date", default=None, help="Filter trades on or after this date (YYYY-MM-DD).")
+@click.option("--person", default=None, help="Filter by person name (partial match).")
 @click.option("--page", default=1, type=int, help="Page number.")
 @click.option("--per-page", default=25, type=int, help="Results per page.")
 @click.pass_context
-def insider_trades_list(ctx: click.Context, cik: str, page: int, per_page: int) -> None:
+def insider_trades_list(
+    ctx: click.Context, cik: str, from_date: str | None, person: str | None, page: int, per_page: int
+) -> None:
     """List insider trades for a company."""
     client = get_client(ctx)
-    result = client.insider_trades.list(cik, page=page, per_page=per_page)
+    result = client.insider_trades.list(cik, from_date=from_date, person=person, page=page, per_page=per_page)
     fmt = ctx.obj["format"]
     if fmt == "json":
         output(result.data, fmt, INSIDER_TRADE_COLUMNS)
