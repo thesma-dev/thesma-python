@@ -87,7 +87,6 @@ class TestCompaniesList:
         assert result.pagination.total == 1
         client.close()
 
-
     @respx.mock
     def test_list_with_sic_single_value(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
