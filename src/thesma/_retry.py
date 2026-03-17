@@ -27,7 +27,7 @@ def _compute_sleep(exc: Exception, attempt: int) -> float:
     if isinstance(exc, RateLimitError):
         retry_after = exc.retry_after if exc.retry_after is not None else DEFAULT_RETRY_AFTER
         return retry_after + random.uniform(0, 0.5)
-    return min(2**attempt, 30) + random.uniform(0, 0.5)
+    return float(min(2**attempt, 30)) + random.uniform(0, 0.5)
 
 
 def sync_retry(fn: Callable[[], T], max_retries: int) -> T:

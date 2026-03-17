@@ -126,7 +126,6 @@ class TestEventsListAll:
         assert isinstance(result, PaginatedResponse)
         client.close()
 
-
     @respx.mock
     def test_list_all_with_from_date(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/events").mock(
