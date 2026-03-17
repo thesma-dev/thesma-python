@@ -16,6 +16,7 @@ def screener_group() -> None:
 
 
 @screener_group.command("screen")
+@click.option("--sic", multiple=True, help="Filter by SIC code(s). Repeat for multiple.")
 @click.option("--tier", default=None, help="Filter by index tier.")
 @click.option("--min-gross-margin", default=None, type=float, help="Minimum gross margin (%).")
 @click.option("--min-operating-margin", default=None, type=float, help="Minimum operating margin (%).")
@@ -40,6 +41,7 @@ def screener_group() -> None:
 @click.pass_context
 def screener_screen(
     ctx: click.Context,
+    sic: tuple[str, ...],
     tier: str | None,
     min_gross_margin: float | None,
     min_operating_margin: float | None,
@@ -60,6 +62,7 @@ def screener_screen(
     """Screen companies by financial ratio thresholds."""
     client = get_client(ctx)
     result = client.screener.screen(
+        sic=sic if sic else None,
         tier=tier,
         min_gross_margin=min_gross_margin,
         min_operating_margin=min_operating_margin,

@@ -19,7 +19,7 @@ class Companies:
         *,
         ticker: str | None = None,
         search: str | None = None,
-        sic: str | None = None,
+        sic: str | list[str] | None = None,
         tier: str | None = None,
         state_fips: str | None = None,
         county_fips: str | None = None,

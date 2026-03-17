@@ -87,6 +87,32 @@ class TestCompaniesList:
         assert result.pagination.total == 1
         client.close()
 
+    @respx.mock
+    def test_list_with_sic_single_value(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(sic="3571")
+
+        request = route.calls.last.request
+        assert "sic=3571" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_sic_multi_value(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(sic=["7372", "3674"])
+
+        request = route.calls.last.request
+        url_str = str(request.url)
+        assert "sic=7372" in url_str
+        assert "sic=3674" in url_str
+        client.close()
+
 
 class TestCompaniesGet:
     @respx.mock

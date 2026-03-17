@@ -31,7 +31,7 @@ class Screener:
         min_revenue_growth: float | None = None,
         min_eps_growth: float | None = None,
         tier: str | None = None,
-        sic: str | None = None,
+        sic: str | list[str] | None = None,
         has_insider_buying: bool | None = None,
         has_institutional_increase: bool | None = None,
         max_net_income: float | None = None,

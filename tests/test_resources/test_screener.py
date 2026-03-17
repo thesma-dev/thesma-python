@@ -98,6 +98,32 @@ class TestScreenerScreen:
         client.close()
 
     @respx.mock
+    def test_screen_with_sic_single_value(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(sic="7372")
+
+        request = route.calls.last.request
+        assert "sic=7372" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_screen_with_sic_multi_value(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(sic=["7372", "3674"])
+
+        request = route.calls.last.request
+        url_str = str(request.url)
+        assert "sic=7372" in url_str
+        assert "sic=3674" in url_str
+        client.close()
+
+    @respx.mock
     def test_screen_sort_maps_to_api_param(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
             return_value=httpx.Response(200, json=SCREENER_JSON),
