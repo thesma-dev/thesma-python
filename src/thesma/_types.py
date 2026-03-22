@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, PrivateAttr, model_validator
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -20,7 +21,17 @@ class PaginationMeta(BaseModel):
     page: int
     per_page: int
     total: int
-    total_pages: int
+    total_pages: int = 0
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compute_total_pages(cls, values: dict) -> dict:  # type: ignore[type-arg]
+        """Compute total_pages from total/per_page if not provided by the API."""
+        if isinstance(values, dict) and not values.get("total_pages"):
+            total = values.get("total", 0)
+            per_page = values.get("per_page", 1)
+            values["total_pages"] = math.ceil(total / per_page) if per_page > 0 else 0
+        return values
 
 
 class DataResponse(BaseModel, Generic[T]):
