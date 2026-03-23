@@ -11,6 +11,7 @@ from thesma._version import __version__
 from thesma.cli.commands.census import census_group
 from thesma.cli.commands.companies import companies_group
 from thesma.cli.commands.events import events_group
+from thesma.cli.commands.export import export_group
 from thesma.cli.commands.filings import filings_group
 from thesma.cli.commands.financials import financials_group
 from thesma.cli.commands.holdings import holdings_group
@@ -60,6 +61,7 @@ cli.add_command(insider_trades_group)
 cli.add_command(holdings_group)
 cli.add_command(events_group)
 cli.add_command(census_group)
+cli.add_command(export_group)
 
 
 def main() -> None:
