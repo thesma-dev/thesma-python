@@ -5,6 +5,7 @@ from thesma.resources.census import Census
 from thesma.resources.companies import Companies
 from thesma.resources.compensation import Compensation
 from thesma.resources.events import Events
+from thesma.resources.export import AsyncExport, Export
 from thesma.resources.filings import Filings
 from thesma.resources.financials import Financials
 from thesma.resources.holdings import Holdings
@@ -17,11 +18,13 @@ from thesma.resources.sections import Sections
 from thesma.resources.webhooks import Webhooks
 
 __all__ = [
+    "AsyncExport",
     "BeneficialOwnership",
     "Census",
     "Companies",
     "Compensation",
     "Events",
+    "Export",
     "Filings",
     "Financials",
     "Holdings",

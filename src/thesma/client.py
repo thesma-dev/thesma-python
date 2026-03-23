@@ -11,11 +11,15 @@ import httpx
 from thesma._auth import auth_headers, validate_api_key
 from thesma._base_client import AsyncAPIClient, SyncAPIClient
 from thesma._types import PaginatedResponse
+from thesma.errors import ConnectionError as ThesmaConnectionError
+from thesma.errors import TimeoutError as ThesmaTimeoutError
+from thesma.errors import raise_for_status
 from thesma.resources.beneficial_ownership import BeneficialOwnership
 from thesma.resources.census import Census
 from thesma.resources.companies import Companies
 from thesma.resources.compensation import Compensation
 from thesma.resources.events import Events
+from thesma.resources.export import AsyncExport, Export
 from thesma.resources.filings import Filings
 from thesma.resources.financials import Financials
 from thesma.resources.holdings import Holdings
@@ -73,6 +77,7 @@ class ThesmaClient:
         self.companies = Companies(self)
         self.compensation = Compensation(self)
         self.events = Events(self)
+        self.export = Export(self)
         self.filings = Filings(self)
         self.financials = Financials(self)
         self.holdings = Holdings(self)
@@ -153,6 +158,38 @@ class ThesmaClient:
             result._fetch_page = _fetch_page
         return result
 
+    # -- streaming request (used by Export resource) --
+
+    def _stream_get(self, path: str, params: dict[str, Any] | None = None) -> httpx.Response:
+        """Send a streaming GET request, returning an open httpx.Response.
+
+        The caller is responsible for closing the response. Uses an extended
+        read timeout (300s) for long-running export downloads.
+        """
+        client = self._ensure_client()
+        timeout = httpx.Timeout(
+            connect=float(self.timeout),
+            read=300.0,
+            write=float(self.timeout),
+            pool=float(self.timeout),
+        )
+        stripped = {k: v for k, v in (params or {}).items() if v is not None} or None
+        request = client.build_request("GET", path, params=stripped)
+        request.extensions["timeout"] = timeout.as_dict()
+        try:
+            response = client.send(request, stream=True)
+        except httpx.TimeoutException as exc:
+            raise ThesmaTimeoutError(str(exc)) from exc
+        except httpx.RequestError as exc:
+            raise ThesmaConnectionError(str(exc)) from exc
+
+        if not response.is_success:
+            response.read()
+            response.close()
+            raise_for_status(response)
+
+        return response
+
 
 class AsyncThesmaClient:
     """Asynchronous client for the Thesma API.
@@ -185,6 +222,7 @@ class AsyncThesmaClient:
         self.companies = Companies(self)
         self.compensation = Compensation(self)
         self.events = Events(self)
+        self.export = AsyncExport(self)
         self.filings = Filings(self)
         self.financials = Financials(self)
         self.holdings = Holdings(self)
@@ -272,3 +310,34 @@ class AsyncThesmaClient:
             result._fetch_page = _fetch_page
             result._is_async = True
         return result
+
+    # -- streaming request (used by AsyncExport resource) --
+
+    async def _async_stream_get(self, path: str, params: dict[str, Any] | None = None) -> httpx.Response:
+        """Send an async streaming GET request, returning an open httpx.Response.
+
+        The caller is responsible for closing the response.
+        """
+        client = self._ensure_client()
+        timeout = httpx.Timeout(
+            connect=float(self.timeout),
+            read=300.0,
+            write=float(self.timeout),
+            pool=float(self.timeout),
+        )
+        stripped = {k: v for k, v in (params or {}).items() if v is not None} or None
+        request = client.build_request("GET", path, params=stripped)
+        request.extensions["timeout"] = timeout.as_dict()
+        try:
+            response = await client.send(request, stream=True)
+        except httpx.TimeoutException as exc:
+            raise ThesmaTimeoutError(str(exc)) from exc
+        except httpx.RequestError as exc:
+            raise ThesmaConnectionError(str(exc)) from exc
+
+        if not response.is_success:
+            await response.aread()
+            await response.aclose()
+            raise_for_status(response)
+
+        return response
