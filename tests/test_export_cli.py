@@ -71,9 +71,8 @@ class TestExportCli:
         out_path = str(tmp_path / "out.jsonl")
         result = runner.invoke(cli, ["--api-key", API_KEY, "export", "companies", "--output", out_path])
 
-        # Warning should be on stderr — CliRunner captures it in output when mix_stderr=True (default)
-        combined = result.output + (result.stderr if hasattr(result, "stderr") and result.stderr else "")
-        assert "incomplete" in combined.lower() or "incomplete" in result.output.lower()
+        # CliRunner with mix_stderr=True (default) captures stderr in output
+        assert "incomplete" in result.output.lower()
 
     def test_holdings_help_mentions_fund(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["export", "holdings", "--help"])
