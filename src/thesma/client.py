@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import random
 import threading
+import time
 import warnings
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -12,8 +15,8 @@ from thesma._auth import auth_headers, validate_api_key
 from thesma._base_client import AsyncAPIClient, SyncAPIClient
 from thesma._types import PaginatedResponse
 from thesma.errors import ConnectionError as ThesmaConnectionError
+from thesma.errors import ExportInProgressError, raise_for_status
 from thesma.errors import TimeoutError as ThesmaTimeoutError
-from thesma.errors import raise_for_status
 from thesma.resources.beneficial_ownership import BeneficialOwnership
 from thesma.resources.census import Census
 from thesma.resources.companies import Companies
@@ -63,12 +66,14 @@ class ThesmaClient:
         timeout: int = 30,
         auto_retry: bool = False,
         max_retries: int = 0,
+        stream_timeout: int = 300,
     ) -> None:
         self.api_key = validate_api_key(api_key)
         self.base_url = base_url
         self.timeout = timeout
         self.auto_retry = auto_retry
         self.max_retries = max_retries
+        self.stream_timeout = stream_timeout
         self._client: httpx.Client | None = None
         self._lock = threading.Lock()
 
@@ -164,31 +169,46 @@ class ThesmaClient:
         """Send a streaming GET request, returning an open httpx.Response.
 
         The caller is responsible for closing the response. Uses an extended
-        read timeout (300s) for long-running export downloads.
+        read timeout (configurable via ``stream_timeout``) for long-running
+        export downloads. Retries up to 6 times on ``export_in_progress`` 429s.
         """
+        _MAX_EXPORT_RETRIES = 6
+        _DEFAULT_RETRY_AFTER = 30.0
+
         client = self._ensure_client()
         timeout = httpx.Timeout(
             connect=float(self.timeout),
-            read=300.0,
+            read=float(self.stream_timeout),
             write=float(self.timeout),
             pool=float(self.timeout),
         )
         stripped = {k: v for k, v in (params or {}).items() if v is not None} or None
-        request = client.build_request("GET", path, params=stripped)
-        request.extensions["timeout"] = timeout.as_dict()
-        try:
-            response = client.send(request, stream=True)
-        except httpx.TimeoutException as exc:
-            raise ThesmaTimeoutError(str(exc)) from exc
-        except httpx.RequestError as exc:
-            raise ThesmaConnectionError(str(exc)) from exc
 
-        if not response.is_success:
-            response.read()
-            response.close()
-            raise_for_status(response)
+        for attempt in range(_MAX_EXPORT_RETRIES + 1):
+            request = client.build_request("GET", path, params=stripped)
+            request.extensions["timeout"] = timeout.as_dict()
+            try:
+                response = client.send(request, stream=True)
+            except httpx.TimeoutException as exc:
+                raise ThesmaTimeoutError(str(exc)) from exc
+            except httpx.RequestError as exc:
+                raise ThesmaConnectionError(str(exc)) from exc
 
-        return response
+            if not response.is_success:
+                response.read()
+                response.close()
+                try:
+                    raise_for_status(response)
+                except ExportInProgressError as exc:
+                    if attempt >= _MAX_EXPORT_RETRIES:
+                        raise
+                    retry_after = exc.retry_after if exc.retry_after is not None else _DEFAULT_RETRY_AFTER
+                    time.sleep(retry_after + random.uniform(0, 0.5))
+                    continue
+
+            return response
+
+        raise RuntimeError("unreachable")  # pragma: no cover
 
 
 class AsyncThesmaClient:
@@ -208,12 +228,14 @@ class AsyncThesmaClient:
         timeout: int = 30,
         auto_retry: bool = False,
         max_retries: int = 0,
+        stream_timeout: int = 300,
     ) -> None:
         self.api_key = validate_api_key(api_key)
         self.base_url = base_url
         self.timeout = timeout
         self.auto_retry = auto_retry
         self.max_retries = max_retries
+        self.stream_timeout = stream_timeout
         self._client: httpx.AsyncClient | None = None
         self._closed = False
 
@@ -316,28 +338,43 @@ class AsyncThesmaClient:
     async def _async_stream_get(self, path: str, params: dict[str, Any] | None = None) -> httpx.Response:
         """Send an async streaming GET request, returning an open httpx.Response.
 
-        The caller is responsible for closing the response.
+        The caller is responsible for closing the response. Retries up to 6
+        times on ``export_in_progress`` 429s.
         """
+        _MAX_EXPORT_RETRIES = 6
+        _DEFAULT_RETRY_AFTER = 30.0
+
         client = self._ensure_client()
         timeout = httpx.Timeout(
             connect=float(self.timeout),
-            read=300.0,
+            read=float(self.stream_timeout),
             write=float(self.timeout),
             pool=float(self.timeout),
         )
         stripped = {k: v for k, v in (params or {}).items() if v is not None} or None
-        request = client.build_request("GET", path, params=stripped)
-        request.extensions["timeout"] = timeout.as_dict()
-        try:
-            response = await client.send(request, stream=True)
-        except httpx.TimeoutException as exc:
-            raise ThesmaTimeoutError(str(exc)) from exc
-        except httpx.RequestError as exc:
-            raise ThesmaConnectionError(str(exc)) from exc
 
-        if not response.is_success:
-            await response.aread()
-            await response.aclose()
-            raise_for_status(response)
+        for attempt in range(_MAX_EXPORT_RETRIES + 1):
+            request = client.build_request("GET", path, params=stripped)
+            request.extensions["timeout"] = timeout.as_dict()
+            try:
+                response = await client.send(request, stream=True)
+            except httpx.TimeoutException as exc:
+                raise ThesmaTimeoutError(str(exc)) from exc
+            except httpx.RequestError as exc:
+                raise ThesmaConnectionError(str(exc)) from exc
 
-        return response
+            if not response.is_success:
+                await response.aread()
+                await response.aclose()
+                try:
+                    raise_for_status(response)
+                except ExportInProgressError as exc:
+                    if attempt >= _MAX_EXPORT_RETRIES:
+                        raise
+                    retry_after = exc.retry_after if exc.retry_after is not None else _DEFAULT_RETRY_AFTER
+                    await asyncio.sleep(retry_after + random.uniform(0, 0.5))
+                    continue
+
+            return response
+
+        raise RuntimeError("unreachable")  # pragma: no cover
