@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
 import respx
 from click.testing import CliRunner
 
+from thesma._export import ExportResult
 from thesma.cli.main import cli
 
 BASE = "https://api.thesma.dev"
@@ -106,3 +108,68 @@ class TestExportCli:
         ]
         for cmd in expected:
             assert cmd in result.output, f"Missing export subcommand: {cmd}"
+
+
+class TestExportCliResume:
+    def test_export_max_retries_option(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Invoke CLI with --max-retries 2 --output <path>. Patch the underlying export method
+        to return ExportResult(complete=True, retries=1, ...). Assert exit code 0."""
+        out_path = str(tmp_path / "out.jsonl")
+        mock_result = ExportResult(path=out_path, rows=100, complete=True, format="jsonl", retries=1)
+
+        with patch("thesma.cli.commands.export.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+            mock_client.export.companies.return_value = mock_result
+
+            result = runner.invoke(
+                cli, ["--api-key", API_KEY, "export", "companies", "--max-retries", "2", "--output", out_path]
+            )
+
+        assert result.exit_code == 0
+        assert "complete" in result.output.lower()
+
+    def test_export_max_retries_default(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Invoke CLI with --output and no --max-retries. Verify export method called with max_resume_retries=3."""
+        out_path = str(tmp_path / "out.jsonl")
+        mock_result = ExportResult(path=out_path, rows=50, complete=True, format="jsonl", retries=0)
+
+        with patch("thesma.cli.commands.export.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+            mock_client.export.companies.return_value = mock_result
+
+            result = runner.invoke(cli, ["--api-key", API_KEY, "export", "companies", "--output", out_path])
+
+        assert result.exit_code == 0
+        mock_client.export.companies.assert_called_once()
+        call_kwargs = mock_client.export.companies.call_args[1]
+        assert call_kwargs["max_resume_retries"] == 3
+
+    def test_export_incomplete_with_retries_warning(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Patch export method to return ExportResult(complete=False, retries=3).
+        Assert the warning message includes retry info."""
+        out_path = str(tmp_path / "out.jsonl")
+        mock_result = ExportResult(path=out_path, rows=50, complete=False, format="jsonl", retries=3)
+
+        with patch("thesma.cli.commands.export.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+            mock_client.export.companies.return_value = mock_result
+
+            result = runner.invoke(cli, ["--api-key", API_KEY, "export", "companies", "--output", out_path])
+
+        assert "3 retries" in result.output
+        assert "4 total attempts" in result.output
+
+    @respx.mock
+    def test_export_stdout_mode_ignores_max_retries(self, runner: CliRunner) -> None:
+        """Invoke CLI without --output but with --max-retries 5.
+        Verify the command still uses ExportStream iteration (stdout mode unchanged)."""
+        respx.get(f"{BASE}/v1/us/sec/export/companies").mock(
+            return_value=httpx.Response(200, content=JSONL_COMPANIES.encode()),
+        )
+        result = runner.invoke(cli, ["--api-key", API_KEY, "export", "companies", "--max-retries", "5"])
+
+        assert result.exit_code == 0
+        assert "320193" in result.output

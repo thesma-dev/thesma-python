@@ -50,12 +50,25 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         _validate_export_args(output, cik, ticker)
         params = _build_export_params(fmt, since, cik, ticker)
         response = self._client._stream_get(path, params=params)
         if output is not None:
-            return _write_to_file_sync(response, output, fmt)
+            client = self._client
+
+            def stream_fn(p: dict[str, Any]) -> Any:
+                return client._stream_get(path, params=p)
+
+            return _write_to_file_sync(
+                response,
+                output,
+                fmt,
+                stream_fn=stream_fn,
+                params=params,
+                max_resume_retries=max_resume_retries,
+            )
         return ExportStream(response, fmt)
 
     @overload
@@ -67,6 +80,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -78,6 +92,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def companies(
@@ -88,6 +103,7 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all companies.
 
@@ -101,9 +117,17 @@ class Export:
                 or Python ``datetime``/``date`` objects.
             cik: Filter by CIK.
             ticker: Filter by ticker (mutually exclusive with ``cik``).
+            max_resume_retries: Maximum number of resume attempts after a stream
+                failure (only applies when ``output`` is provided). Default 3.
         """
         return self._export(
-            "/v1/us/sec/export/companies", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/companies",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -115,6 +139,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -126,6 +151,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def financials(
@@ -136,13 +162,20 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all financial data.
 
         ``GET /v1/us/sec/export/financials``
         """
         return self._export(
-            "/v1/us/sec/export/financials", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/financials",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -154,6 +187,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -165,6 +199,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def insider_trades(
@@ -175,13 +210,20 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all insider trade data.
 
         ``GET /v1/us/sec/export/insider-trades``
         """
         return self._export(
-            "/v1/us/sec/export/insider-trades", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/insider-trades",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -193,6 +235,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -204,6 +247,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def events(
@@ -214,12 +258,21 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all corporate events.
 
         ``GET /v1/us/sec/export/events``
         """
-        return self._export("/v1/us/sec/export/events", output=output, fmt=format, since=since, cik=cik, ticker=ticker)
+        return self._export(
+            "/v1/us/sec/export/events",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
+        )
 
     @overload
     def ratios(
@@ -230,6 +283,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -241,6 +295,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def ratios(
@@ -251,12 +306,21 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all financial ratios.
 
         ``GET /v1/us/sec/export/ratios``
         """
-        return self._export("/v1/us/sec/export/ratios", output=output, fmt=format, since=since, cik=cik, ticker=ticker)
+        return self._export(
+            "/v1/us/sec/export/ratios",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
+        )
 
     @overload
     def holdings(
@@ -267,6 +331,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -278,6 +343,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def holdings(
@@ -288,6 +354,7 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all institutional holdings.
 
@@ -299,9 +366,17 @@ class Export:
             since: Only return records after this timestamp.
             cik: Filter by fund CIK (the 13F filer).
             ticker: Filter by fund ticker (the 13F filer).
+            max_resume_retries: Maximum number of resume attempts after a stream
+                failure (only applies when ``output`` is provided). Default 3.
         """
         return self._export(
-            "/v1/us/sec/export/holdings", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/holdings",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -313,6 +388,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -324,6 +400,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def compensation(
@@ -334,13 +411,20 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all executive compensation data.
 
         ``GET /v1/us/sec/export/compensation``
         """
         return self._export(
-            "/v1/us/sec/export/compensation", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/compensation",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -352,6 +436,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -363,6 +448,7 @@ class Export:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportStream: ...
 
     def beneficial_ownership(
@@ -373,13 +459,20 @@ class Export:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | ExportStream:
         """Export all beneficial ownership data.
 
         ``GET /v1/us/sec/export/beneficial-ownership``
         """
         return self._export(
-            "/v1/us/sec/export/beneficial-ownership", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/beneficial-ownership",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
 
@@ -401,12 +494,25 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         _validate_export_args(output, cik, ticker)
         params = _build_export_params(fmt, since, cik, ticker)
         response = await self._client._async_stream_get(path, params=params)
         if output is not None:
-            return await _write_to_file_async(response, output, fmt)
+            client = self._client
+
+            async def stream_fn(p: dict[str, Any]) -> Any:
+                return await client._async_stream_get(path, params=p)
+
+            return await _write_to_file_async(
+                response,
+                output,
+                fmt,
+                stream_fn=stream_fn,
+                params=params,
+                max_resume_retries=max_resume_retries,
+            )
         return AsyncExportStream(response, fmt)
 
     @overload
@@ -418,6 +524,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -429,6 +536,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def companies(
@@ -439,6 +547,7 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all companies.
 
@@ -451,9 +560,17 @@ class AsyncExport:
             since: Only return records after this timestamp.
             cik: Filter by CIK.
             ticker: Filter by ticker (mutually exclusive with ``cik``).
+            max_resume_retries: Maximum number of resume attempts after a stream
+                failure (only applies when ``output`` is provided). Default 3.
         """
         return await self._export(
-            "/v1/us/sec/export/companies", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/companies",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -465,6 +582,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -476,6 +594,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def financials(
@@ -486,13 +605,20 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all financial data.
 
         ``GET /v1/us/sec/export/financials``
         """
         return await self._export(
-            "/v1/us/sec/export/financials", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/financials",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -504,6 +630,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -515,6 +642,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def insider_trades(
@@ -525,13 +653,20 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all insider trade data.
 
         ``GET /v1/us/sec/export/insider-trades``
         """
         return await self._export(
-            "/v1/us/sec/export/insider-trades", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/insider-trades",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -543,6 +678,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -554,6 +690,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def events(
@@ -564,13 +701,20 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all corporate events.
 
         ``GET /v1/us/sec/export/events``
         """
         return await self._export(
-            "/v1/us/sec/export/events", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/events",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -582,6 +726,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -593,6 +738,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def ratios(
@@ -603,13 +749,20 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all financial ratios.
 
         ``GET /v1/us/sec/export/ratios``
         """
         return await self._export(
-            "/v1/us/sec/export/ratios", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/ratios",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -621,6 +774,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -632,6 +786,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def holdings(
@@ -642,6 +797,7 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all institutional holdings.
 
@@ -653,9 +809,17 @@ class AsyncExport:
             since: Only return records after this timestamp.
             cik: Filter by fund CIK (the 13F filer).
             ticker: Filter by fund ticker (the 13F filer).
+            max_resume_retries: Maximum number of resume attempts after a stream
+                failure (only applies when ``output`` is provided). Default 3.
         """
         return await self._export(
-            "/v1/us/sec/export/holdings", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/holdings",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -667,6 +831,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -678,6 +843,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def compensation(
@@ -688,13 +854,20 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all executive compensation data.
 
         ``GET /v1/us/sec/export/compensation``
         """
         return await self._export(
-            "/v1/us/sec/export/compensation", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/compensation",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
 
     @overload
@@ -706,6 +879,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> ExportResult: ...
 
     @overload
@@ -717,6 +891,7 @@ class AsyncExport:
         since: str | datetime | date | None = ...,
         cik: str | None = ...,
         ticker: str | None = ...,
+        max_resume_retries: int = ...,
     ) -> AsyncExportStream: ...
 
     async def beneficial_ownership(
@@ -727,11 +902,18 @@ class AsyncExport:
         since: str | datetime | date | None = None,
         cik: str | None = None,
         ticker: str | None = None,
+        max_resume_retries: int = 3,
     ) -> ExportResult | AsyncExportStream:
         """Export all beneficial ownership data.
 
         ``GET /v1/us/sec/export/beneficial-ownership``
         """
         return await self._export(
-            "/v1/us/sec/export/beneficial-ownership", output=output, fmt=format, since=since, cik=cik, ticker=ticker
+            "/v1/us/sec/export/beneficial-ownership",
+            output=output,
+            fmt=format,
+            since=since,
+            cik=cik,
+            ticker=ticker,
+            max_resume_retries=max_resume_retries,
         )
