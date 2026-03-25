@@ -12,6 +12,7 @@ from thesma.errors import (
     AuthenticationError,
     BadRequestError,
     ConnectionError,
+    ExportInProgressError,
     ForbiddenError,
     NotFoundError,
     RateLimitError,
@@ -44,6 +45,33 @@ class TestErrorInheritance:
         assert err.message == "something broke"
         assert err.error_code == "INTERNAL"
         assert str(err) == "something broke"
+
+
+# --- ExportInProgressError ---
+
+
+class TestExportInProgressError:
+    def test_export_in_progress_error_is_rate_limit_subclass(self) -> None:
+        assert issubclass(ExportInProgressError, RateLimitError)
+
+    def test_raise_for_status_export_in_progress(self) -> None:
+        resp = httpx.Response(
+            429,
+            json={"detail": "Export in progress", "code": "export_in_progress"},
+            headers={"Retry-After": "60"},
+        )
+        with pytest.raises(ExportInProgressError) as exc_info:
+            raise_for_status(resp)
+        assert exc_info.value.retry_after == 60.0
+
+    def test_raise_for_status_429_without_export_code(self) -> None:
+        resp = httpx.Response(
+            429,
+            json={"detail": "Rate limit exceeded"},
+        )
+        with pytest.raises(RateLimitError) as exc_info:
+            raise_for_status(resp)
+        assert type(exc_info.value) is RateLimitError
 
 
 # --- raise_for_status mapping ---

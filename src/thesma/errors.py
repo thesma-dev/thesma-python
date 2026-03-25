@@ -74,6 +74,10 @@ class RateLimitError(ThesmaError):
         self.retry_after = retry_after
 
 
+class ExportInProgressError(RateLimitError):
+    """429 with error_code ``export_in_progress`` — a previous export is still active."""
+
+
 class ServerError(ThesmaError):
     """5xx Server Error."""
 
@@ -120,7 +124,10 @@ def raise_for_status(response: httpx.Response) -> None:
         if retry_after_raw is not None:
             with contextlib.suppress(ValueError, TypeError):
                 retry_after = float(retry_after_raw)
-        raise RateLimitError(
+        exc_cls_429: type[RateLimitError] = RateLimitError
+        if error_code == "export_in_progress":
+            exc_cls_429 = ExportInProgressError
+        raise exc_cls_429(
             message,
             status_code=status_code,
             error_code=error_code,

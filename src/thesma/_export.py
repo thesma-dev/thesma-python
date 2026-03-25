@@ -5,10 +5,14 @@ from __future__ import annotations
 import asyncio
 import csv
 import json
-from collections.abc import AsyncIterator, Iterator
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
+
+import httpx
+
+_STREAM_ERRORS = (httpx.ReadError, httpx.ReadTimeout, httpx.RemoteProtocolError)
 
 
 @dataclass
@@ -19,6 +23,7 @@ class ExportResult:
     rows: int
     complete: bool
     format: str
+    retries: int = field(default=0)
 
 
 class ExportStream:
@@ -42,11 +47,17 @@ class ExportStream:
         self._format = fmt
         self._complete = False
         self._closed = False
+        self._error: Exception | None = None
 
     @property
     def complete(self) -> bool:
         """Whether the export completed successfully (sentinel found for JSONL, always True for CSV)."""
         return self._complete
+
+    @property
+    def error(self) -> Exception | None:
+        """The exception that terminated the stream, or ``None`` if iteration succeeded."""
+        return self._error
 
     def __enter__(self) -> ExportStream:
         return self
@@ -73,20 +84,28 @@ class ExportStream:
             return
 
     def _iterate_jsonl(self) -> Iterator[dict[str, Any]]:
-        for line in self._response.iter_lines():
-            if not line:
-                continue
-            data = json.loads(line)
-            if "__export_complete" in data:
-                self._complete = True
-                continue
-            yield data
+        try:
+            for line in self._response.iter_lines():
+                if not line:
+                    continue
+                data = json.loads(line)
+                if "__export_complete" in data:
+                    self._complete = True
+                    continue
+                yield data
+        except _STREAM_ERRORS as exc:
+            self._error = exc
+            return
 
     def _iterate_csv(self) -> Iterator[dict[str, Any]]:
-        reader = csv.DictReader(self._response.iter_lines())
-        for row in reader:
-            yield dict(row)
-        self._complete = True
+        try:
+            reader = csv.DictReader(self._response.iter_lines())
+            for row in reader:
+                yield dict(row)
+            self._complete = True
+        except _STREAM_ERRORS as exc:
+            self._error = exc
+            return
 
 
 class AsyncExportStream:
@@ -101,11 +120,17 @@ class AsyncExportStream:
         self._format = fmt
         self._complete = False
         self._closed = False
+        self._error: Exception | None = None
 
     @property
     def complete(self) -> bool:
         """Whether the export completed successfully."""
         return self._complete
+
+    @property
+    def error(self) -> Exception | None:
+        """The exception that terminated the stream, or ``None`` if iteration succeeded."""
+        return self._error
 
     async def __aenter__(self) -> AsyncExportStream:
         return self
@@ -125,23 +150,31 @@ class AsyncExportStream:
         return self._iterate_jsonl()
 
     async def _iterate_jsonl(self) -> AsyncIterator[dict[str, Any]]:
-        async for line in self._response.aiter_lines():
-            if not line:
-                continue
-            data = json.loads(line)
-            if "__export_complete" in data:
-                self._complete = True
-                continue
-            yield data
+        try:
+            async for line in self._response.aiter_lines():
+                if not line:
+                    continue
+                data = json.loads(line)
+                if "__export_complete" in data:
+                    self._complete = True
+                    continue
+                yield data
+        except _STREAM_ERRORS as exc:
+            self._error = exc
+            return
 
     async def _iterate_csv(self) -> AsyncIterator[dict[str, Any]]:
-        lines: list[str] = []
-        async for line in self._response.aiter_lines():
-            lines.append(line)
-        reader = csv.DictReader(lines)
-        for row in reader:
-            yield dict(row)
-        self._complete = True
+        try:
+            lines: list[str] = []
+            async for line in self._response.aiter_lines():
+                lines.append(line)
+            reader = csv.DictReader(lines)
+            for row in reader:
+                yield dict(row)
+            self._complete = True
+        except _STREAM_ERRORS as exc:
+            self._error = exc
+            return
 
 
 def _serialize_since(since: str | datetime | date | None) -> str | None:
@@ -171,46 +204,110 @@ def _build_export_params(
     return {k: v for k, v in params.items() if v is not None}
 
 
-def _write_to_file_sync(response: Any, output: str, fmt: str) -> ExportResult:
+def _write_to_file_sync(
+    response: Any,
+    output: str,
+    fmt: str,
+    *,
+    stream_fn: Callable[[dict[str, Any]], Any] | None = None,
+    params: dict[str, Any] | None = None,
+    max_resume_retries: int = 3,
+) -> ExportResult:
     """Stream a response to a file synchronously, returning export metadata."""
+    from pathlib import Path
+
     rows = 0
     complete = False
+    retries = 0
+    max_updated_at: str | None = None
+
+    # Initial attempt — write mode (truncate)
     try:
         with open(output, "w", newline="") as f:
             if fmt == "csv":
-                for line in response.iter_lines():
-                    f.write(line + "\n")
-                    rows += 1
-                # Subtract 1 for the header row
+                try:
+                    for line in response.iter_lines():
+                        f.write(line + "\n")
+                        rows += 1
+                except _STREAM_ERRORS:
+                    pass
+                else:
+                    complete = True
                 rows = max(rows - 1, 0)
-                complete = True
             else:
-                for line in response.iter_lines():
-                    if not line:
-                        continue
-                    data = json.loads(line)
-                    if "__export_complete" in data:
-                        complete = True
-                        continue
-                    f.write(line + "\n")
-                    rows += 1
+                try:
+                    for line in response.iter_lines():
+                        if not line:
+                            continue
+                        data = json.loads(line)
+                        if "__export_complete" in data:
+                            complete = True
+                            continue
+                        f.write(line + "\n")
+                        rows += 1
+                        updated_at = data.get("updated_at")
+                        if updated_at is not None and (max_updated_at is None or updated_at > max_updated_at):
+                            max_updated_at = updated_at
+                except _STREAM_ERRORS:
+                    pass
     finally:
         response.close()
 
-    from pathlib import Path
+    # Resume loop — only for JSONL with a valid cursor and stream_fn
+    while (
+        not complete
+        and fmt != "csv"
+        and max_updated_at is not None
+        and stream_fn is not None
+        and params is not None
+        and retries < max_resume_retries
+    ):
+        retries += 1
+        resume_params = {**params, "since": max_updated_at}
+        response = stream_fn(resume_params)
+        try:
+            with open(output, "a", newline="") as f:
+                try:
+                    for line in response.iter_lines():
+                        if not line:
+                            continue
+                        data = json.loads(line)
+                        if "__export_complete" in data:
+                            complete = True
+                            continue
+                        f.write(line + "\n")
+                        rows += 1
+                        updated_at = data.get("updated_at")
+                        if updated_at is not None and (max_updated_at is None or updated_at > max_updated_at):
+                            max_updated_at = updated_at
+                except _STREAM_ERRORS:
+                    pass
+        finally:
+            response.close()
 
     return ExportResult(
         path=str(Path(output).resolve()),
         rows=rows,
         complete=complete,
         format=fmt,
+        retries=retries,
     )
 
 
-async def _write_to_file_async(response: Any, output: str, fmt: str) -> ExportResult:
+async def _write_to_file_async(
+    response: Any,
+    output: str,
+    fmt: str,
+    *,
+    stream_fn: Callable[[dict[str, Any]], Awaitable[Any]] | None = None,
+    params: dict[str, Any] | None = None,
+    max_resume_retries: int = 3,
+) -> ExportResult:
     """Stream a response to a file asynchronously, returning export metadata."""
     rows = 0
     complete = False
+    retries = 0
+    max_updated_at: str | None = None
     batch: list[str] = []
     batch_size = 100
 
@@ -225,35 +322,46 @@ async def _write_to_file_async(response: Any, output: str, fmt: str) -> ExportRe
 
     await asyncio.to_thread(_truncate, resolved)
 
+    # Initial attempt
     try:
         if fmt == "csv":
-            async for line in response.aiter_lines():
-                batch.append(line + "\n")
-                rows += 1
-                if len(batch) >= batch_size:
-                    chunk = "".join(batch)
-                    batch.clear()
-                    await asyncio.to_thread(_append_to_file, resolved, chunk)
+            try:
+                async for line in response.aiter_lines():
+                    batch.append(line + "\n")
+                    rows += 1
+                    if len(batch) >= batch_size:
+                        chunk = "".join(batch)
+                        batch.clear()
+                        await asyncio.to_thread(_append_to_file, resolved, chunk)
+            except _STREAM_ERRORS:
+                pass
+            else:
+                complete = True
             if batch:
                 chunk = "".join(batch)
                 batch.clear()
                 await asyncio.to_thread(_append_to_file, resolved, chunk)
             rows = max(rows - 1, 0)  # subtract header
-            complete = True
         else:
-            async for line in response.aiter_lines():
-                if not line:
-                    continue
-                data = json.loads(line)
-                if "__export_complete" in data:
-                    complete = True
-                    continue
-                batch.append(line + "\n")
-                rows += 1
-                if len(batch) >= batch_size:
-                    chunk = "".join(batch)
-                    batch.clear()
-                    await asyncio.to_thread(_append_to_file, resolved, chunk)
+            try:
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    if "__export_complete" in data:
+                        complete = True
+                        continue
+                    batch.append(line + "\n")
+                    rows += 1
+                    updated_at = data.get("updated_at")
+                    if updated_at is not None and (max_updated_at is None or updated_at > max_updated_at):
+                        max_updated_at = updated_at
+                    if len(batch) >= batch_size:
+                        chunk = "".join(batch)
+                        batch.clear()
+                        await asyncio.to_thread(_append_to_file, resolved, chunk)
+            except _STREAM_ERRORS:
+                pass
             if batch:
                 chunk = "".join(batch)
                 batch.clear()
@@ -261,11 +369,52 @@ async def _write_to_file_async(response: Any, output: str, fmt: str) -> ExportRe
     finally:
         await response.aclose()
 
+    # Resume loop — only for JSONL with a valid cursor and stream_fn
+    while (
+        not complete
+        and fmt != "csv"
+        and max_updated_at is not None
+        and stream_fn is not None
+        and params is not None
+        and retries < max_resume_retries
+    ):
+        retries += 1
+        resume_params = {**params, "since": max_updated_at}
+        response = await stream_fn(resume_params)
+        batch.clear()
+        try:
+            try:
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    if "__export_complete" in data:
+                        complete = True
+                        continue
+                    batch.append(line + "\n")
+                    rows += 1
+                    updated_at = data.get("updated_at")
+                    if updated_at is not None and (max_updated_at is None or updated_at > max_updated_at):
+                        max_updated_at = updated_at
+                    if len(batch) >= batch_size:
+                        chunk = "".join(batch)
+                        batch.clear()
+                        await asyncio.to_thread(_append_to_file, resolved, chunk)
+            except _STREAM_ERRORS:
+                pass
+            if batch:
+                chunk = "".join(batch)
+                batch.clear()
+                await asyncio.to_thread(_append_to_file, resolved, chunk)
+        finally:
+            await response.aclose()
+
     return ExportResult(
         path=resolved,
         rows=rows,
         complete=complete,
         format=fmt,
+        retries=retries,
     )
 
 
