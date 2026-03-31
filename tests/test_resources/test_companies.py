@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import respx
 
-from thesma._generated.models import CompanyResponse
+from thesma._generated.models import EnrichedCompanyData
 from thesma._types import DataResponse, PaginatedResponse
 from thesma.client import ThesmaClient
 
@@ -137,5 +137,31 @@ class TestCompaniesGet:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193")
 
-        assert isinstance(result.data, CompanyResponse)
+        assert isinstance(result.data, EnrichedCompanyData)
+        client.close()
+
+
+class TestCompaniesGetInclude:
+    @respx.mock
+    def test_get_with_include(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=COMPANY_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.get("0000320193", include="labor_context")
+
+        request = route.calls.last.request
+        assert "include=labor_context" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_get_without_include(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=COMPANY_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.get("0000320193")
+
+        request = route.calls.last.request
+        assert "include" not in str(request.url)
         client.close()

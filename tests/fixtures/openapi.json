@@ -3,7 +3,7 @@
   "info": {
     "title": "Thesma API",
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
-    "version": "0.9.0"
+    "version": "0.0.0-dev"
   },
   "paths": {
     "/healthz": {
@@ -87,6 +87,24 @@
               "title": "Schedule Type"
             },
             "description": "Filter by schedule type: 13D or 13G (family match \u2014 13D includes SC 13D and SC 13D/A)"
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by SEC accession number (exact match).",
+              "title": "Accession Number"
+            },
+            "description": "Filter by SEC accession number (exact match)."
           },
           {
             "name": "page",
@@ -223,6 +241,24 @@
             "description": "Substring search on filer name (case-insensitive, min 2 characters)"
           },
           {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by SEC accession number (exact match).",
+              "title": "Accession Number"
+            },
+            "description": "Filter by SEC accession number (exact match)."
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -257,6 +293,1145 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_BeneficialOwnershipItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/counties/{fips}/employment": {
+      "get": {
+        "tags": [
+          "BLS Counties"
+        ],
+        "summary": "County employment (QCEW)",
+        "description": "Paginated quarterly employment observations for a county, with NAICS suppression fallback. QCEW data has a ~6-month publication lag.",
+        "operationId": "get_county_employment_v1_us_bls_counties__fips__employment_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "description": "5-digit county FIPS code",
+              "title": "Fips"
+            },
+            "description": "5-digit county FIPS code"
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "NAICS code (2-6 digits, '10', or hyphenated range like '31-33')",
+              "default": "10",
+              "title": "Industry"
+            },
+            "description": "NAICS code (2-6 digits, '10', or hyphenated range like '31-33')"
+          },
+          {
+            "name": "ownership",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(private|federal|state_govt|local_govt|total)$",
+              "description": "Ownership type",
+              "default": "private",
+              "title": "Ownership"
+            },
+            "description": "Ownership type"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to specific year",
+              "title": "Year"
+            },
+            "description": "Filter to specific year"
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 4,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to specific quarter (1-4)",
+              "title": "Quarter"
+            },
+            "description": "Filter to specific quarter (1-4)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_QcewEmployment_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/counties/{fips}/wages": {
+      "get": {
+        "tags": [
+          "BLS Counties"
+        ],
+        "summary": "County wages (QCEW)",
+        "description": "Single-quarter wage snapshot for a county, with NAICS suppression fallback. QCEW data has a ~6-month publication lag.",
+        "operationId": "get_county_wages_v1_us_bls_counties__fips__wages_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "description": "5-digit county FIPS code",
+              "title": "Fips"
+            },
+            "description": "5-digit county FIPS code"
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "NAICS code (2-6 digits, '10', or hyphenated range like '31-33')",
+              "default": "10",
+              "title": "Industry"
+            },
+            "description": "NAICS code (2-6 digits, '10', or hyphenated range like '31-33')"
+          },
+          {
+            "name": "ownership",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(private|federal|state_govt|local_govt|total)$",
+              "description": "Ownership type",
+              "default": "private",
+              "title": "Ownership"
+            },
+            "description": "Ownership type"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to specific year",
+              "title": "Year"
+            },
+            "description": "Filter to specific year"
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 4,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to specific quarter (1-4)",
+              "title": "Quarter"
+            },
+            "description": "Filter to specific quarter (1-4)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_Union_QcewWages__NoneType__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/industries/{naics}/employment": {
+      "get": {
+        "tags": [
+          "BLS Employment"
+        ],
+        "summary": "Get Employment Timeseries",
+        "description": "Paginated CES employment time series for a NAICS industry.",
+        "operationId": "get_employment_timeseries_v1_us_bls_industries__naics__employment_get",
+        "parameters": [
+          {
+            "name": "naics",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2,6}$",
+              "description": "2-6 digit NAICS code",
+              "title": "Naics"
+            },
+            "description": "2-6 digit NAICS code"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (YYYY-MM, inclusive)",
+              "title": "From"
+            },
+            "description": "Start date (YYYY-MM, inclusive)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (YYYY-MM, inclusive)",
+              "title": "To"
+            },
+            "description": "End date (YYYY-MM, inclusive)"
+          },
+          {
+            "name": "adjustment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(sa|nsa)$",
+              "description": "sa or nsa",
+              "default": "sa",
+              "title": "Adjustment"
+            },
+            "description": "sa or nsa"
+          },
+          {
+            "name": "geo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(national|state|metro)$",
+              "description": "Geographic level",
+              "default": "national",
+              "title": "Geo"
+            },
+            "description": "Geographic level"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2-digit state FIPS code",
+              "title": "State"
+            },
+            "description": "2-digit state FIPS code"
+          },
+          {
+            "name": "metro",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{5}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "5-digit CBSA code",
+              "title": "Metro"
+            },
+            "description": "5-digit CBSA code"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CesEmploymentPoint_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/industries/{naics}/employment/latest": {
+      "get": {
+        "tags": [
+          "BLS Employment"
+        ],
+        "summary": "Get Employment Latest",
+        "description": "Latest CES employment observation with year-over-year changes.",
+        "operationId": "get_employment_latest_v1_us_bls_industries__naics__employment_latest_get",
+        "parameters": [
+          {
+            "name": "naics",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2,6}$",
+              "description": "2-6 digit NAICS code",
+              "title": "Naics"
+            },
+            "description": "2-6 digit NAICS code"
+          },
+          {
+            "name": "adjustment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(sa|nsa)$",
+              "description": "sa or nsa",
+              "default": "sa",
+              "title": "Adjustment"
+            },
+            "description": "sa or nsa"
+          },
+          {
+            "name": "geo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(national|state|metro)$",
+              "description": "Geographic level",
+              "default": "national",
+              "title": "Geo"
+            },
+            "description": "Geographic level"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2-digit state FIPS code",
+              "title": "State"
+            },
+            "description": "2-digit state FIPS code"
+          },
+          {
+            "name": "metro",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{5}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "5-digit CBSA code",
+              "title": "Metro"
+            },
+            "description": "5-digit CBSA code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_CesEmploymentLatest_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/industries": {
+      "get": {
+        "tags": [
+          "BLS Industries"
+        ],
+        "summary": "List Industries",
+        "description": "List BLS industries with optional search and level filtering.",
+        "operationId": "list_industries_v1_us_bls_industries_get",
+        "parameters": [
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 6,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by NAICS digit count (1-6)",
+              "title": "Level"
+            },
+            "description": "Filter by NAICS digit count (1-6)"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive search against industry title",
+              "title": "Search"
+            },
+            "description": "Case-insensitive search against industry title"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_BlsIndustrySummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/industries/{naics}": {
+      "get": {
+        "tags": [
+          "BLS Industries"
+        ],
+        "summary": "Get Industry",
+        "description": "Return detailed information for a single BLS industry by NAICS code.",
+        "operationId": "get_industry_v1_us_bls_industries__naics__get",
+        "parameters": [
+          {
+            "name": "naics",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2,6}$",
+              "description": "2-6 digit NAICS code",
+              "title": "Naics"
+            },
+            "description": "2-6 digit NAICS code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_BlsIndustryDetail_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/metrics": {
+      "get": {
+        "tags": [
+          "BLS Metrics"
+        ],
+        "summary": "List Metrics",
+        "description": "List BLS metrics with optional filters.",
+        "operationId": "list_metrics_v1_us_bls_metrics_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by category: employment, wages, or derived",
+              "title": "Category"
+            },
+            "description": "Filter by category: employment, wages, or derived"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by source dataset: ces, qcew, or oews",
+              "title": "Source"
+            },
+            "description": "Filter by source dataset: ces, qcew, or oews"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive search on name and description",
+              "title": "Search"
+            },
+            "description": "Case-insensitive search on name and description"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_BlsMetricSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/metrics/{metric}": {
+      "get": {
+        "tags": [
+          "BLS Metrics"
+        ],
+        "summary": "Get Metric",
+        "description": "Return detail for a single BLS metric by composite key canonical_name:source_dataset.",
+        "operationId": "get_metric_v1_us_bls_metrics__metric__get",
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_BlsMetricDetail_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/occupations": {
+      "get": {
+        "tags": [
+          "BLS Occupations"
+        ],
+        "summary": "List Occupations",
+        "description": "List BLS occupations with optional search and group filtering.",
+        "operationId": "list_occupations_v1_us_bls_occupations_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive search against occupation title",
+              "title": "Search"
+            },
+            "description": "Case-insensitive search against occupation title"
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(major|detailed)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter: 'major' or 'detailed'",
+              "title": "Group"
+            },
+            "description": "Filter: 'major' or 'detailed'"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OccupationSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/occupations/{soc}": {
+      "get": {
+        "tags": [
+          "BLS Occupations"
+        ],
+        "summary": "Get Occupation",
+        "description": "Return detailed information for a single occupation by SOC code.",
+        "operationId": "get_occupation_v1_us_bls_occupations__soc__get",
+        "parameters": [
+          {
+            "name": "soc",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2}-\\d{4}$",
+              "description": "SOC code (XX-XXXX format)",
+              "title": "Soc"
+            },
+            "description": "SOC code (XX-XXXX format)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_OccupationDetail_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/occupations/{soc}/wages": {
+      "get": {
+        "tags": [
+          "BLS Occupations"
+        ],
+        "summary": "Get Occupation Wages",
+        "description": "Return OEWS occupation wage data with geo/industry/year filters.",
+        "operationId": "get_occupation_wages_v1_us_bls_occupations__soc__wages_get",
+        "parameters": [
+          {
+            "name": "soc",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2}-\\d{4}$",
+              "description": "SOC code (XX-XXXX format)",
+              "title": "Soc"
+            },
+            "description": "SOC code (XX-XXXX format)"
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{2,6}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "NAICS code (2-6 digits)",
+              "title": "Industry"
+            },
+            "description": "NAICS code (2-6 digits)"
+          },
+          {
+            "name": "geo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(national|state|metro)$",
+              "description": "Geographic level",
+              "default": "national",
+              "title": "Geo"
+            },
+            "description": "Geographic level"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "State FIPS code (2 digits)",
+              "title": "State"
+            },
+            "description": "State FIPS code (2 digits)"
+          },
+          {
+            "name": "metro",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{5}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Metro CBSA code (5 digits)",
+              "title": "Metro"
+            },
+            "description": "Metro CBSA code (5 digits)"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reference year",
+              "title": "Year"
+            },
+            "description": "Reference year"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OccupationWages_"
                 }
               }
             }
@@ -604,16 +1779,19 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Filter by SIC code",
+              "description": "Filter by SIC code(s). Repeat parameter for multiple values.",
               "title": "Sic"
             },
-            "description": "Filter by SIC code"
+            "description": "Filter by SIC code(s). Repeat parameter for multiple values."
           },
           {
             "name": "tier",
@@ -738,6 +1916,24 @@
               "type": "string",
               "title": "Cik"
             }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated enrichment options (e.g. labor_context)",
+              "title": "Include"
+            },
+            "description": "Comma-separated enrichment options (e.g. labor_context)"
           }
         ],
         "responses": {
@@ -746,7 +1942,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DataResponse_CompanyResponse_"
+                  "$ref": "#/components/schemas/EnrichedCompanyDataResponse"
                 }
               }
             }
@@ -840,6 +2036,24 @@
               "title": "Year"
             },
             "description": "Fiscal year (e.g. 2024). Defaults to the most recent available."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated enrichment options (e.g. labor_context)",
+              "title": "Include"
+            },
+            "description": "Comma-separated enrichment options (e.g. labor_context)"
           }
         ],
         "responses": {
@@ -848,7 +2062,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DataResponse_CompensationResponse_"
+                  "$ref": "#/components/schemas/EnrichedCompensationDataResponse"
                 }
               }
             }
@@ -1984,6 +3198,24 @@
               "title": "Quarter"
             },
             "description": "Fiscal quarter (1-4). Only valid with period=quarterly."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated enrichment options (e.g. labor_context)",
+              "title": "Include"
+            },
+            "description": "Comma-separated enrichment options (e.g. labor_context)"
           }
         ],
         "responses": {
@@ -1992,7 +3224,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DataResponse_FinancialStatementResponse_"
+                  "$ref": "#/components/schemas/EnrichedFinancialDataResponse"
                 }
               }
             }
@@ -3638,6 +4870,24 @@
             "description": "Minimum net income (USD)"
           },
           {
+            "name": "max_net_income",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum net income (USD). Use max_net_income=0 to screen for loss-making companies.",
+              "title": "Max Net Income"
+            },
+            "description": "Maximum net income (USD). Use max_net_income=0 to screen for loss-making companies."
+          },
+          {
             "name": "min_gross_margin",
             "in": "query",
             "required": false,
@@ -3860,52 +5110,19 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "SIC code filter",
+              "description": "Filter by SIC code(s). Repeat parameter for multiple values.",
               "title": "Sic"
             },
-            "description": "SIC code filter"
-          },
-          {
-            "name": "max_net_income",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Maximum net income (USD). Use 0 to screen for loss-making companies.",
-              "title": "Max Net Income"
-            },
-            "description": "Maximum net income (USD). Use 0 to screen for loss-making companies."
-          },
-          {
-            "name": "min_institutional_ownership_pct",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Minimum institutional ownership percentage (0-100+). Values above 100 are valid.",
-              "title": "Min Institutional Ownership Pct"
-            },
-            "description": "Minimum institutional ownership percentage (0-100+). Values above 100 are valid."
+            "description": "Filter by SIC code(s). Repeat parameter for multiple values."
           },
           {
             "name": "has_insider_buying",
@@ -3920,10 +5137,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Companies with insider purchases in last 90 days",
+              "description": "Companies with insider purchases in the window specified by insider_buying_days (default: 90 days)",
               "title": "Has Insider Buying"
             },
-            "description": "Companies with insider purchases in last 90 days"
+            "description": "Companies with insider purchases in the window specified by insider_buying_days (default: 90 days)"
           },
           {
             "name": "insider_buying_days",
@@ -3932,17 +5149,16 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "enum": ["7", "14", "30", "60", "90", "180", "365"]
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Lookback window for insider buying filter. Requires has_insider_buying=true.",
+              "description": "Lookback window in days for insider buying filter. Allowed values: 7, 14, 30, 60, 90, 180, 365. Only used when has_insider_buying=true.",
               "title": "Insider Buying Days"
             },
-            "description": "Lookback window for insider buying filter. Requires has_insider_buying=true."
+            "description": "Lookback window in days for insider buying filter. Allowed values: 7, 14, 30, 60, 90, 180, 365. Only used when has_insider_buying=true."
           },
           {
             "name": "has_institutional_increase",
@@ -3961,6 +5177,150 @@
               "title": "Has Institutional Increase"
             },
             "description": "Companies with 13F position increases last quarter"
+          },
+          {
+            "name": "min_institutional_ownership_pct",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum institutional ownership percentage (0-100+)",
+              "title": "Min Institutional Ownership Pct"
+            },
+            "description": "Minimum institutional ownership percentage (0-100+)"
+          },
+          {
+            "name": "industry_hiring_trend",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by hiring trend: accelerating, stable, decelerating, declining. Requires BLS dataset.",
+              "title": "Industry Hiring Trend"
+            },
+            "description": "Filter by hiring trend: accelerating, stable, decelerating, declining. Requires BLS dataset."
+          },
+          {
+            "name": "min_industry_employment_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum YoY % change in national CES employment. Requires BLS dataset.",
+              "title": "Min Industry Employment Growth"
+            },
+            "description": "Minimum YoY % change in national CES employment. Requires BLS dataset."
+          },
+          {
+            "name": "max_industry_employment_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum YoY % change in national CES employment. Requires BLS dataset.",
+              "title": "Max Industry Employment Growth"
+            },
+            "description": "Maximum YoY % change in national CES employment. Requires BLS dataset."
+          },
+          {
+            "name": "min_industry_wage_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum YoY % change in national QCEW avg weekly wage. Requires BLS dataset.",
+              "title": "Min Industry Wage Growth"
+            },
+            "description": "Minimum YoY % change in national QCEW avg weekly wage. Requires BLS dataset."
+          },
+          {
+            "name": "min_hq_county_wage_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum YoY % change in HQ county avg weekly wage. Requires BLS dataset.",
+              "title": "Min Hq County Wage Growth"
+            },
+            "description": "Minimum YoY % change in HQ county avg weekly wage. Requires BLS dataset."
+          },
+          {
+            "name": "min_comp_to_market_ratio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum CEO comp / OEWS median wage ratio. Requires BLS dataset.",
+              "title": "Min Comp To Market Ratio"
+            },
+            "description": "Minimum CEO comp / OEWS median wage ratio. Requires BLS dataset."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Include additional data: labor_context",
+              "title": "Include"
+            },
+            "description": "Include additional data: labor_context"
           },
           {
             "name": "sort",
@@ -4026,7 +5386,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_ScreenerResultItem_"
+                  "$ref": "#/components/schemas/ScreenerResponse"
                 }
               }
             }
@@ -4675,6 +6035,790 @@
         }
       }
     },
+    "/v1/us/sec/export/companies": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Companies",
+        "description": "Stream all companies as JSONL or CSV.",
+        "operationId": "export_companies_v1_us_sec_export_companies_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/financials": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Financials",
+        "description": "Stream all financial statement line items as JSONL or CSV.",
+        "operationId": "export_financials_v1_us_sec_export_financials_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/insider-trades": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Insider Trades",
+        "description": "Stream all insider trades as JSONL or CSV.",
+        "operationId": "export_insider_trades_v1_us_sec_export_insider_trades_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/events": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Events",
+        "description": "Stream all 8-K events as JSONL or CSV.",
+        "operationId": "export_events_v1_us_sec_export_events_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/ratios": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Ratios",
+        "description": "Stream all pre-computed financial ratios as JSONL or CSV.",
+        "operationId": "export_ratios_v1_us_sec_export_ratios_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/holdings": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Holdings",
+        "description": "Stream all institutional holdings as JSONL or CSV.",
+        "operationId": "export_holdings_v1_us_sec_export_holdings_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by fund CIK (the 13F filer)",
+              "title": "Cik"
+            },
+            "description": "Filter by fund CIK (the 13F filer)"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by fund ticker (the 13F filer)",
+              "title": "Ticker"
+            },
+            "description": "Filter by fund ticker (the 13F filer)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/compensation": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Compensation",
+        "description": "Stream all executive compensation as JSONL or CSV.",
+        "operationId": "export_compensation_v1_us_sec_export_compensation_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sec/export/beneficial-ownership": {
+      "get": {
+        "tags": [
+          "Data Export"
+        ],
+        "summary": "Export Beneficial Ownership",
+        "description": "Stream all beneficial ownership filings as JSONL or CSV.",
+        "operationId": "export_beneficial_ownership_v1_us_sec_export_beneficial_ownership_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Output format: jsonl or csv",
+              "default": "jsonl",
+              "title": "Format"
+            },
+            "description": "Output format: jsonl or csv"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only return records updated strictly after this ISO timestamp",
+              "title": "Since"
+            },
+            "description": "Only return records updated strictly after this ISO timestamp"
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by CIK",
+              "title": "Cik"
+            },
+            "description": "Filter to a single company by CIK"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single company by ticker",
+              "title": "Ticker"
+            },
+            "description": "Filter to a single company by ticker"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/webhooks": {
       "get": {
         "tags": [
@@ -5102,7 +7246,7 @@
               }
             ],
             "title": "Original Accession Number",
-            "description": "Accession number of the original filing, if this is an amendment."
+            "description": "Accession number of the original filing, if this is an amendment. May be null for amendments where the filer did not include this in their SEC filing (~34% of amendments)."
           },
           "is_group_filing": {
             "type": "boolean",
@@ -5134,6 +7278,330 @@
         ],
         "title": "BeneficialOwnershipItem",
         "description": "A single beneficial ownership record in a list response."
+      },
+      "BlsIndustryChild": {
+        "properties": {
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "NAICS industry code."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Industry name."
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level",
+            "description": "NAICS digit count."
+          }
+        },
+        "type": "object",
+        "required": [
+          "naics_code",
+          "title",
+          "level"
+        ],
+        "title": "BlsIndustryChild",
+        "description": "Direct child industry in a detail response."
+      },
+      "BlsIndustryDataAvailability": {
+        "properties": {
+          "ces_years": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/src__api__schemas__bls_industry__YearRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CES employment data year range."
+          },
+          "qcew_years": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/src__api__schemas__bls_industry__YearRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "QCEW county data year range."
+          },
+          "oews_years": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/src__api__schemas__bls_industry__YearRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "OEWS occupation wage data year range."
+          }
+        },
+        "type": "object",
+        "title": "BlsIndustryDataAvailability",
+        "description": "Summary of available data year ranges for an industry."
+      },
+      "BlsIndustryDetail": {
+        "properties": {
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "NAICS industry code."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Industry name."
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level",
+            "description": "NAICS digit count (1-6)."
+          },
+          "parent_naics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Naics",
+            "description": "Parent NAICS code."
+          },
+          "has_ces_data": {
+            "type": "boolean",
+            "title": "Has Ces Data",
+            "description": "Whether CES employment data has been ingested."
+          },
+          "has_qcew_data": {
+            "type": "boolean",
+            "title": "Has Qcew Data",
+            "description": "Whether QCEW county data has been ingested."
+          },
+          "has_oews_data": {
+            "type": "boolean",
+            "title": "Has Oews Data",
+            "description": "Whether OEWS occupation wage data has been ingested."
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/BlsIndustryChild"
+            },
+            "type": "array",
+            "title": "Children",
+            "description": "Direct child industries (one level down)."
+          },
+          "data_availability": {
+            "$ref": "#/components/schemas/BlsIndustryDataAvailability",
+            "description": "Summary of available data year ranges."
+          }
+        },
+        "type": "object",
+        "required": [
+          "naics_code",
+          "title",
+          "level",
+          "has_ces_data",
+          "has_qcew_data",
+          "has_oews_data",
+          "children",
+          "data_availability"
+        ],
+        "title": "BlsIndustryDetail",
+        "description": "Detailed BLS industry with children and data availability."
+      },
+      "BlsIndustrySummary": {
+        "properties": {
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "NAICS industry code."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Industry name."
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level",
+            "description": "NAICS digit count (1-6)."
+          },
+          "parent_naics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Naics",
+            "description": "Parent NAICS code."
+          },
+          "has_ces_data": {
+            "type": "boolean",
+            "title": "Has Ces Data",
+            "description": "Whether CES employment data has been ingested."
+          },
+          "has_qcew_data": {
+            "type": "boolean",
+            "title": "Has Qcew Data",
+            "description": "Whether QCEW county data has been ingested."
+          },
+          "has_oews_data": {
+            "type": "boolean",
+            "title": "Has Oews Data",
+            "description": "Whether OEWS occupation wage data has been ingested."
+          }
+        },
+        "type": "object",
+        "required": [
+          "naics_code",
+          "title",
+          "level",
+          "has_ces_data",
+          "has_qcew_data",
+          "has_oews_data"
+        ],
+        "title": "BlsIndustrySummary",
+        "description": "BLS industry list item."
+      },
+      "BlsMetricDetail": {
+        "properties": {
+          "canonical_name": {
+            "type": "string",
+            "title": "Canonical Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "source_dataset": {
+            "type": "string",
+            "title": "Source Dataset"
+          },
+          "update_cadence": {
+            "type": "string",
+            "title": "Update Cadence"
+          },
+          "typical_lag_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Lag Months"
+          },
+          "data_availability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricYearRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "related_endpoints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Related Endpoints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canonical_name",
+          "display_name",
+          "description",
+          "category",
+          "unit",
+          "source_dataset",
+          "update_cadence",
+          "typical_lag_months",
+          "data_availability",
+          "related_endpoints"
+        ],
+        "title": "BlsMetricDetail"
+      },
+      "BlsMetricSummary": {
+        "properties": {
+          "canonical_name": {
+            "type": "string",
+            "title": "Canonical Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "source_dataset": {
+            "type": "string",
+            "title": "Source Dataset"
+          },
+          "update_cadence": {
+            "type": "string",
+            "title": "Update Cadence"
+          },
+          "typical_lag_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Lag Months"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canonical_name",
+          "display_name",
+          "description",
+          "category",
+          "unit",
+          "source_dataset",
+          "update_cadence",
+          "typical_lag_months"
+        ],
+        "title": "BlsMetricSummary"
       },
       "BoardMemberItem": {
         "properties": {
@@ -5380,6 +7848,216 @@
         ],
         "title": "CensusTimeSeriesPoint",
         "description": "A single point in a Census time series."
+      },
+      "CesEmploymentLatest": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Observation year."
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month",
+            "description": "Month (1-12) or 13 for annual average."
+          },
+          "period": {
+            "type": "string",
+            "title": "Period",
+            "description": "Formatted period: '2025-11' or '2025-A' for annual average."
+          },
+          "all_employees_thousands": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Employees Thousands",
+            "description": "Total employment in thousands (CES data_type 01)."
+          },
+          "avg_hourly_earnings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Hourly Earnings",
+            "description": "Average hourly earnings in dollars (CES data_type 03)."
+          },
+          "avg_weekly_earnings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Weekly Earnings",
+            "description": "Average weekly earnings in dollars (CES data_type 11)."
+          },
+          "adjustment": {
+            "type": "string",
+            "title": "Adjustment",
+            "description": "'sa' (seasonally adjusted) or 'nsa' (not seasonally adjusted)."
+          },
+          "footnote_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footnote Code",
+            "description": "'P' = preliminary, 'R' = revised, null = final."
+          },
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "NAICS code data was returned for (may differ if fallback occurred)."
+          },
+          "match_precision": {
+            "type": "string",
+            "title": "Match Precision",
+            "description": "E.g. '6-digit', '4-digit' \u2014 indicates exact vs fallback match."
+          },
+          "employment_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Yoy Pct",
+            "description": "YoY change in all_employees_thousands (%)."
+          },
+          "earnings_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnings Yoy Pct",
+            "description": "YoY change in avg_hourly_earnings (%)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "period",
+          "adjustment",
+          "naics_code",
+          "match_precision"
+        ],
+        "title": "CesEmploymentLatest",
+        "description": "Latest CES observation with year-over-year changes."
+      },
+      "CesEmploymentPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Observation year."
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month",
+            "description": "Month (1-12) or 13 for annual average."
+          },
+          "period": {
+            "type": "string",
+            "title": "Period",
+            "description": "Formatted period: '2025-11' or '2025-A' for annual average."
+          },
+          "all_employees_thousands": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Employees Thousands",
+            "description": "Total employment in thousands (CES data_type 01)."
+          },
+          "avg_hourly_earnings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Hourly Earnings",
+            "description": "Average hourly earnings in dollars (CES data_type 03)."
+          },
+          "avg_weekly_earnings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Weekly Earnings",
+            "description": "Average weekly earnings in dollars (CES data_type 11)."
+          },
+          "adjustment": {
+            "type": "string",
+            "title": "Adjustment",
+            "description": "'sa' (seasonally adjusted) or 'nsa' (not seasonally adjusted)."
+          },
+          "footnote_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footnote Code",
+            "description": "'P' = preliminary, 'R' = revised, null = final."
+          },
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "NAICS code data was returned for (may differ if fallback occurred)."
+          },
+          "match_precision": {
+            "type": "string",
+            "title": "Match Precision",
+            "description": "E.g. '6-digit', '4-digit' \u2014 indicates exact vs fallback match."
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "period",
+          "adjustment",
+          "naics_code",
+          "match_precision"
+        ],
+        "title": "CesEmploymentPoint",
+        "description": "A single pivoted CES employment observation."
       },
       "CommitteeDetail": {
         "properties": {
@@ -5646,164 +8324,6 @@
         "title": "CompanyRef",
         "description": "Minimal company reference in responses."
       },
-      "CompanyResponse": {
-        "properties": {
-          "cik": {
-            "type": "string",
-            "title": "Cik",
-            "description": "SEC Central Index Key, zero-padded to 10 digits."
-          },
-          "ticker": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ticker",
-            "description": "Trading ticker symbol, if available."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Company name as registered with the SEC."
-          },
-          "sic_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sic Code",
-            "description": "Standard Industrial Classification code."
-          },
-          "sic_description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sic Description",
-            "description": "Human-readable SIC industry description."
-          },
-          "fiscal_year_end": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fiscal Year End",
-            "description": "Fiscal year end date in MMDD format."
-          },
-          "company_tier": {
-            "type": "string",
-            "enum": [
-              "sp500",
-              "russell1000",
-              "russell2000",
-              "other"
-            ],
-            "title": "Company Tier",
-            "description": "Index membership tier."
-          },
-          "state_fips": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "State Fips",
-            "description": "2-digit state FIPS code (e.g. '06' for California)."
-          },
-          "county_fips": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "County Fips",
-            "description": "5-digit county FIPS code (e.g. '06037' for LA County)."
-          },
-          "county_fips_confidence": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "County Fips Confidence",
-            "description": "Confidence of county FIPS mapping from ZIP code."
-          },
-          "hq_state": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hq State",
-            "description": "EDGAR business address state code (2-letter USPS)."
-          },
-          "hq_city": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hq City",
-            "description": "EDGAR business address city name."
-          },
-          "filings_url": {
-            "type": "string",
-            "title": "Filings Url",
-            "description": "URL to retrieve this company's filings."
-          },
-          "financials_url": {
-            "type": "string",
-            "title": "Financials Url",
-            "description": "URL to retrieve this company's financial statements."
-          }
-        },
-        "type": "object",
-        "required": [
-          "cik",
-          "name",
-          "company_tier",
-          "filings_url",
-          "financials_url"
-        ],
-        "title": "CompanyResponse",
-        "description": "Single company detail response."
-      },
       "CompanySummary": {
         "properties": {
           "cik": {
@@ -5951,6 +8471,105 @@
         "title": "ComparisonResponse",
         "description": "Response for cross-place comparison."
       },
+      "CompensationBenchmark": {
+        "properties": {
+          "soc_code": {
+            "type": "string",
+            "title": "Soc Code",
+            "description": "SOC code for Chief Executives.",
+            "default": "11-1011"
+          },
+          "soc_title": {
+            "type": "string",
+            "title": "Soc Title",
+            "description": "SOC occupation title."
+          },
+          "industry_naics": {
+            "type": "string",
+            "title": "Industry Naics",
+            "description": "NAICS code at which OEWS data was found."
+          },
+          "industry_name": {
+            "type": "string",
+            "title": "Industry Name",
+            "description": "Industry title from bls_industries."
+          },
+          "benchmark_geography": {
+            "type": "string",
+            "title": "Benchmark Geography",
+            "description": "Geographic scope of benchmark.",
+            "default": "National"
+          },
+          "market_median_annual_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Median Annual Wage",
+            "description": "OEWS national median annual wage."
+          },
+          "market_mean_annual_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Mean Annual Wage",
+            "description": "OEWS national mean annual wage."
+          },
+          "market_75th_percentile": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market 75Th Percentile",
+            "description": "75th percentile annual wage."
+          },
+          "market_90th_percentile": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market 90Th Percentile",
+            "description": "90th percentile annual wage."
+          },
+          "reference_year": {
+            "type": "integer",
+            "title": "Reference Year",
+            "description": "OEWS survey year."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source identifier.",
+            "default": "OEWS"
+          }
+        },
+        "type": "object",
+        "required": [
+          "soc_title",
+          "industry_naics",
+          "industry_name",
+          "reference_year"
+        ],
+        "title": "CompensationBenchmark",
+        "description": "OEWS-based compensation benchmark for Chief Executives."
+      },
       "CompensationDetail": {
         "properties": {
           "salary": {
@@ -6012,6 +8631,18 @@
             ],
             "title": "Non Equity Incentive",
             "description": "Non-equity incentive plan compensation in USD."
+          },
+          "change_in_pension_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change In Pension Value",
+            "description": "Change in pension value and NQDC earnings in USD."
           },
           "other": {
             "anyOf": [
@@ -6087,6 +8718,69 @@
         ],
         "title": "CompensationResponse",
         "description": "Full compensation response for a company/year."
+      },
+      "DataAvailability": {
+        "properties": {
+          "years": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/src__api__schemas__bls_occupation__YearRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Year range of available data."
+          },
+          "geographies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Geographies",
+            "description": "Available geography types."
+          },
+          "industry_count": {
+            "type": "integer",
+            "title": "Industry Count",
+            "description": "Number of distinct industries with non-suppressed data.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "DataAvailability",
+        "description": "Summary of available OEWS data for an occupation."
+      },
+      "DataFreshness": {
+        "properties": {
+          "ces_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ces Period",
+            "description": "CES data period (e.g. '2025-11')."
+          },
+          "qcew_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qcew Period",
+            "description": "QCEW data period (e.g. '2025-Q2')."
+          }
+        },
+        "type": "object",
+        "title": "DataFreshness",
+        "description": "Data freshness periods for BLS screener data."
       },
       "DataQualityReportCreate": {
         "properties": {
@@ -6331,6 +9025,30 @@
         "title": "DataQualityReportUpdate",
         "description": "Request body for admin status update."
       },
+      "DataResponse_BlsIndustryDetail_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BlsIndustryDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[BlsIndustryDetail]"
+      },
+      "DataResponse_BlsMetricDetail_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BlsMetricDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[BlsMetricDetail]"
+      },
       "DataResponse_BoardResponse_": {
         "properties": {
           "data": {
@@ -6343,29 +9061,17 @@
         ],
         "title": "DataResponse[BoardResponse]"
       },
-      "DataResponse_CompanyResponse_": {
+      "DataResponse_CesEmploymentLatest_": {
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/CompanyResponse"
+            "$ref": "#/components/schemas/CesEmploymentLatest"
           }
         },
         "type": "object",
         "required": [
           "data"
         ],
-        "title": "DataResponse[CompanyResponse]"
-      },
-      "DataResponse_CompensationResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/CompensationResponse"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "title": "DataResponse[CompensationResponse]"
+        "title": "DataResponse[CesEmploymentLatest]"
       },
       "DataResponse_DataQualityReportResponse_": {
         "properties": {
@@ -6415,18 +9121,6 @@
         ],
         "title": "DataResponse[FilingDetailResponse]"
       },
-      "DataResponse_FinancialStatementResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/FinancialStatementResponse"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "title": "DataResponse[FinancialStatementResponse]"
-      },
       "DataResponse_MetricDetail_": {
         "properties": {
           "data": {
@@ -6438,6 +9132,18 @@
           "data"
         ],
         "title": "DataResponse[MetricDetail]"
+      },
+      "DataResponse_OccupationDetail_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OccupationDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[OccupationDetail]"
       },
       "DataResponse_PlaceDetail_": {
         "properties": {
@@ -6547,6 +9253,25 @@
         ],
         "title": "DataResponse[TimeSeries]"
       },
+      "DataResponse_Union_QcewWages__NoneType__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QcewWages"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[Union[QcewWages, NoneType]]"
+      },
       "DataResponse_WebhookCreateResponse_": {
         "properties": {
           "data": {
@@ -6634,6 +9359,22 @@
           "data"
         ],
         "title": "DataResponse[list[WebhookResponse]]"
+      },
+      "EnrichedCompanyData": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "EnrichedCompanyDataResponse": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "EnrichedCompensationDataResponse": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "EnrichedFinancialDataResponse": {
+        "additionalProperties": true,
+        "type": "object"
       },
       "EntityResponse": {
         "properties": {
@@ -7206,6 +9947,21 @@
             "title": "Line Items",
             "description": "Canonical field name to value mapping. Individual field units vary (revenue in currency units, shares as counts).\n\n**Income statement fields**: revenue, cost_of_revenue, gross_profit, operating_expenses, research_and_development, selling_general_admin, operating_income, interest_expense, interest_income, pre_tax_income, income_tax_expense, net_income, eps_basic, eps_diluted, shares_basic, shares_diluted.\n\n**Balance sheet fields**: total_assets, current_assets, cash_and_equivalents, accounts_receivable, inventory, non_current_assets, property_plant_equipment, goodwill, intangible_assets, total_liabilities, current_liabilities, accounts_payable, short_term_debt, non_current_liabilities, long_term_debt, total_equity, common_shares_outstanding.\n\n**Cash flow fields**: operating_cash_flow, investing_cash_flow, financing_cash_flow, net_change_in_cash, capital_expenditures, dividends_paid, share_repurchases.\n\n**Bank-specific fields** (income statement, populated only for bank/financial institution filings): net_interest_income, interest_and_dividend_income, noninterest_income, provision_for_credit_losses, noninterest_expense.\n\nUse GET /v1/us/sec/financials/fields for machine-readable field metadata."
           },
+          "field_confidence": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Confidence",
+            "description": "Mapping of canonical field names to their mapping confidence level. Only includes fields where confidence is not 'high' (e.g. P2 fallback tags or derived values). Omitted or null when all fields are high-confidence."
+          },
           "metadata": {
             "$ref": "#/components/schemas/StatementMetadata",
             "description": "Data quality and source metadata."
@@ -7590,6 +10346,99 @@
         "title": "HolderListItem",
         "description": "A fund that holds shares in a company."
       },
+      "IndustryContext": {
+        "properties": {
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "Resolved NAICS 2022 code."
+          },
+          "naics_description": {
+            "type": "string",
+            "title": "Naics Description",
+            "description": "Industry name from bls_industries."
+          },
+          "naics_match_level": {
+            "type": "string",
+            "title": "Naics Match Level",
+            "description": "Precision of SIC\u2192NAICS mapping, e.g. '6-digit', '4-digit'."
+          },
+          "total_employment_thousands": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Employment Thousands",
+            "description": "Latest all-employee count (CES data_type 01)."
+          },
+          "employment_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Yoy Pct",
+            "description": "YoY change in employment (%)."
+          },
+          "avg_hourly_earnings": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Hourly Earnings",
+            "description": "Latest avg hourly earnings (CES data_type 03)."
+          },
+          "earnings_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnings Yoy Pct",
+            "description": "YoY change in avg hourly earnings (%)."
+          },
+          "data_period": {
+            "type": "string",
+            "title": "Data Period",
+            "description": "Formatted as 'YYYY-MM'."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source identifier.",
+            "default": "CES"
+          },
+          "adjustment": {
+            "type": "string",
+            "title": "Adjustment",
+            "description": "Seasonal adjustment: 'sa' or 'nsa'.",
+            "default": "sa"
+          }
+        },
+        "type": "object",
+        "required": [
+          "naics_code",
+          "naics_description",
+          "naics_match_level",
+          "data_period"
+        ],
+        "title": "IndustryContext",
+        "description": "CES-based industry employment context for a company's NAICS sector."
+      },
       "InsiderHoldingItem": {
         "properties": {
           "security_type": {
@@ -7930,6 +10779,124 @@
         "title": "InsiderTradeListItem",
         "description": "Insider trade in a list response."
       },
+      "LaborContext": {
+        "properties": {
+          "industry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IndustryContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CES industry employment context."
+          },
+          "local_market": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalMarketContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "QCEW local market context."
+          },
+          "compensation_benchmark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompensationBenchmark"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "OEWS compensation benchmark."
+          }
+        },
+        "type": "object",
+        "title": "LaborContext",
+        "description": "Combined labor context enrichment for SEC endpoint responses."
+      },
+      "LaborContextSummary": {
+        "properties": {
+          "industry_hiring_trend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Hiring Trend",
+            "description": "Hiring trend classification."
+          },
+          "industry_employment_growth_yoy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Employment Growth Yoy",
+            "description": "YoY % change in national industry employment."
+          },
+          "industry_wage_growth_yoy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Wage Growth Yoy",
+            "description": "YoY % change in national industry avg weekly wage."
+          },
+          "hq_county_wage_growth_yoy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hq County Wage Growth Yoy",
+            "description": "YoY % change in HQ county all-industries avg weekly wage."
+          },
+          "comp_to_market_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comp To Market Ratio",
+            "description": "CEO comp / OEWS median ratio."
+          },
+          "data_freshness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataFreshness"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "BLS data period information."
+          }
+        },
+        "type": "object",
+        "title": "LaborContextSummary",
+        "description": "Flat labor context summary for screener results, read from pre-computed company columns."
+      },
       "LatestYear": {
         "properties": {
           "acs1": {
@@ -7960,6 +10927,129 @@
         "type": "object",
         "title": "LatestYear",
         "description": "Latest available year per dataset."
+      },
+      "LocalMarketContext": {
+        "properties": {
+          "county_fips": {
+            "type": "string",
+            "title": "County Fips",
+            "description": "Company HQ county FIPS code."
+          },
+          "county_name": {
+            "type": "string",
+            "title": "County Name",
+            "description": "County name + state abbreviation."
+          },
+          "county_fips_confidence": {
+            "type": "string",
+            "title": "County Fips Confidence",
+            "description": "Confidence of FIPS mapping: 'high', 'medium', 'low'."
+          },
+          "industry_employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Employment",
+            "description": "Employment in company's industry in HQ county."
+          },
+          "industry_employment_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Employment Yoy Pct",
+            "description": "YoY change in industry employment (%)."
+          },
+          "industry_avg_weekly_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Avg Weekly Wage",
+            "description": "Average weekly wage in industry+county."
+          },
+          "industry_wage_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Wage Yoy Pct",
+            "description": "YoY change in industry avg weekly wage (%)."
+          },
+          "total_employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Employment",
+            "description": "All-industries employment in HQ county."
+          },
+          "total_avg_weekly_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Avg Weekly Wage",
+            "description": "All-industries avg weekly wage in county."
+          },
+          "data_period": {
+            "type": "string",
+            "title": "Data Period",
+            "description": "Formatted as 'YYYY-QN'."
+          },
+          "data_lag_months": {
+            "type": "integer",
+            "title": "Data Lag Months",
+            "description": "Approximate months between current date and data period."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source identifier.",
+            "default": "QCEW"
+          },
+          "match_precision": {
+            "type": "string",
+            "title": "Match Precision",
+            "description": "E.g. '6-digit', '4-digit', 'all-industries'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "county_fips",
+          "county_name",
+          "county_fips_confidence",
+          "data_period",
+          "data_lag_months",
+          "match_precision"
+        ],
+        "title": "LocalMarketContext",
+        "description": "QCEW-based local labour market context for a company's HQ county."
       },
       "MetricDetail": {
         "properties": {
@@ -8188,6 +11278,348 @@
         "title": "MetricValue",
         "description": "A single metric value for a place."
       },
+      "MetricYearRange": {
+        "properties": {
+          "min": {
+            "type": "integer",
+            "title": "Min"
+          },
+          "max": {
+            "type": "integer",
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "MetricYearRange"
+      },
+      "OccupationDetail": {
+        "properties": {
+          "soc_code": {
+            "type": "string",
+            "title": "Soc Code",
+            "description": "SOC code (format: XX-XXXX)."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Occupation title."
+          },
+          "major_group": {
+            "type": "string",
+            "title": "Major Group",
+            "description": "2-digit major group code."
+          },
+          "is_detailed": {
+            "type": "boolean",
+            "title": "Is Detailed",
+            "description": "True for detailed occupations, False for major group summaries."
+          },
+          "data_availability": {
+            "$ref": "#/components/schemas/DataAvailability",
+            "description": "Summary of available OEWS data."
+          },
+          "related_occupations": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedOccupation"
+            },
+            "type": "array",
+            "title": "Related Occupations",
+            "description": "Related occupations in the same major group with OEWS data."
+          }
+        },
+        "type": "object",
+        "required": [
+          "soc_code",
+          "title",
+          "major_group",
+          "is_detailed",
+          "data_availability",
+          "related_occupations"
+        ],
+        "title": "OccupationDetail",
+        "description": "Detailed BLS occupation with data availability and related occupations."
+      },
+      "OccupationSummary": {
+        "properties": {
+          "soc_code": {
+            "type": "string",
+            "title": "Soc Code",
+            "description": "SOC code (format: XX-XXXX)."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Occupation title."
+          },
+          "major_group": {
+            "type": "string",
+            "title": "Major Group",
+            "description": "2-digit major group code."
+          },
+          "is_detailed": {
+            "type": "boolean",
+            "title": "Is Detailed",
+            "description": "True for detailed occupations, False for major group summaries."
+          }
+        },
+        "type": "object",
+        "required": [
+          "soc_code",
+          "title",
+          "major_group",
+          "is_detailed"
+        ],
+        "title": "OccupationSummary",
+        "description": "BLS occupation list item."
+      },
+      "OccupationWages": {
+        "properties": {
+          "soc_code": {
+            "type": "string",
+            "title": "Soc Code",
+            "description": "SOC code."
+          },
+          "soc_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soc Title",
+            "description": "Occupation title from soc_codes table."
+          },
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code",
+            "description": "NAICS code ('000000' for cross-industry)."
+          },
+          "naics_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naics Title",
+            "description": "Industry title."
+          },
+          "area_code": {
+            "type": "string",
+            "title": "Area Code",
+            "description": "BLS area code."
+          },
+          "area_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Name",
+            "description": "Area name."
+          },
+          "area_type": {
+            "type": "string",
+            "title": "Area Type",
+            "description": "Geographic level: national, state, or metro."
+          },
+          "reference_year": {
+            "type": "integer",
+            "title": "Reference Year",
+            "description": "Survey reference year (May of this year)."
+          },
+          "employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment",
+            "description": "Total estimated employment."
+          },
+          "mean_hourly_wage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Hourly Wage",
+            "description": "Mean hourly wage."
+          },
+          "mean_annual_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Annual Wage",
+            "description": "Mean annual wage."
+          },
+          "median_hourly_wage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Hourly Wage",
+            "description": "Median (50th percentile) hourly wage."
+          },
+          "median_annual_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Annual Wage",
+            "description": "Median annual wage."
+          },
+          "pct10_hourly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct10 Hourly",
+            "description": "10th percentile hourly wage."
+          },
+          "pct25_hourly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct25 Hourly",
+            "description": "25th percentile hourly wage."
+          },
+          "pct75_hourly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct75 Hourly",
+            "description": "75th percentile hourly wage."
+          },
+          "pct90_hourly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct90 Hourly",
+            "description": "90th percentile hourly wage."
+          },
+          "pct10_annual": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct10 Annual",
+            "description": "10th percentile annual wage."
+          },
+          "pct25_annual": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct25 Annual",
+            "description": "25th percentile annual wage."
+          },
+          "pct75_annual": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct75 Annual",
+            "description": "75th percentile annual wage."
+          },
+          "pct90_annual": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct90 Annual",
+            "description": "90th percentile annual wage."
+          },
+          "suppressed": {
+            "type": "boolean",
+            "title": "Suppressed",
+            "description": "True if wage/employment data was suppressed."
+          },
+          "wage_censored_high": {
+            "type": "boolean",
+            "title": "Wage Censored High",
+            "description": "True if wages exceed BLS top-coding threshold ($115.22/hr)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "soc_code",
+          "soc_title",
+          "naics_code",
+          "area_code",
+          "area_type",
+          "reference_year",
+          "suppressed",
+          "wage_censored_high"
+        ],
+        "title": "OccupationWages",
+        "description": "OEWS occupation wage data."
+      },
       "PaginatedResponse_BeneficialOwnershipItem_": {
         "properties": {
           "data": {
@@ -8207,6 +11639,66 @@
           "pagination"
         ],
         "title": "PaginatedResponse[BeneficialOwnershipItem]"
+      },
+      "PaginatedResponse_BlsIndustrySummary_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BlsIndustrySummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[BlsIndustrySummary]"
+      },
+      "PaginatedResponse_BlsMetricSummary_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BlsMetricSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[BlsMetricSummary]"
+      },
+      "PaginatedResponse_CesEmploymentPoint_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CesEmploymentPoint"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[CesEmploymentPoint]"
       },
       "PaginatedResponse_CompanyListItem_": {
         "properties": {
@@ -8448,6 +11940,46 @@
         ],
         "title": "PaginatedResponse[InsiderTradeListItem]"
       },
+      "PaginatedResponse_OccupationSummary_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OccupationSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[OccupationSummary]"
+      },
+      "PaginatedResponse_OccupationWages_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OccupationWages"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[OccupationWages]"
+      },
       "PaginatedResponse_PlaceSummary_": {
         "properties": {
           "data": {
@@ -8488,11 +12020,11 @@
         ],
         "title": "PaginatedResponse[ProxyVoteItem]"
       },
-      "PaginatedResponse_ScreenerResultItem_": {
+      "PaginatedResponse_QcewEmployment_": {
         "properties": {
           "data": {
             "items": {
-              "$ref": "#/components/schemas/ScreenerResultItem"
+              "$ref": "#/components/schemas/QcewEmployment"
             },
             "type": "array",
             "title": "Data"
@@ -8506,7 +12038,7 @@
           "data",
           "pagination"
         ],
-        "title": "PaginatedResponse[ScreenerResultItem]"
+        "title": "PaginatedResponse[QcewEmployment]"
       },
       "PaginatedResponse_SectionSummary_": {
         "properties": {
@@ -8561,6 +12093,11 @@
           "total": {
             "type": "integer",
             "title": "Total"
+          },
+          "total_pages": {
+            "type": "integer",
+            "title": "Total Pages",
+            "default": 0
           }
         },
         "type": "object",
@@ -8982,6 +12519,300 @@
         "title": "ProxyVoteItem",
         "description": "A single proposal's voting results."
       },
+      "QcewEmployment": {
+        "properties": {
+          "area_fips": {
+            "type": "string",
+            "title": "Area Fips",
+            "description": "5-digit county FIPS code."
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Data year."
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter",
+            "description": "Quarter 1-4."
+          },
+          "industry_code": {
+            "type": "string",
+            "title": "Industry Code",
+            "description": "NAICS code data was returned for (may differ from requested if fallback)."
+          },
+          "requested_industry": {
+            "type": "string",
+            "title": "Requested Industry",
+            "description": "The NAICS code originally requested."
+          },
+          "match_precision": {
+            "type": "string",
+            "title": "Match Precision",
+            "description": "Granularity level: '6-digit', '5-digit', ..., 'all-industries'."
+          },
+          "ownership": {
+            "type": "string",
+            "title": "Ownership",
+            "description": "Human-readable ownership type."
+          },
+          "disclosure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclosure Code",
+            "description": "'N' if suppressed at this level."
+          },
+          "establishment_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Establishment Count",
+            "description": "Number of business establishments."
+          },
+          "month1_employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month1 Employment",
+            "description": "Employment level, first month of quarter."
+          },
+          "month2_employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month2 Employment",
+            "description": "Employment level, second month of quarter."
+          },
+          "month3_employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month3 Employment",
+            "description": "Employment level, third month of quarter."
+          },
+          "employment_yoy_change": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Yoy Change",
+            "description": "Year-over-year employment change (absolute)."
+          },
+          "employment_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Yoy Pct",
+            "description": "Year-over-year employment change (percent)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "area_fips",
+          "year",
+          "quarter",
+          "industry_code",
+          "requested_industry",
+          "match_precision",
+          "ownership"
+        ],
+        "title": "QcewEmployment",
+        "description": "QCEW county-level employment observation."
+      },
+      "QcewWages": {
+        "properties": {
+          "area_fips": {
+            "type": "string",
+            "title": "Area Fips",
+            "description": "5-digit county FIPS code."
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Data year."
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter",
+            "description": "Quarter 1-4."
+          },
+          "industry_code": {
+            "type": "string",
+            "title": "Industry Code",
+            "description": "NAICS code data was returned for."
+          },
+          "requested_industry": {
+            "type": "string",
+            "title": "Requested Industry",
+            "description": "The NAICS code originally requested."
+          },
+          "match_precision": {
+            "type": "string",
+            "title": "Match Precision",
+            "description": "Granularity level of returned data."
+          },
+          "ownership": {
+            "type": "string",
+            "title": "Ownership",
+            "description": "Human-readable ownership type."
+          },
+          "total_quarterly_wages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Quarterly Wages",
+            "description": "Total wages paid in the quarter."
+          },
+          "avg_weekly_wage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Weekly Wage",
+            "description": "Average weekly wage."
+          },
+          "wage_yoy_change": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wage Yoy Change",
+            "description": "Year-over-year average weekly wage change (absolute)."
+          },
+          "wage_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wage Yoy Pct",
+            "description": "Year-over-year average weekly wage change (percent)."
+          },
+          "total_wages_yoy_change": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Wages Yoy Change",
+            "description": "Year-over-year total quarterly wages change (absolute)."
+          },
+          "total_wages_yoy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Wages Yoy Pct",
+            "description": "Year-over-year total quarterly wages change (percent)."
+          },
+          "location_quotient_employment": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Quotient Employment",
+            "description": "Location quotient for employment (industry concentration vs national average)."
+          },
+          "location_quotient_wages": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Quotient Wages",
+            "description": "Location quotient for average weekly wage."
+          },
+          "location_quotient_establishments": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Quotient Establishments",
+            "description": "Location quotient for establishment count."
+          }
+        },
+        "type": "object",
+        "required": [
+          "area_fips",
+          "year",
+          "quarter",
+          "industry_code",
+          "requested_industry",
+          "match_precision",
+          "ownership"
+        ],
+        "title": "QcewWages",
+        "description": "QCEW county-level wage snapshot."
+      },
       "RatioMetadata": {
         "properties": {
           "filing_accession": {
@@ -9270,6 +13101,27 @@
         "title": "RatioValues",
         "description": "All computed financial ratios."
       },
+      "RelatedOccupation": {
+        "properties": {
+          "soc_code": {
+            "type": "string",
+            "title": "Soc Code",
+            "description": "SOC code."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Occupation title."
+          }
+        },
+        "type": "object",
+        "required": [
+          "soc_code",
+          "title"
+        ],
+        "title": "RelatedOccupation",
+        "description": "Related occupation in the same major group."
+      },
       "ScreenerFinancials": {
         "properties": {
           "revenue": {
@@ -9361,66 +13213,13 @@
         "title": "ScreenerFinancials",
         "description": "Raw financial fields from the company's latest annual fiscal year."
       },
+      "ScreenerResponse": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ScreenerResultItem": {
-        "properties": {
-          "cik": {
-            "type": "string",
-            "title": "Cik",
-            "description": "SEC Central Index Key, zero-padded to 10 digits."
-          },
-          "ticker": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ticker",
-            "description": "Trading ticker symbol, if available."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Company name as registered with the SEC."
-          },
-          "company_tier": {
-            "type": "string",
-            "enum": [
-              "sp500",
-              "russell1000",
-              "russell2000",
-              "other"
-            ],
-            "title": "Company Tier",
-            "description": "Index membership tier."
-          },
-          "fiscal_year": {
-            "type": "integer",
-            "title": "Fiscal Year",
-            "description": "Fiscal year of the most recent annual ratio data for this company."
-          },
-          "financials": {
-            "$ref": "#/components/schemas/ScreenerFinancials",
-            "description": "Raw financial fields from the company's latest annual fiscal year."
-          },
-          "ratios": {
-            "$ref": "#/components/schemas/RatioValues",
-            "description": "Computed financial ratios for this company."
-          }
-        },
-        "type": "object",
-        "required": [
-          "cik",
-          "name",
-          "company_tier",
-          "fiscal_year",
-          "financials",
-          "ratios"
-        ],
-        "title": "ScreenerResultItem",
-        "description": "A single company in screener results."
+        "additionalProperties": true,
+        "type": "object"
       },
       "SearchPaginatedResponse": {
         "properties": {
@@ -11016,6 +14815,48 @@
         },
         "type": "object",
         "title": "WebhookUpdateRequest"
+      },
+      "src__api__schemas__bls_industry__YearRange": {
+        "properties": {
+          "min": {
+            "type": "integer",
+            "title": "Min",
+            "description": "Earliest year with data."
+          },
+          "max": {
+            "type": "integer",
+            "title": "Max",
+            "description": "Latest year with data."
+          }
+        },
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "YearRange",
+        "description": "Min/max year range for a dataset."
+      },
+      "src__api__schemas__bls_occupation__YearRange": {
+        "properties": {
+          "min": {
+            "type": "integer",
+            "title": "Min",
+            "description": "Earliest year with data."
+          },
+          "max": {
+            "type": "integer",
+            "title": "Max",
+            "description": "Latest year with data."
+          }
+        },
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "YearRange",
+        "description": "Min/max year range for OEWS data."
       }
     }
   },
@@ -11081,6 +14922,30 @@
       "description": "Semantic search across filing sections and company data."
     },
     {
+      "name": "Data Export",
+      "description": "Bulk streaming downloads of complete SEC datasets in JSONL or CSV format."
+    },
+    {
+      "name": "BLS Industries",
+      "description": "NAICS industry lookup and hierarchy."
+    },
+    {
+      "name": "BLS Employment",
+      "description": "CES monthly employment, hours, and earnings by industry."
+    },
+    {
+      "name": "BLS Occupations",
+      "description": "OEWS occupation wages by industry and geography."
+    },
+    {
+      "name": "BLS Counties",
+      "description": "QCEW county-level employment and wages."
+    },
+    {
+      "name": "BLS Metrics",
+      "description": "BLS metric definitions and available data series."
+    },
+    {
       "name": "Census Geographies",
       "description": "US Census geographic hierarchies \u2014 states, counties, and ZIPs."
     },
@@ -11127,7 +14992,8 @@
         "Compensation",
         "Proxy Votes",
         "Sections",
-        "Search"
+        "Search",
+        "Data Export"
       ]
     },
     {
@@ -11137,6 +15003,16 @@
         "Census Metrics",
         "Census Places",
         "Census Breakdowns"
+      ]
+    },
+    {
+      "name": "Bureau of Labor Statistics",
+      "tags": [
+        "BLS Industries",
+        "BLS Employment",
+        "BLS Counties",
+        "BLS Occupations",
+        "BLS Metrics"
       ]
     },
     {

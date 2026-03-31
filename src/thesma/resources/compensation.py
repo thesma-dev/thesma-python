@@ -19,6 +19,7 @@ class Compensation:
         cik: str,
         *,
         year: int | None = None,
+        include: str | None = None,
     ) -> DataResponse[CompensationResponse]:
         """Get executive compensation for a company.
 
@@ -26,6 +27,7 @@ class Compensation:
         """
         params: dict[str, Any] = {
             "year": year,
+            "include": include,
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",

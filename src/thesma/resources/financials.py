@@ -22,6 +22,7 @@ class Financials:
         period: str | None = None,
         year: int | None = None,
         quarter: int | None = None,
+        include: str | None = None,
     ) -> DataResponse[FinancialStatementResponse]:
         """Get a financial statement for a company.
 
@@ -32,6 +33,7 @@ class Financials:
             "period": period,
             "year": year,
             "quarter": quarter,
+            "include": include,
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",

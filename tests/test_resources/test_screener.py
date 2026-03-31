@@ -191,9 +191,9 @@ class TestScreenerEnhancements:
         result = client.screener.screen()
 
         item = result.data[0]
-        assert item.financials.revenue == 383285000000
-        assert item.financials.eps_diluted == 6.08
-        assert item.financials.institutional_ownership_pct == 62.5
+        assert item.financials["revenue"] == 383285000000
+        assert item.financials["eps_diluted"] == 6.08
+        assert item.financials["institutional_ownership_pct"] == 62.5
         client.close()
 
     @respx.mock
@@ -205,13 +205,13 @@ class TestScreenerEnhancements:
         result = client.screener.screen()
 
         item = result.data[0]
-        assert item.financials.revenue is None
-        assert item.financials.net_income is None
-        assert item.financials.eps_diluted is None
-        assert item.financials.common_shares_outstanding is None
-        assert item.financials.total_equity is None
-        assert item.financials.dividends_paid is None
-        assert item.financials.institutional_ownership_pct is None
+        assert item.financials["revenue"] is None
+        assert item.financials["net_income"] is None
+        assert item.financials["eps_diluted"] is None
+        assert item.financials["common_shares_outstanding"] is None
+        assert item.financials["total_equity"] is None
+        assert item.financials["dividends_paid"] is None
+        assert item.financials["institutional_ownership_pct"] is None
         client.close()
 
     @respx.mock
@@ -222,7 +222,7 @@ class TestScreenerEnhancements:
         client = ThesmaClient(api_key=api_key)
         result = client.screener.screen()
 
-        assert result.data[0].financials.dividends_paid == -15025000000
+        assert result.data[0].financials["dividends_paid"] == -15025000000
         client.close()
 
     @respx.mock
@@ -233,5 +233,58 @@ class TestScreenerEnhancements:
         client = ThesmaClient(api_key=api_key)
         result = client.screener.screen()
 
-        assert result.data[0].ratios.gross_margin == 46.2
+        assert result.data[0].ratios["gross_margin"] == 46.2
+        client.close()
+
+
+class TestScreenerBlsFilters:
+    @respx.mock
+    def test_screener_bls_filters(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(
+            industry_hiring_trend="stable",
+            min_industry_employment_growth=1.0,
+            max_industry_employment_growth=5.0,
+            min_industry_wage_growth=2.0,
+            min_hq_county_wage_growth=1.5,
+            min_comp_to_market_ratio=10.0,
+        )
+
+        url_str = str(route.calls.last.request.url)
+        assert "industry_hiring_trend=stable" in url_str
+        assert "min_industry_employment_growth=1.0" in url_str
+        assert "max_industry_employment_growth=5.0" in url_str
+        assert "min_industry_wage_growth=2.0" in url_str
+        assert "min_hq_county_wage_growth=1.5" in url_str
+        assert "min_comp_to_market_ratio=10.0" in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_bls_filters_omitted_when_none(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen()
+
+        url_str = str(route.calls.last.request.url)
+        assert "industry_hiring_trend" not in url_str
+        assert "min_industry_employment_growth" not in url_str
+        assert "min_comp_to_market_ratio" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_bls_filters_mixed_with_sec(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_revenue=1000000, industry_hiring_trend="accelerating")
+
+        url_str = str(route.calls.last.request.url)
+        assert "min_revenue=1000000" in url_str
+        assert "industry_hiring_trend=accelerating" in url_str
         client.close()

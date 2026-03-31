@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from thesma._generated.models import CompanyListItem, CompanyResponse
+from thesma._generated.models import CompanyListItem, EnrichedCompanyData
 from thesma._types import DataResponse, PaginatedResponse
 
 
@@ -47,13 +47,15 @@ class Companies:
             response_model=PaginatedResponse[CompanyListItem],
         )
 
-    def get(self, cik: str) -> DataResponse[CompanyResponse]:
+    def get(self, cik: str, *, include: str | None = None) -> DataResponse[EnrichedCompanyData]:
         """Get a single company by CIK.
 
         ``GET /v1/us/sec/companies/{cik}``
         """
+        params: dict[str, Any] = {"include": include}
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
             f"/v1/us/sec/companies/{cik}",
-            response_model=DataResponse[CompanyResponse],
+            params=params,
+            response_model=DataResponse[EnrichedCompanyData],
         )
