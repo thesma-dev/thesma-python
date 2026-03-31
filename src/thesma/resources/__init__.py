@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from thesma.resources.beneficial_ownership import BeneficialOwnership
+from thesma.resources.bls import Bls
 from thesma.resources.census import Census
 from thesma.resources.companies import Companies
 from thesma.resources.compensation import Compensation
@@ -20,6 +21,7 @@ from thesma.resources.webhooks import Webhooks
 __all__ = [
     "AsyncExport",
     "BeneficialOwnership",
+    "Bls",
     "Census",
     "Companies",
     "Compensation",

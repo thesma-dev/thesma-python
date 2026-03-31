@@ -42,11 +42,12 @@ def companies_list(
 
 @companies_group.command("get")
 @click.argument("cik")
+@click.option("--include", default=None, help="Include enrichment (e.g. labor_context).")
 @click.pass_context
-def companies_get(ctx: click.Context, cik: str) -> None:
+def companies_get(ctx: click.Context, cik: str, include: str | None) -> None:
     """Get a single company by CIK."""
     client = get_client(ctx)
-    result = client.companies.get(cik)
+    result = client.companies.get(cik, include=include)
     fmt = ctx.obj["format"]
     if fmt == "json":
         output(result, fmt, ())

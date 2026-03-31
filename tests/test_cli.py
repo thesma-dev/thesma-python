@@ -169,7 +169,15 @@ class TestCompaniesGet:
         mock_client = _make_mock_client()
         result = _invoke(runner, ["companies", "get", "0000320193"], mock_client, fmt="json")
         assert result.exit_code == 0
-        mock_client.companies.get.assert_called_once_with("0000320193")
+        mock_client.companies.get.assert_called_once_with("0000320193", include=None)
+
+    def test_cli_companies_get_include(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner, ["companies", "get", "0000320193", "--include", "labor_context"], mock_client, fmt="json"
+        )
+        assert result.exit_code == 0
+        mock_client.companies.get.assert_called_once_with("0000320193", include="labor_context")
 
 
 # --- Error handling ---
@@ -256,6 +264,32 @@ class TestScreenerScreen:
         assert result.exit_code == 0
         call_kwargs = mock_client.screener.screen.call_args
         assert call_kwargs.kwargs.get("has_institutional_increase") is True
+
+    def test_cli_screener_bls_options(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            [
+                "screener",
+                "screen",
+                "--industry-hiring-trend",
+                "stable",
+                "--min-comp-to-market-ratio",
+                "50",
+            ],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("industry_hiring_trend") == "stable"
+        assert call_kwargs.kwargs.get("min_comp_to_market_ratio") == 50.0
+
+    def test_cli_screener_help_shows_bls_options(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "--industry-hiring-trend" in result.output
+        assert "--min-comp-to-market-ratio" in result.output
+        assert "--min-hq-county-wage-growth" in result.output
 
 
 # --- Insider trades CLI ---

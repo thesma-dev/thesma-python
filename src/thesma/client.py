@@ -18,6 +18,7 @@ from thesma.errors import ConnectionError as ThesmaConnectionError
 from thesma.errors import ExportInProgressError, raise_for_status
 from thesma.errors import TimeoutError as ThesmaTimeoutError
 from thesma.resources.beneficial_ownership import BeneficialOwnership
+from thesma.resources.bls import Bls
 from thesma.resources.census import Census
 from thesma.resources.companies import Companies
 from thesma.resources.compensation import Compensation
@@ -78,6 +79,7 @@ class ThesmaClient:
         self._lock = threading.Lock()
 
         self.beneficial_ownership = BeneficialOwnership(self)
+        self.bls = Bls(self)
         self.census = Census(self)
         self.companies = Companies(self)
         self.compensation = Compensation(self)
@@ -240,6 +242,7 @@ class AsyncThesmaClient:
         self._closed = False
 
         self.beneficial_ownership = BeneficialOwnership(self)
+        self.bls = Bls(self)
         self.census = Census(self)
         self.companies = Companies(self)
         self.compensation = Compensation(self)

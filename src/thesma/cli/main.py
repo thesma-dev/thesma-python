@@ -8,6 +8,7 @@ import sys
 import click
 
 from thesma._version import __version__
+from thesma.cli.commands.bls import bls_group
 from thesma.cli.commands.census import census_group
 from thesma.cli.commands.companies import companies_group
 from thesma.cli.commands.events import events_group
@@ -52,6 +53,7 @@ def cli(ctx: click.Context, api_key: str | None, output_format: str, base_url: s
 
 
 # Register all command groups
+cli.add_command(bls_group)
 cli.add_command(companies_group)
 cli.add_command(financials_group)
 cli.add_command(filings_group)

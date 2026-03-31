@@ -92,6 +92,20 @@ class TestCompensationGet:
         client.close()
 
 
+class TestCompensationGetInclude:
+    @respx.mock
+    def test_get_with_include(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/executive-compensation").mock(
+            return_value=httpx.Response(200, json=COMPENSATION_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.compensation.get("0000320193", include="labor_context")
+
+        request = route.calls.last.request
+        assert "include=labor_context" in str(request.url)
+        client.close()
+
+
 class TestCompensationBoard:
     @respx.mock
     def test_board(self, api_key: str) -> None:

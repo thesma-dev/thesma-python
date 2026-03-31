@@ -34,6 +34,17 @@ def screener_group() -> None:
     help="Insider buying lookback days. Requires --has-insider-buying.",
 )
 @click.option("--has-institutional-increase", default=None, type=bool, help="Filter for institutional increase.")
+@click.option(
+    "--industry-hiring-trend",
+    default=None,
+    type=click.Choice(["accelerating", "decelerating", "stable", "declining"], case_sensitive=False),
+    help="Filter by industry hiring trend.",
+)
+@click.option("--min-industry-employment-growth", default=None, type=float, help="Min industry employment growth %%.")
+@click.option("--max-industry-employment-growth", default=None, type=float, help="Max industry employment growth %%.")
+@click.option("--min-industry-wage-growth", default=None, type=float, help="Min industry wage growth %%.")
+@click.option("--min-hq-county-wage-growth", default=None, type=float, help="Min HQ county wage growth %%.")
+@click.option("--min-comp-to-market-ratio", default=None, type=float, help="Min CEO comp-to-market ratio.")
 @click.option("--sort-by", default=None, help="Sort by field.")
 @click.option("--order", default=None, help="Sort order (asc, desc).")
 @click.option("--page", default=1, type=int, help="Page number.")
@@ -54,6 +65,12 @@ def screener_screen(
     has_insider_buying: bool | None,
     insider_buying_days: str | None,
     has_institutional_increase: bool | None,
+    industry_hiring_trend: str | None,
+    min_industry_employment_growth: float | None,
+    max_industry_employment_growth: float | None,
+    min_industry_wage_growth: float | None,
+    min_hq_county_wage_growth: float | None,
+    min_comp_to_market_ratio: float | None,
     sort_by: str | None,
     order: str | None,
     page: int,
@@ -75,6 +92,12 @@ def screener_screen(
         has_insider_buying=has_insider_buying,
         insider_buying_days=insider_buying_days,
         has_institutional_increase=has_institutional_increase,
+        industry_hiring_trend=industry_hiring_trend,
+        min_industry_employment_growth=min_industry_employment_growth,
+        max_industry_employment_growth=max_industry_employment_growth,
+        min_industry_wage_growth=min_industry_wage_growth,
+        min_hq_county_wage_growth=min_hq_county_wage_growth,
+        min_comp_to_market_ratio=min_comp_to_market_ratio,
         sort_by=sort_by,
         order=order,
         page=page,
