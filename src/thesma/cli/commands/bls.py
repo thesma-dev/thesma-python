@@ -20,6 +20,7 @@ COUNTY_EMPLOYMENT_COLUMNS = (
 OCCUPATION_LIST_COLUMNS = ("soc_code", "title", "major_group")
 OCCUPATION_WAGES_COLUMNS = ("area_name", "reference_year", "median_annual_wage", "mean_annual_wage", "employment")
 METRIC_LIST_COLUMNS = ("canonical_name", "display_name", "category", "source_dataset")
+TURNOVER_COLUMNS = ("period", "job_openings", "hires", "quits", "total_separations")
 
 
 @click.group("bls")
@@ -283,3 +284,185 @@ def bls_metric(ctx: click.Context, metric: str) -> None:
         data = result.data.model_dump(mode="json")
         rows = [{"field": k, "value": v} for k, v in data.items()]
         output(rows, fmt, ("field", "value"))
+
+
+# --- Turnover data (JOLTS) ---
+
+
+@bls_group.command("turnover")
+@click.argument("naics")
+@click.option("--from", "from_date", default=None, help="Start date (YYYY-MM).")
+@click.option("--to", "to_date", default=None, help="End date (YYYY-MM).")
+@click.option(
+    "--adjustment", default="sa", type=click.Choice(["sa", "nsa"], case_sensitive=False), help="Seasonal adjustment."
+)
+@click.option("--measures", default=None, help="Comma-separated measures to include.")
+@click.option("--rate-or-level", default="both", help="Return rate, level, or both.")
+@click.option("--page", default=1, type=int, help="Page number.")
+@click.option("--per-page", default=25, type=int, help="Results per page.")
+@click.pass_context
+def bls_turnover(
+    ctx: click.Context,
+    naics: str,
+    from_date: str | None,
+    to_date: str | None,
+    adjustment: str,
+    measures: str | None,
+    rate_or_level: str,
+    page: int,
+    per_page: int,
+) -> None:
+    """Get JOLTS industry turnover time series."""
+    client = get_client(ctx)
+    result = client.bls.turnover(
+        naics,
+        from_date=from_date,
+        to_date=to_date,
+        adjustment=adjustment,
+        measures=measures,
+        rate_or_level=rate_or_level,
+        page=page,
+        per_page=per_page,
+    )
+    output(result.data, ctx.obj["format"], TURNOVER_COLUMNS)
+
+
+@bls_group.command("turnover-latest")
+@click.argument("naics")
+@click.option(
+    "--adjustment", default="sa", type=click.Choice(["sa", "nsa"], case_sensitive=False), help="Seasonal adjustment."
+)
+@click.option("--measures", default=None, help="Comma-separated measures to include.")
+@click.option("--rate-or-level", default="both", help="Return rate, level, or both.")
+@click.pass_context
+def bls_turnover_latest(
+    ctx: click.Context,
+    naics: str,
+    adjustment: str,
+    measures: str | None,
+    rate_or_level: str,
+) -> None:
+    """Get latest JOLTS turnover observation for an industry."""
+    client = get_client(ctx)
+    result = client.bls.turnover_latest(naics, adjustment=adjustment, measures=measures, rate_or_level=rate_or_level)
+    fmt = ctx.obj["format"]
+    if fmt == "json":
+        output(result, fmt, ())
+    else:
+        data = result.data.model_dump(mode="json")
+        rows = [{"field": k, "value": v} for k, v in data.items()]
+        output(rows, fmt, ("field", "value"))
+
+
+@bls_group.command("state-turnover")
+@click.argument("fips")
+@click.option("--from", "from_date", default=None, help="Start date (YYYY-MM).")
+@click.option("--to", "to_date", default=None, help="End date (YYYY-MM).")
+@click.option(
+    "--adjustment", default="sa", type=click.Choice(["sa", "nsa"], case_sensitive=False), help="Seasonal adjustment."
+)
+@click.option("--measures", default=None, help="Comma-separated measures to include.")
+@click.option("--rate-or-level", default="both", help="Return rate, level, or both.")
+@click.option("--page", default=1, type=int, help="Page number.")
+@click.option("--per-page", default=25, type=int, help="Results per page.")
+@click.pass_context
+def bls_state_turnover(
+    ctx: click.Context,
+    fips: str,
+    from_date: str | None,
+    to_date: str | None,
+    adjustment: str,
+    measures: str | None,
+    rate_or_level: str,
+    page: int,
+    per_page: int,
+) -> None:
+    """Get state-level JOLTS turnover data."""
+    client = get_client(ctx)
+    result = client.bls.state_turnover(
+        fips,
+        from_date=from_date,
+        to_date=to_date,
+        adjustment=adjustment,
+        measures=measures,
+        rate_or_level=rate_or_level,
+        page=page,
+        per_page=per_page,
+    )
+    output(result.data, ctx.obj["format"], TURNOVER_COLUMNS)
+
+
+@bls_group.command("regional-turnover")
+@click.argument("region")
+@click.option("--from", "from_date", default=None, help="Start date (YYYY-MM).")
+@click.option("--to", "to_date", default=None, help="End date (YYYY-MM).")
+@click.option(
+    "--adjustment", default="sa", type=click.Choice(["sa", "nsa"], case_sensitive=False), help="Seasonal adjustment."
+)
+@click.option("--measures", default=None, help="Comma-separated measures to include.")
+@click.option("--rate-or-level", default="both", help="Return rate, level, or both.")
+@click.option("--page", default=1, type=int, help="Page number.")
+@click.option("--per-page", default=25, type=int, help="Results per page.")
+@click.pass_context
+def bls_regional_turnover(
+    ctx: click.Context,
+    region: str,
+    from_date: str | None,
+    to_date: str | None,
+    adjustment: str,
+    measures: str | None,
+    rate_or_level: str,
+    page: int,
+    per_page: int,
+) -> None:
+    """Get regional JOLTS turnover data."""
+    client = get_client(ctx)
+    result = client.bls.regional_turnover(
+        region,
+        from_date=from_date,
+        to_date=to_date,
+        adjustment=adjustment,
+        measures=measures,
+        rate_or_level=rate_or_level,
+        page=page,
+        per_page=per_page,
+    )
+    output(result.data, ctx.obj["format"], TURNOVER_COLUMNS)
+
+
+@bls_group.command("turnover-by-size")
+@click.option("--from", "from_date", default=None, help="Start date (YYYY-MM).")
+@click.option("--to", "to_date", default=None, help="End date (YYYY-MM).")
+@click.option(
+    "--adjustment", default="sa", type=click.Choice(["sa", "nsa"], case_sensitive=False), help="Seasonal adjustment."
+)
+@click.option("--measures", default=None, help="Comma-separated measures to include.")
+@click.option("--rate-or-level", default="both", help="Return rate, level, or both.")
+@click.option("--size", default=None, help="Establishment size class (e.g. 1-9, 10-49, 5000+).")
+@click.option("--page", default=1, type=int, help="Page number.")
+@click.option("--per-page", default=25, type=int, help="Results per page.")
+@click.pass_context
+def bls_turnover_by_size(
+    ctx: click.Context,
+    from_date: str | None,
+    to_date: str | None,
+    adjustment: str,
+    measures: str | None,
+    rate_or_level: str,
+    size: str | None,
+    page: int,
+    per_page: int,
+) -> None:
+    """Get national JOLTS turnover by establishment size class."""
+    client = get_client(ctx)
+    result = client.bls.turnover_by_size(
+        from_date=from_date,
+        to_date=to_date,
+        adjustment=adjustment,
+        measures=measures,
+        rate_or_level=rate_or_level,
+        size=size,
+        page=page,
+        per_page=per_page,
+    )
+    output(result.data, ctx.obj["format"], TURNOVER_COLUMNS)

@@ -169,6 +169,77 @@ def _make_bls_mock_client() -> MagicMock:
     metric_response.data = metric_detail
     client.bls.metric.return_value = metric_response
 
+    # --- SDK-16 mocks (JOLTS turnover) ---
+
+    # turnover() -> PaginatedResponse with .data as list of dicts
+    turnover_response = MagicMock()
+    turnover_response.data = [
+        {
+            "period": "2024-06",
+            "job_openings": 8500,
+            "hires": 5800,
+            "quits": 3600,
+            "total_separations": 5200,
+        },
+    ]
+    client.bls.turnover.return_value = turnover_response
+
+    # turnover_latest() -> DataResponse with .data as mock model
+    turnover_latest_detail = MagicMock()
+    turnover_latest_detail.model_dump.return_value = {
+        "year": 2024,
+        "month": 12,
+        "period": "2024-12",
+        "job_openings": 8700,
+        "hires": 5900,
+        "quits": 3700,
+        "total_separations": 5300,
+        "adjustment": "sa",
+        "naics_code": "000000",
+    }
+    turnover_latest_response = MagicMock()
+    turnover_latest_response.data = turnover_latest_detail
+    client.bls.turnover_latest.return_value = turnover_latest_response
+
+    # state_turnover() -> PaginatedResponse with .data as list of dicts
+    state_turnover_response = MagicMock()
+    state_turnover_response.data = [
+        {
+            "period": "2024-09",
+            "job_openings": 4200,
+            "hires": 2900,
+            "quits": 1800,
+            "total_separations": 2600,
+        },
+    ]
+    client.bls.state_turnover.return_value = state_turnover_response
+
+    # regional_turnover() -> PaginatedResponse with .data as list of dicts
+    regional_turnover_response = MagicMock()
+    regional_turnover_response.data = [
+        {
+            "period": "2024-03",
+            "job_openings": 2100,
+            "hires": 1450,
+            "quits": 920,
+            "total_separations": 1300,
+        },
+    ]
+    client.bls.regional_turnover.return_value = regional_turnover_response
+
+    # turnover_by_size() -> PaginatedResponse with .data as list of dicts
+    turnover_by_size_response = MagicMock()
+    turnover_by_size_response.data = [
+        {
+            "period": "2024-06",
+            "job_openings": 3100,
+            "hires": 2200,
+            "quits": 1400,
+            "total_separations": 1950,
+        },
+    ]
+    client.bls.turnover_by_size.return_value = turnover_by_size_response
+
     return client
 
 
@@ -247,3 +318,63 @@ class TestBlsCliSdk14:
         result = _invoke(runner, ["bls", "metric", "total_employment:ces"], mock_client)
         assert result.exit_code == 0
         assert "Total Employment" in result.output
+
+
+class TestBlsCliSdk16:
+    def test_turnover_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "turnover", "000000", "--from", "2024-01", "--to", "2024-12"], mock_client)
+        assert result.exit_code == 0
+        assert "8500" in result.output
+
+    def test_turnover_latest_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "turnover-latest", "000000"], mock_client)
+        assert result.exit_code == 0
+        assert "8700" in result.output
+
+    def test_state_turnover_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "state-turnover", "06"], mock_client)
+        assert result.exit_code == 0
+        assert "4200" in result.output
+
+    def test_regional_turnover_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "regional-turnover", "northeast"], mock_client)
+        assert result.exit_code == 0
+        assert "2100" in result.output
+
+    def test_turnover_by_size_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "turnover-by-size"], mock_client)
+        assert result.exit_code == 0
+        assert "3100" in result.output
+
+
+class TestValidateDateRange:
+    def test_from_without_to_raises(self) -> None:
+        from thesma.resources.bls import Bls
+
+        bls = Bls(client=MagicMock())
+        with pytest.raises(ValueError, match="Both from_date and to_date are required"):
+            bls._validate_date_range(from_date="2024-01", to_date=None)
+
+    def test_to_without_from_raises(self) -> None:
+        from thesma.resources.bls import Bls
+
+        bls = Bls(client=MagicMock())
+        with pytest.raises(ValueError, match="Both from_date and to_date are required"):
+            bls._validate_date_range(from_date=None, to_date="2024-12")
+
+    def test_both_provided_passes(self) -> None:
+        from thesma.resources.bls import Bls
+
+        bls = Bls(client=MagicMock())
+        bls._validate_date_range(from_date="2024-01", to_date="2024-12")  # should not raise
+
+    def test_both_none_passes(self) -> None:
+        from thesma.resources.bls import Bls
+
+        bls = Bls(client=MagicMock())
+        bls._validate_date_range(from_date=None, to_date=None)  # should not raise

@@ -11,6 +11,11 @@ from thesma._generated.models import (
     BlsMetricSummary,
     CesEmploymentLatest,
     CesEmploymentPoint,
+    JoltsRegionTurnoverPoint,
+    JoltsSizeClassPoint,
+    JoltsStateTurnoverPoint,
+    JoltsTurnoverLatest,
+    JoltsTurnoverPoint,
     OccupationDetail,
     OccupationSummary,
     OccupationWages,
@@ -278,4 +283,167 @@ class Bls:
             "GET",
             f"/v1/us/bls/metrics/{metric}",
             response_model=DataResponse[BlsMetricDetail],
+        )
+
+    # --- Turnover data (JOLTS) ---
+
+    def _validate_date_range(self, from_date: str | None, to_date: str | None) -> None:
+        if (from_date is None) != (to_date is None):
+            raise ValueError("Both from_date and to_date are required for a time series")
+
+    def turnover(
+        self,
+        naics: str,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        adjustment: str = "sa",
+        measures: str | None = None,
+        rate_or_level: str = "both",
+        page: int = 1,
+        per_page: int = 25,
+    ) -> PaginatedResponse[JoltsTurnoverPoint]:
+        """Get JOLTS industry turnover time series.
+
+        ``GET /v1/us/bls/industries/{naics}/turnover``
+        """
+        self._validate_date_range(from_date, to_date)
+        params = {
+            "from": from_date,
+            "to": to_date,
+            "adjustment": adjustment,
+            "measures": measures,
+            "rate_or_level": rate_or_level,
+            "page": page,
+            "per_page": per_page,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            f"/v1/us/bls/industries/{naics}/turnover",
+            params=params,
+            response_model=PaginatedResponse[JoltsTurnoverPoint],
+        )
+
+    def turnover_latest(
+        self,
+        naics: str,
+        *,
+        adjustment: str = "sa",
+        measures: str | None = None,
+        rate_or_level: str = "both",
+    ) -> DataResponse[JoltsTurnoverLatest]:
+        """Get latest JOLTS turnover observation for an industry.
+
+        ``GET /v1/us/bls/industries/{naics}/turnover/latest``
+        """
+        params = {
+            "adjustment": adjustment,
+            "measures": measures,
+            "rate_or_level": rate_or_level,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            f"/v1/us/bls/industries/{naics}/turnover/latest",
+            params=params,
+            response_model=DataResponse[JoltsTurnoverLatest],
+        )
+
+    def state_turnover(
+        self,
+        fips: str,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        adjustment: str = "sa",
+        measures: str | None = None,
+        rate_or_level: str = "both",
+        page: int = 1,
+        per_page: int = 25,
+    ) -> PaginatedResponse[JoltsStateTurnoverPoint]:
+        """Get state-level JOLTS turnover data.
+
+        ``GET /v1/us/bls/states/{fips}/turnover``
+        """
+        self._validate_date_range(from_date, to_date)
+        params = {
+            "from": from_date,
+            "to": to_date,
+            "adjustment": adjustment,
+            "measures": measures,
+            "rate_or_level": rate_or_level,
+            "page": page,
+            "per_page": per_page,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            f"/v1/us/bls/states/{fips}/turnover",
+            params=params,
+            response_model=PaginatedResponse[JoltsStateTurnoverPoint],
+        )
+
+    def regional_turnover(
+        self,
+        region: str,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        adjustment: str = "sa",
+        measures: str | None = None,
+        rate_or_level: str = "both",
+        page: int = 1,
+        per_page: int = 25,
+    ) -> PaginatedResponse[JoltsRegionTurnoverPoint]:
+        """Get regional JOLTS turnover data.
+
+        ``GET /v1/us/bls/regions/{region}/turnover``
+        """
+        self._validate_date_range(from_date, to_date)
+        params = {
+            "from": from_date,
+            "to": to_date,
+            "adjustment": adjustment,
+            "measures": measures,
+            "rate_or_level": rate_or_level,
+            "page": page,
+            "per_page": per_page,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            f"/v1/us/bls/regions/{region}/turnover",
+            params=params,
+            response_model=PaginatedResponse[JoltsRegionTurnoverPoint],
+        )
+
+    def turnover_by_size(
+        self,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        adjustment: str = "sa",
+        measures: str | None = None,
+        rate_or_level: str = "both",
+        size: str | None = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> PaginatedResponse[JoltsSizeClassPoint]:
+        """Get national JOLTS turnover by establishment size class.
+
+        ``GET /v1/us/bls/turnover/by-size``
+        """
+        self._validate_date_range(from_date, to_date)
+        params = {
+            "from": from_date,
+            "to": to_date,
+            "adjustment": adjustment,
+            "measures": measures,
+            "rate_or_level": rate_or_level,
+            "size": size,
+            "page": page,
+            "per_page": per_page,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            "/v1/us/bls/turnover/by-size",
+            params=params,
+            response_model=PaginatedResponse[JoltsSizeClassPoint],
         )

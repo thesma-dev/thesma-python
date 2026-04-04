@@ -45,6 +45,10 @@ def screener_group() -> None:
 @click.option("--min-industry-wage-growth", default=None, type=float, help="Min industry wage growth %%.")
 @click.option("--min-hq-county-wage-growth", default=None, type=float, help="Min HQ county wage growth %%.")
 @click.option("--min-comp-to-market-ratio", default=None, type=float, help="Min CEO comp-to-market ratio.")
+@click.option("--min-industry-quits-rate", default=None, type=float, help="Min industry quits rate (%%).")
+@click.option("--max-industry-quits-rate", default=None, type=float, help="Max industry quits rate (%%).")
+@click.option("--min-industry-openings-rate", default=None, type=float, help="Min industry job openings rate (%%).")
+@click.option("--max-industry-openings-rate", default=None, type=float, help="Max industry job openings rate (%%).")
 @click.option("--sort-by", default=None, help="Sort by field.")
 @click.option("--order", default=None, help="Sort order (asc, desc).")
 @click.option("--page", default=1, type=int, help="Page number.")
@@ -71,6 +75,10 @@ def screener_screen(
     min_industry_wage_growth: float | None,
     min_hq_county_wage_growth: float | None,
     min_comp_to_market_ratio: float | None,
+    min_industry_quits_rate: float | None,
+    max_industry_quits_rate: float | None,
+    min_industry_openings_rate: float | None,
+    max_industry_openings_rate: float | None,
     sort_by: str | None,
     order: str | None,
     page: int,
@@ -98,6 +106,10 @@ def screener_screen(
         min_industry_wage_growth=min_industry_wage_growth,
         min_hq_county_wage_growth=min_hq_county_wage_growth,
         min_comp_to_market_ratio=min_comp_to_market_ratio,
+        min_industry_quits_rate=min_industry_quits_rate,
+        max_industry_quits_rate=max_industry_quits_rate,
+        min_industry_openings_rate=min_industry_openings_rate,
+        max_industry_openings_rate=max_industry_openings_rate,
         sort_by=sort_by,
         order=order,
         page=page,
