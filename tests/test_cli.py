@@ -291,6 +291,40 @@ class TestScreenerScreen:
         assert "--min-comp-to-market-ratio" in result.output
         assert "--min-hq-county-wage-growth" in result.output
 
+    def test_cli_screener_jolts_filters(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            [
+                "screener",
+                "screen",
+                "--min-industry-quits-rate",
+                "2.0",
+                "--max-industry-quits-rate",
+                "4.0",
+                "--min-industry-openings-rate",
+                "3.0",
+                "--max-industry-openings-rate",
+                "6.0",
+            ],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        assert "AAPL" in result.output
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("min_industry_quits_rate") == 2.0
+        assert call_kwargs.kwargs.get("max_industry_quits_rate") == 4.0
+        assert call_kwargs.kwargs.get("min_industry_openings_rate") == 3.0
+        assert call_kwargs.kwargs.get("max_industry_openings_rate") == 6.0
+
+    def test_cli_screener_help_shows_jolts_options(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "--min-industry-quits-rate" in result.output
+        assert "--max-industry-quits-rate" in result.output
+        assert "--min-industry-openings-rate" in result.output
+        assert "--max-industry-openings-rate" in result.output
+
 
 # --- Insider trades CLI ---
 
