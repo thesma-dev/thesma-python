@@ -20,6 +20,7 @@ class Events:
         cik: str,
         *,
         from_date: str | None = None,
+        to_date: str | None = None,
         category: str | None = None,
         page: int = 1,
         per_page: int = 25,
@@ -30,6 +31,7 @@ class Events:
         """
         params: dict[str, Any] = {
             "from": from_date,
+            "to": to_date,
             "category": category,
             "page": page,
             "per_page": per_page,
@@ -45,6 +47,7 @@ class Events:
         self,
         *,
         from_date: str | None = None,
+        to_date: str | None = None,
         category: str | None = None,
         page: int = 1,
         per_page: int = 25,
@@ -55,6 +58,7 @@ class Events:
         """
         params: dict[str, Any] = {
             "from": from_date,
+            "to": to_date,
             "category": category,
             "page": page,
             "per_page": per_page,

@@ -144,6 +144,30 @@ class TestInsiderTradesList:
         assert "person=John" in str(request.url)
         client.close()
 
+    @respx.mock
+    def test_list_with_to_date(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193", to_date="2024-12-31")
+
+        request = route.calls.last.request
+        assert "to=2024-12-31" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_none_to_date_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0000320193")
+
+        request = route.calls.last.request
+        assert "to=" not in str(request.url)
+        client.close()
+
 
 class TestInsiderTradesListAll:
     @respx.mock
@@ -194,4 +218,28 @@ class TestInsiderTradesListAll:
 
         request = route.calls.last.request
         assert "from=" not in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_with_to_date(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list_all(to_date="2024-12-31")
+
+        request = route.calls.last.request
+        assert "to=2024-12-31" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_none_to_date_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list_all()
+
+        request = route.calls.last.request
+        assert "to=" not in str(request.url)
         client.close()

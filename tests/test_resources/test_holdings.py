@@ -155,6 +155,30 @@ class TestFunds:
         assert result.data[0].name == "Vanguard Group Inc"
         client.close()
 
+    @respx.mock
+    def test_funds_with_search(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/funds").mock(
+            return_value=httpx.Response(200, json=PAGINATED_FUNDS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.holdings.funds(search="Vanguard")
+
+        request = route.calls.last.request
+        assert "search=Vanguard" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_funds_none_search_omitted(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/funds").mock(
+            return_value=httpx.Response(200, json=PAGINATED_FUNDS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.holdings.funds()
+
+        request = route.calls.last.request
+        assert "search=" not in str(request.url)
+        client.close()
+
 
 class TestFundHoldings:
     @respx.mock
