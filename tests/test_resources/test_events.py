@@ -110,7 +110,6 @@ class TestEventsList:
         assert "from=" not in str(request.url)
         client.close()
 
-
     @respx.mock
     def test_list_with_to_date(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/events").mock(
@@ -174,7 +173,6 @@ class TestEventsListAll:
         request = route.calls.last.request
         assert "from=" not in str(request.url)
         client.close()
-
 
     @respx.mock
     def test_list_all_with_to_date(self, api_key: str) -> None:

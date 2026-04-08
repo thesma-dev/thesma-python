@@ -155,7 +155,6 @@ class TestFunds:
         assert result.data[0].name == "Vanguard Group Inc"
         client.close()
 
-
     @respx.mock
     def test_funds_with_search(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/funds").mock(

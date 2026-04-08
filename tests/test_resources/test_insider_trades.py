@@ -144,7 +144,6 @@ class TestInsiderTradesList:
         assert "person=John" in str(request.url)
         client.close()
 
-
     @respx.mock
     def test_list_with_to_date(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/insider-trades").mock(
