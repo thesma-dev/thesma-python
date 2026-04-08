@@ -29,11 +29,12 @@ def holdings_holders(ctx: click.Context, cik: str, page: int, per_page: int) -> 
 
 
 @holdings_group.command("funds")
+@click.option("--search", default=None, help="Search funds by name.")
 @click.option("--page", default=1, type=int, help="Page number.")
 @click.option("--per-page", default=25, type=int, help="Results per page.")
 @click.pass_context
-def holdings_funds(ctx: click.Context, page: int, per_page: int) -> None:
+def holdings_funds(ctx: click.Context, search: str | None, page: int, per_page: int) -> None:
     """List institutional funds."""
     client = get_client(ctx)
-    result = client.holdings.funds(page=page, per_page=per_page)
+    result = client.holdings.funds(search=search, page=page, per_page=per_page)
     output(result.data, ctx.obj["format"], FUND_COLUMNS)

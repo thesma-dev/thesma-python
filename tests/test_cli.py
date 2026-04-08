@@ -326,6 +326,22 @@ class TestScreenerScreen:
         assert "--max-industry-openings-rate" in result.output
 
 
+# --- Holdings CLI ---
+
+
+class TestHoldingsCli:
+    def test_holdings_funds_search_flag(self, runner: CliRunner) -> None:
+        mock_client = MagicMock()
+        response = MagicMock()
+        response.data = []
+        mock_client.holdings.funds.return_value = response
+        result = _invoke(runner, ["holdings", "funds", "--search", "Vanguard"], mock_client)
+        assert result.exit_code == 0
+        mock_client.holdings.funds.assert_called_once()
+        call_kwargs = mock_client.holdings.funds.call_args
+        assert call_kwargs.kwargs.get("search") == "Vanguard"
+
+
 # --- Insider trades CLI ---
 
 
@@ -340,6 +356,17 @@ class TestInsiderTradesCli:
         mock_client.insider_trades.list.assert_called_once()
         call_kwargs = mock_client.insider_trades.list.call_args
         assert call_kwargs.kwargs.get("from_date") == "2024-01-01"
+
+    def test_insider_trades_list_to_flag(self, runner: CliRunner) -> None:
+        mock_client = MagicMock()
+        response = MagicMock()
+        response.data = []
+        mock_client.insider_trades.list.return_value = response
+        result = _invoke(runner, ["insider-trades", "list", "0000320193", "--to", "2024-12-31"], mock_client)
+        assert result.exit_code == 0
+        mock_client.insider_trades.list.assert_called_once()
+        call_kwargs = mock_client.insider_trades.list.call_args
+        assert call_kwargs.kwargs.get("to_date") == "2024-12-31"
 
     def test_insider_trades_list_person_flag(self, runner: CliRunner) -> None:
         mock_client = MagicMock()
@@ -367,3 +394,14 @@ class TestEventsCli:
         mock_client.events.list.assert_called_once()
         call_kwargs = mock_client.events.list.call_args
         assert call_kwargs.kwargs.get("from_date") == "2024-01-01"
+
+    def test_events_list_to_flag(self, runner: CliRunner) -> None:
+        mock_client = MagicMock()
+        response = MagicMock()
+        response.data = []
+        mock_client.events.list.return_value = response
+        result = _invoke(runner, ["events", "list", "0000320193", "--to", "2024-12-31"], mock_client)
+        assert result.exit_code == 0
+        mock_client.events.list.assert_called_once()
+        call_kwargs = mock_client.events.list.call_args
+        assert call_kwargs.kwargs.get("to_date") == "2024-12-31"

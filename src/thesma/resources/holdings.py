@@ -69,6 +69,7 @@ class Holdings:
     def funds(
         self,
         *,
+        search: str | None = None,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[FundListItem]:
@@ -77,6 +78,7 @@ class Holdings:
         ``GET /v1/us/sec/funds``
         """
         params: dict[str, Any] = {
+            "search": search,
             "page": page,
             "per_page": per_page,
         }
