@@ -291,6 +291,87 @@ class TestScreenerScreen:
         assert "--min-comp-to-market-ratio" in result.output
         assert "--min-hq-county-wage-growth" in result.output
 
+    def test_cli_screener_min_local_unemployment_rate(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--min-local-unemployment-rate", "2.0"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("min_local_unemployment_rate") == 2.0
+
+    def test_cli_screener_local_unemployment_trend(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--local-unemployment-trend", "improving"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("local_unemployment_trend") == "improving"
+
+    def test_cli_screener_local_unemployment_trend_invalid_value(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--local-unemployment-trend", "foo"],
+            mock_client,
+        )
+        assert result.exit_code != 0
+        # Click's Choice rejects the value before any API call is made.
+        assert mock_client.screener.screen.call_count == 0
+
+    def test_cli_screener_min_local_labor_force_int(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--min-local-labor-force", "500000"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("min_local_labor_force") == 500000
+        assert isinstance(call_kwargs.kwargs.get("min_local_labor_force"), int)
+
+    def test_cli_screener_help_shows_laus_options(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "--min-local-unemployment-rate" in result.output
+        assert "--max-local-unemployment-rate" in result.output
+        assert "--local-unemployment-trend" in result.output
+        assert "--min-local-labor-force" in result.output
+
+    def test_cli_screener_all_laus_options_combined(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            [
+                "screener",
+                "screen",
+                "--min-local-unemployment-rate",
+                "2.0",
+                "--max-local-unemployment-rate",
+                "4.0",
+                "--local-unemployment-trend",
+                "improving",
+                "--min-local-labor-force",
+                "500000",
+                "--tier",
+                "russell1000",
+            ],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("min_local_unemployment_rate") == 2.0
+        assert call_kwargs.kwargs.get("max_local_unemployment_rate") == 4.0
+        assert call_kwargs.kwargs.get("local_unemployment_trend") == "improving"
+        assert call_kwargs.kwargs.get("min_local_labor_force") == 500000
+        assert call_kwargs.kwargs.get("tier") == "russell1000"
+
     def test_cli_screener_jolts_filters(self, runner: CliRunner) -> None:
         mock_client = _make_mock_client()
         result = _invoke(

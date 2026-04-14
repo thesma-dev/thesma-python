@@ -555,6 +555,209 @@
         }
       }
     },
+    "/v1/us/bls/counties/compare": {
+      "get": {
+        "tags": [
+          "BLS Counties"
+        ],
+        "summary": "Compare county unemployment across up to 10 counties (LAUS)",
+        "description": "Compare LAUS unemployment metrics across up to 10 US counties in a single request. County data is always non-seasonally-adjusted. Response is not wrapped in a `DataResponse` envelope: sibling metadata (year, month, national_unemployment_rate, errors) is returned alongside the results list.",
+        "operationId": "compare_counties_v1_us_bls_counties_compare_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated list of 5-digit county FIPS codes (max 10)",
+              "title": "Fips"
+            },
+            "description": "Comma-separated list of 5-digit county FIPS codes (max 10)"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar year; defaults to latest available.",
+              "title": "Year"
+            },
+            "description": "Calendar year; defaults to latest available."
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 13,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Month 1-12, or 13 for annual average; defaults to latest available.",
+              "title": "Month"
+            },
+            "description": "Month 1-12, or 13 for annual average; defaults to latest available."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LausCountyComparisonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/counties/{fips}/unemployment": {
+      "get": {
+        "tags": [
+          "BLS Counties"
+        ],
+        "summary": "County unemployment time series (LAUS)",
+        "description": "Monthly LAUS observations for a single county. County LAUS data is never seasonally adjusted. When `annual_only=true`, only M13 annual-average rows are returned; the month component of `from`/`to` is ignored in that mode and only the year bound applies.",
+        "operationId": "get_county_unemployment_v1_us_bls_counties__fips__unemployment_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "5-digit county FIPS code",
+              "title": "Fips"
+            },
+            "description": "5-digit county FIPS code"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive start period, yyyy-mm",
+              "title": "From"
+            },
+            "description": "Inclusive start period, yyyy-mm"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive end period, yyyy-mm",
+              "title": "To"
+            },
+            "description": "Inclusive end period, yyyy-mm"
+          },
+          {
+            "name": "annual_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Return only M13 annual averages",
+              "default": false,
+              "title": "Annual Only"
+            },
+            "description": "Return only M13 annual averages"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LausCountyObservation_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/us/bls/industries/{naics}/employment": {
       "get": {
         "tags": [
@@ -1432,6 +1635,233 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_OccupationWages_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/states/compare": {
+      "get": {
+        "tags": [
+          "BLS States"
+        ],
+        "summary": "Compare state unemployment across up to 10 states (LAUS)",
+        "description": "Compare LAUS unemployment metrics across up to 10 US states in a single request. Supports seasonally and non-seasonally adjusted series. Response is not wrapped in a `DataResponse` envelope: sibling metadata (year, month, national_unemployment_rate, errors) is returned alongside the results list.",
+        "operationId": "compare_states_v1_us_bls_states_compare_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated list of 2-digit state FIPS codes (max 10)",
+              "title": "Fips"
+            },
+            "description": "Comma-separated list of 2-digit state FIPS codes (max 10)"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Calendar year; defaults to latest available.",
+              "title": "Year"
+            },
+            "description": "Calendar year; defaults to latest available."
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 13,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Month 1-12, or 13 for annual average; defaults to latest available.",
+              "title": "Month"
+            },
+            "description": "Month 1-12, or 13 for annual average; defaults to latest available."
+          },
+          {
+            "name": "adjustment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "'sa' (seasonally adjusted) or 'nsa'.",
+              "default": "sa",
+              "title": "Adjustment"
+            },
+            "description": "'sa' (seasonally adjusted) or 'nsa'."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LausStateComparisonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/bls/states/{fips}/unemployment": {
+      "get": {
+        "tags": [
+          "BLS States"
+        ],
+        "summary": "State unemployment time series (LAUS)",
+        "description": "Monthly LAUS observations for a single state, seasonally or non-seasonally adjusted. When `annual_only=true`, only M13 annual-average rows are returned; the month component of `from`/`to` is ignored in that mode and only the year bound applies.",
+        "operationId": "get_state_unemployment_v1_us_bls_states__fips__unemployment_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "2-digit state FIPS code",
+              "title": "Fips"
+            },
+            "description": "2-digit state FIPS code"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive start period, yyyy-mm",
+              "title": "From"
+            },
+            "description": "Inclusive start period, yyyy-mm"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive end period, yyyy-mm",
+              "title": "To"
+            },
+            "description": "Inclusive end period, yyyy-mm"
+          },
+          {
+            "name": "adjustment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "'sa' (seasonally adjusted) or 'nsa'.",
+              "default": "sa",
+              "title": "Adjustment"
+            },
+            "description": "'sa' (seasonally adjusted) or 'nsa'."
+          },
+          {
+            "name": "annual_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Return only M13 annual averages",
+              "default": false,
+              "title": "Annual Only"
+            },
+            "description": "Return only M13 annual averages"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LausStateObservation_"
                 }
               }
             }
@@ -4047,7 +4477,7 @@
           "Holding Changes"
         ],
         "summary": "List Company Institutional Changes",
-        "description": "List institutional position changes for a company \u2014 which funds are buying/selling.",
+        "description": "List institutional position changes for a company \u2014 which funds are buying/selling.\n\nNote: ``pct_change`` is the percentage change in share count, not market value.",
         "operationId": "list_company_institutional_changes_v1_us_sec_companies__cik__institutional_changes_get",
         "parameters": [
           {
@@ -4153,7 +4583,7 @@
           "Holding Changes"
         ],
         "summary": "List Fund Holding Changes",
-        "description": "List a fund's position changes \u2014 what are they buying/selling.",
+        "description": "List a fund's position changes \u2014 what are they buying/selling.\n\nNote: ``pct_change`` is the percentage change in share count, not market value.",
         "operationId": "list_fund_holding_changes_v1_us_sec_funds__cik__holding_changes_get",
         "parameters": [
           {
@@ -4259,7 +4689,7 @@
           "Holdings"
         ],
         "summary": "List Institutional Holders",
-        "description": "List institutional holders of a company from 13F filings.",
+        "description": "List institutional holders of a company from 13F filings.\n\nReturns one row per (filing, CUSIP, position_type). Sub-manager attribution\nwithin a filing is not exposed; see SEC EDGAR directly for regulatory\nattribution analysis.",
         "operationId": "list_institutional_holders_v1_us_sec_companies__cik__institutional_holders_get",
         "parameters": [
           {
@@ -4347,7 +4777,7 @@
           "Holdings"
         ],
         "summary": "List Fund Holdings",
-        "description": "List a fund's portfolio holdings from 13F filings.",
+        "description": "List a fund's portfolio holdings from 13F filings.\n\nReturns one row per (filing, CUSIP, position_type). Sub-manager attribution\nwithin a filing is not exposed; see SEC EDGAR directly for regulatory\nattribution analysis.",
         "operationId": "list_fund_holdings_v1_us_sec_funds__cik__holdings_get",
         "parameters": [
           {
@@ -6074,6 +6504,78 @@
               "title": "Max Industry Openings Rate"
             },
             "description": "Maximum JOLTS job openings rate (%) in company's industry. Requires BLS dataset."
+          },
+          {
+            "name": "min_local_unemployment_rate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum HQ county unemployment rate (%). Requires BLS dataset.",
+              "title": "Min Local Unemployment Rate"
+            },
+            "description": "Minimum HQ county unemployment rate (%). Requires BLS dataset."
+          },
+          {
+            "name": "max_local_unemployment_rate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum HQ county unemployment rate (%). Requires BLS dataset.",
+              "title": "Max Local Unemployment Rate"
+            },
+            "description": "Maximum HQ county unemployment rate (%). Requires BLS dataset."
+          },
+          {
+            "name": "local_unemployment_trend",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by LAUS trend: improving, stable, worsening. Requires BLS dataset.",
+              "title": "Local Unemployment Trend"
+            },
+            "description": "Filter by LAUS trend: improving, stable, worsening. Requires BLS dataset."
+          },
+          {
+            "name": "min_local_labor_force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum HQ county labour force size. Requires BLS dataset.",
+              "title": "Min Local Labor Force"
+            },
+            "description": "Minimum HQ county labour force size. Requires BLS dataset."
           },
           {
             "name": "include",
@@ -8963,6 +9465,24 @@
             "title": "Change Type",
             "description": "Type of position change between quarters."
           },
+          "position_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "equity",
+                  "debt",
+                  "option",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Type",
+            "description": "Type of investment position."
+          },
           "current_shares": {
             "anyOf": [
               {
@@ -9559,6 +10079,18 @@
             ],
             "title": "Jolts Period",
             "description": "JOLTS data period (e.g. '2025-10')."
+          },
+          "laus_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Laus Period",
+            "description": "LAUS data period (e.g. '2025-11')."
           }
         },
         "type": "object",
@@ -10944,6 +11476,24 @@
             "title": "Change Type",
             "description": "Type of position change between quarters."
           },
+          "position_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "equity",
+                  "debt",
+                  "option",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Type",
+            "description": "Type of investment position."
+          },
           "current_shares": {
             "anyOf": [
               {
@@ -11096,6 +11646,18 @@
             ],
             "title": "Fund Name",
             "description": "Fund name as registered with the SEC."
+          },
+          "manager_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Name",
+            "description": "Specific subsidiary manager name for combined 13F filings. For single-manager filings, same as fund_name. Null for pre-backfill rows."
           },
           "shares": {
             "type": "number",
@@ -12435,6 +12997,42 @@
             "title": "Labour Market Tightness",
             "description": "openings_rate / (quits_rate + layoffs_rate)."
           },
+          "local_unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Unemployment Rate",
+            "description": "LAUS: HQ county unemployment rate (%)."
+          },
+          "local_unemployment_trend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Unemployment Trend",
+            "description": "LAUS: improving | stable | worsening."
+          },
+          "local_labor_force": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Labor Force",
+            "description": "LAUS: HQ county labour force count (persons)."
+          },
           "data_freshness": {
             "anyOf": [
               {
@@ -12481,6 +13079,593 @@
         "type": "object",
         "title": "LatestYear",
         "description": "Latest available year per dataset."
+      },
+      "LausComparisonError": {
+        "properties": {
+          "fips": {
+            "type": "string",
+            "title": "Fips",
+            "description": "FIPS code with no LAUS data for the requested period."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable miss explanation."
+          }
+        },
+        "type": "object",
+        "required": [
+          "fips",
+          "message"
+        ],
+        "title": "LausComparisonError",
+        "description": "One entry in the partial-results `errors` array of a comparison response."
+      },
+      "LausCountyComparisonItem": {
+        "properties": {
+          "county_fips": {
+            "type": "string",
+            "title": "County Fips",
+            "description": "5-digit county FIPS code."
+          },
+          "county_name": {
+            "type": "string",
+            "title": "County Name",
+            "description": "County name (falls back to county_fips if unavailable)."
+          },
+          "unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment Rate",
+            "description": "Unemployment rate (percent)."
+          },
+          "unemployment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment",
+            "description": "Number of unemployed persons."
+          },
+          "employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment",
+            "description": "Number of employed persons."
+          },
+          "labor_force": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force",
+            "description": "Civilian labor force count."
+          }
+        },
+        "type": "object",
+        "required": [
+          "county_fips",
+          "county_name"
+        ],
+        "title": "LausCountyComparisonItem",
+        "description": "Single-county row in a LAUS county comparison response."
+      },
+      "LausCountyComparisonResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LausCountyComparisonItem"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "Per-county rows that had data."
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Resolved year for the comparison period."
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month",
+            "description": "Resolved month (1-12, or 13 for annual average)."
+          },
+          "seasonal_adjustment": {
+            "type": "string",
+            "const": "not_seasonally_adjusted",
+            "title": "Seasonal Adjustment",
+            "description": "County LAUS data is never seasonally adjusted.",
+            "default": "not_seasonally_adjusted"
+          },
+          "national_unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Unemployment Rate",
+            "description": "US national unemployment rate benchmark computed from the LAUS state NSA aggregate (excludes Puerto Rico). Null when source data is unavailable; a response-level `X-Warning` header is set in that case."
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/LausComparisonError"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "FIPS codes that had no data for the requested period."
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "year",
+          "month"
+        ],
+        "title": "LausCountyComparisonResponse",
+        "description": "Compare LAUS unemployment across up to 10 counties with a national benchmark.\n\nDeliberately does not wrap results in `DataResponse`: sibling metadata\n(`year`, `month`, `national_unemployment_rate`, `errors`) lives alongside\n`data` at the top level. This is the established pattern for multi-entity\ncomparison endpoints."
+      },
+      "LausCountyObservation": {
+        "properties": {
+          "county_fips": {
+            "type": "string",
+            "title": "County Fips",
+            "description": "5-digit county FIPS code."
+          },
+          "county_name": {
+            "type": "string",
+            "title": "County Name",
+            "description": "County name (falls back to county_fips if unavailable)."
+          },
+          "state_fips": {
+            "type": "string",
+            "title": "State Fips",
+            "description": "2-digit state FIPS code."
+          },
+          "state_name": {
+            "type": "string",
+            "title": "State Name",
+            "description": "State name (falls back to state_fips if unavailable)."
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Calendar year."
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month",
+            "description": "Month 1-12, or 13 for the annual average."
+          },
+          "period": {
+            "type": "string",
+            "title": "Period",
+            "description": "BLS period code, e.g. 'M01'..'M12' or 'M13' (annual)."
+          },
+          "seasonal_adjustment": {
+            "type": "string",
+            "const": "not_seasonally_adjusted",
+            "title": "Seasonal Adjustment",
+            "description": "County LAUS data is never seasonally adjusted.",
+            "default": "not_seasonally_adjusted"
+          },
+          "unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment Rate",
+            "description": "Unemployment rate (percent)."
+          },
+          "unemployment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment",
+            "description": "Number of unemployed persons."
+          },
+          "employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment",
+            "description": "Number of employed persons."
+          },
+          "labor_force": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force",
+            "description": "Civilian labor force count."
+          },
+          "footnote_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footnote Code",
+            "description": "BLS footnote code, if any."
+          },
+          "preliminary": {
+            "type": "boolean",
+            "title": "Preliminary",
+            "description": "True if the row is a preliminary estimate."
+          }
+        },
+        "type": "object",
+        "required": [
+          "county_fips",
+          "county_name",
+          "state_fips",
+          "state_name",
+          "year",
+          "month",
+          "period",
+          "preliminary"
+        ],
+        "title": "LausCountyObservation",
+        "description": "Monthly LAUS observation for a single county (never seasonally adjusted)."
+      },
+      "LausStateComparisonItem": {
+        "properties": {
+          "state_fips": {
+            "type": "string",
+            "title": "State Fips",
+            "description": "2-digit state FIPS code."
+          },
+          "state_name": {
+            "type": "string",
+            "title": "State Name",
+            "description": "State name (falls back to state_fips if unavailable)."
+          },
+          "unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment Rate",
+            "description": "Unemployment rate (percent)."
+          },
+          "unemployment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment",
+            "description": "Number of unemployed persons."
+          },
+          "employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment",
+            "description": "Number of employed persons."
+          },
+          "labor_force": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force",
+            "description": "Civilian labor force count."
+          },
+          "employment_population_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Population Ratio",
+            "description": "Employment-to-population ratio (percent)."
+          },
+          "labor_force_participation_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force Participation Rate",
+            "description": "Labor force participation rate (percent)."
+          },
+          "civilian_noninstitutional_population": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Civilian Noninstitutional Population",
+            "description": "Civilian noninstitutional population count."
+          }
+        },
+        "type": "object",
+        "required": [
+          "state_fips",
+          "state_name"
+        ],
+        "title": "LausStateComparisonItem",
+        "description": "Single-state row in a LAUS state comparison response."
+      },
+      "LausStateComparisonResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LausStateComparisonItem"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "Per-state rows that had data."
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Resolved year for the comparison period."
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month",
+            "description": "Resolved month (1-12, or 13 for annual average)."
+          },
+          "seasonal_adjustment": {
+            "type": "string",
+            "enum": [
+              "seasonally_adjusted",
+              "not_seasonally_adjusted"
+            ],
+            "title": "Seasonal Adjustment",
+            "description": "Whether the request resolved to SA or NSA state series."
+          },
+          "national_unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Unemployment Rate",
+            "description": "US national unemployment rate benchmark computed from the LAUS state aggregate at the matching seasonal adjustment (excludes Puerto Rico). Null when source data is unavailable; a response-level `X-Warning` header is set in that case."
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/LausComparisonError"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "FIPS codes that had no data for the requested period."
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "year",
+          "month",
+          "seasonal_adjustment"
+        ],
+        "title": "LausStateComparisonResponse",
+        "description": "Compare LAUS unemployment across up to 10 states with a national benchmark.\n\nSee `LausCountyComparisonResponse` for the envelope rationale."
+      },
+      "LausStateObservation": {
+        "properties": {
+          "state_fips": {
+            "type": "string",
+            "title": "State Fips",
+            "description": "2-digit state FIPS code."
+          },
+          "state_name": {
+            "type": "string",
+            "title": "State Name",
+            "description": "State name (falls back to state_fips if unavailable)."
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year",
+            "description": "Calendar year."
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month",
+            "description": "Month 1-12, or 13 for the annual average."
+          },
+          "period": {
+            "type": "string",
+            "title": "Period",
+            "description": "BLS period code, e.g. 'M01'..'M12' or 'M13' (annual)."
+          },
+          "seasonal_adjustment": {
+            "type": "string",
+            "enum": [
+              "seasonally_adjusted",
+              "not_seasonally_adjusted"
+            ],
+            "title": "Seasonal Adjustment",
+            "description": "Whether the row is seasonally adjusted."
+          },
+          "unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment Rate",
+            "description": "Unemployment rate (percent)."
+          },
+          "unemployment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment",
+            "description": "Number of unemployed persons."
+          },
+          "employment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment",
+            "description": "Number of employed persons."
+          },
+          "labor_force": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force",
+            "description": "Civilian labor force count."
+          },
+          "employment_population_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Population Ratio",
+            "description": "Employment-to-population ratio (percent)."
+          },
+          "labor_force_participation_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force Participation Rate",
+            "description": "Labor force participation rate (percent)."
+          },
+          "civilian_noninstitutional_population": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Civilian Noninstitutional Population",
+            "description": "Civilian noninstitutional population count."
+          },
+          "footnote_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footnote Code",
+            "description": "BLS footnote code, if any."
+          },
+          "preliminary": {
+            "type": "boolean",
+            "title": "Preliminary",
+            "description": "True if the row is a preliminary estimate."
+          }
+        },
+        "type": "object",
+        "required": [
+          "state_fips",
+          "state_name",
+          "year",
+          "month",
+          "period",
+          "seasonal_adjustment",
+          "preliminary"
+        ],
+        "title": "LausStateObservation",
+        "description": "Monthly LAUS observation for a single state (SA or NSA)."
       },
       "LocalMarketContext": {
         "properties": {
@@ -12572,38 +13757,158 @@
             "description": "All-industries avg weekly wage in county."
           },
           "data_period": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Data Period",
-            "description": "Formatted as 'YYYY-QN'."
+            "description": "QCEW data period, formatted as 'YYYY-QN'."
           },
           "data_lag_months": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Data Lag Months",
-            "description": "Approximate months between current date and data period."
+            "description": "Approximate months between current date and QCEW data period."
           },
           "source": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source",
-            "description": "Data source identifier.",
-            "default": "QCEW"
+            "description": "Data source identifier."
           },
           "match_precision": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Match Precision",
-            "description": "E.g. '6-digit', '4-digit', 'all-industries'."
+            "description": "QCEW NAICS match precision: '6-digit', '4-digit', 'all-industries'. Omitted when QCEW absent."
+          },
+          "unemployment_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment Rate",
+            "description": "LAUS: latest month unemployment rate (%)."
+          },
+          "unemployment_rate_yoy_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unemployment Rate Yoy Change",
+            "description": "LAUS: YoY absolute change (percentage points) in unemployment rate."
+          },
+          "labor_force": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force",
+            "description": "LAUS: latest month labour force count (persons)."
+          },
+          "labor_force_yoy_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labor Force Yoy Change Pct",
+            "description": "LAUS: YoY percentage change in labour force."
+          },
+          "laus_data_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Laus Data Period",
+            "description": "LAUS data period, formatted 'YYYY-MM'."
+          },
+          "laus_data_lag_weeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Laus Data Lag Weeks",
+            "description": "Weeks between current date and LAUS data period end."
+          },
+          "match_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Level",
+            "description": "LAUS resolution used: 'county' for exact match, 'state' for state fallback. Omitted when LAUS unavailable."
+          },
+          "seasonal_adjustment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Adjustment",
+            "description": "'not_seasonally_adjusted' for county data, 'seasonally_adjusted' for state fallback."
           }
         },
         "type": "object",
         "required": [
           "county_fips",
           "county_name",
-          "county_fips_confidence",
-          "data_period",
-          "data_lag_months",
-          "match_precision"
+          "county_fips_confidence"
         ],
         "title": "LocalMarketContext",
-        "description": "QCEW-based local labour market context for a company's HQ county."
+        "description": "Local labour market context for a company's HQ county.\n\nMerges QCEW (industry + county employment/wages) and LAUS\n(county/state unemployment rate and labour force) signals into a\nsingle object. Either source may be absent independently."
       },
       "MetricDetail": {
         "properties": {
@@ -13573,6 +14878,46 @@
           "pagination"
         ],
         "title": "PaginatedResponse[JoltsTurnoverPoint]"
+      },
+      "PaginatedResponse_LausCountyObservation_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LausCountyObservation"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[LausCountyObservation]"
+      },
+      "PaginatedResponse_LausStateObservation_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LausStateObservation"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[LausStateObservation]"
       },
       "PaginatedResponse_OccupationSummary_": {
         "properties": {
@@ -16687,6 +18032,10 @@
       "description": "QCEW county-level employment and wages."
     },
     {
+      "name": "BLS States",
+      "description": "LAUS state-level unemployment (SA and NSA)."
+    },
+    {
       "name": "BLS Turnover",
       "description": "JOLTS labour market turnover data"
     },
@@ -16762,6 +18111,7 @@
         "BLS Turnover",
         "BLS Counties",
         "BLS Occupations",
+        "BLS States",
         "BLS Metrics"
       ]
     },

@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
+from thesma._generated.models import (
+    LausCountyComparisonResponse,
+    LausStateComparisonResponse,
+)
 from thesma._types import DataResponse, PaginatedResponse
 from thesma.client import ThesmaClient
+from thesma.errors import NotFoundError, ServerError
 from thesma.resources.bls import Bls
 
 BASE = "https://api.thesma.dev"
@@ -453,4 +459,410 @@ class TestBlsRegistered:
         client = ThesmaClient(api_key=api_key)
         assert hasattr(client, "bls")
         assert isinstance(client.bls, Bls)
+        client.close()
+
+
+# --- SDK-18 fixtures (LAUS) ---
+
+LAUS_COUNTY_RESPONSE = {
+    "data": [
+        {
+            "county_fips": "06085",
+            "county_name": "Santa Clara County, CA",
+            "state_fips": "06",
+            "state_name": "California",
+            "year": 2025,
+            "month": 11,
+            "period": "M11",
+            "seasonal_adjustment": "not_seasonally_adjusted",
+            "unemployment_rate": 2.8,
+            "unemployment": 29450,
+            "employment": 1021000,
+            "labor_force": 1050450,
+            "footnote_code": None,
+            "preliminary": False,
+        }
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+LAUS_STATE_RESPONSE = {
+    "data": [
+        {
+            "state_fips": "06",
+            "state_name": "California",
+            "year": 2025,
+            "month": 11,
+            "period": "M11",
+            "seasonal_adjustment": "seasonally_adjusted",
+            "unemployment_rate": 5.1,
+            "unemployment": 987000,
+            "employment": 18345000,
+            "labor_force": 19332000,
+            "employment_population_ratio": 59.8,
+            "labor_force_participation_rate": 63.1,
+            "civilian_noninstitutional_population": 30636000,
+            "footnote_code": None,
+            "preliminary": False,
+        }
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+LAUS_COUNTY_COMPARE_RESPONSE = {
+    "data": [
+        {
+            "county_fips": "06085",
+            "county_name": "Santa Clara County, CA",
+            "unemployment_rate": 2.8,
+            "unemployment": 29450,
+            "employment": 1021000,
+            "labor_force": 1050450,
+        },
+        {
+            "county_fips": "48201",
+            "county_name": "Harris County, TX",
+            "unemployment_rate": 4.1,
+            "unemployment": 98200,
+            "employment": 2296000,
+            "labor_force": 2394200,
+        },
+    ],
+    "year": 2025,
+    "month": 11,
+    "seasonal_adjustment": "not_seasonally_adjusted",
+    "national_unemployment_rate": 4.0,
+    "errors": [],
+}
+
+LAUS_COUNTY_COMPARE_PARTIAL_RESPONSE = {
+    "data": [
+        {
+            "county_fips": "06085",
+            "county_name": "Santa Clara County, CA",
+            "unemployment_rate": 2.8,
+            "unemployment": 29450,
+            "employment": 1021000,
+            "labor_force": 1050450,
+        }
+    ],
+    "year": 2025,
+    "month": 11,
+    "seasonal_adjustment": "not_seasonally_adjusted",
+    "national_unemployment_rate": 4.0,
+    "errors": [{"fips": "99999", "message": "No LAUS data found for county FIPS 99999"}],
+}
+
+LAUS_COUNTY_COMPARE_NULL_BENCHMARK_RESPONSE = {
+    "data": [
+        {
+            "county_fips": "06085",
+            "county_name": "Santa Clara County, CA",
+            "unemployment_rate": 2.8,
+            "unemployment": 29450,
+            "employment": 1021000,
+            "labor_force": 1050450,
+        }
+    ],
+    "year": 2025,
+    "month": 11,
+    "seasonal_adjustment": "not_seasonally_adjusted",
+    "national_unemployment_rate": None,
+    "errors": [],
+}
+
+LAUS_STATE_COMPARE_RESPONSE = {
+    "data": [
+        {
+            "state_fips": "06",
+            "state_name": "California",
+            "unemployment_rate": 5.1,
+            "unemployment": 987000,
+            "employment": 18345000,
+            "labor_force": 19332000,
+            "employment_population_ratio": 59.8,
+            "labor_force_participation_rate": 63.1,
+            "civilian_noninstitutional_population": 30636000,
+        }
+    ],
+    "year": 2025,
+    "month": 11,
+    "seasonal_adjustment": "seasonally_adjusted",
+    "national_unemployment_rate": 4.0,
+    "errors": [],
+}
+
+
+# --- SDK-18 tests (LAUS) ---
+
+
+class TestCountyUnemployment:
+    @respx.mock
+    def test_county_unemployment(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/06085/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.bls.county_unemployment("06085")
+
+        assert route.called
+        assert "06085" in str(route.calls.last.request.url)
+        assert isinstance(result, PaginatedResponse)
+        assert result.data[0].county_fips == "06085"
+        assert result.data[0].seasonal_adjustment == "not_seasonally_adjusted"
+        assert result.pagination.total == 1
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_with_filters(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/06085/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.county_unemployment("06085", from_date="2024-01", to_date="2025-11", annual_only=False)
+
+        url_str = str(route.calls.last.request.url)
+        assert "from=2024-01" in url_str
+        assert "to=2025-11" in url_str
+        assert "annual_only=false" in url_str
+        assert "from_date" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_annual_only(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/06085/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.county_unemployment("06085", annual_only=True)
+
+        assert "annual_only=true" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_404_propagates(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/bls/counties/99999/unemployment").mock(
+            return_value=httpx.Response(404, json={"detail": "not found"}),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(NotFoundError):
+            client.bls.county_unemployment("99999")
+        client.close()
+
+
+class TestCountyUnemploymentCompare:
+    @respx.mock
+    def test_county_unemployment_compare(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.bls.county_unemployment_compare(["06085", "48201"], year=2025, month=11)
+
+        assert route.called
+        url_str = str(route.calls.last.request.url)
+        assert "fips=06085%2C48201" in url_str
+        assert "year=2025" in url_str
+        assert "month=11" in url_str
+        assert isinstance(result, LausCountyComparisonResponse)
+        assert len(result.data) == 2
+        assert result.year == 2025
+        assert result.national_unemployment_rate == 4.0
+        assert result.errors == []
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_default_period(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.county_unemployment_compare(["06085", "48201"])
+
+        url_str = str(route.calls.last.request.url)
+        assert "year=" not in url_str
+        assert "month=" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_partial_results(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_PARTIAL_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.bls.county_unemployment_compare(["06085", "99999"])
+
+        assert len(result.data) == 1
+        assert result.errors is not None
+        assert len(result.errors) == 1
+        assert result.errors[0].fips == "99999"
+        assert result.errors[0].message.startswith("No LAUS data found")
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_null_benchmark(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_NULL_BENCHMARK_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.bls.county_unemployment_compare(["06085"])
+
+        assert result.national_unemployment_rate is None
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_404_when_all_miss(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(404, json={"detail": "no data"}),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(NotFoundError):
+            client.bls.county_unemployment_compare(["99999", "88888"])
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_503_when_no_data(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(503, json={"detail": "no laus data loaded"}),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ServerError):
+            client.bls.county_unemployment_compare(["06085", "48201"])
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_passes_list_as_csv(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.county_unemployment_compare(["06085", "48201", "17031"])
+
+        url_str = str(route.calls.last.request.url)
+        # httpx percent-encodes commas — assert the encoded form
+        assert "fips=06085%2C48201%2C17031" in url_str
+        # Make sure the SDK did NOT pass a Python list (which would repeat fips=)
+        assert url_str.count("fips=") == 1
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_rejects_empty_list(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ValueError, match="empty"):
+            client.bls.county_unemployment_compare([])
+        assert not route.called
+        client.close()
+
+    @respx.mock
+    def test_county_unemployment_compare_strips_whitespace_in_items(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/counties/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_COUNTY_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.county_unemployment_compare(["06085", " 48201", "17031 "])
+
+        url_str = str(route.calls.last.request.url)
+        assert "fips=06085%2C48201%2C17031" in url_str
+        client.close()
+
+
+class TestStateUnemployment:
+    @respx.mock
+    def test_state_unemployment_default_sa(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/06/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.bls.state_unemployment("06")
+
+        url_str = str(route.calls.last.request.url)
+        assert "adjustment=sa" in url_str
+        assert result.data[0].labor_force_participation_rate == 63.1
+        assert result.data[0].seasonal_adjustment.value == "seasonally_adjusted"
+        client.close()
+
+    @respx.mock
+    def test_state_unemployment_nsa(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/06/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.state_unemployment("06", adjustment="nsa")
+
+        assert "adjustment=nsa" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_state_unemployment_with_filters(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/06/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.state_unemployment(
+            "06",
+            from_date="2024-01",
+            to_date="2025-11",
+            annual_only=True,
+            adjustment="nsa",
+        )
+
+        url_str = str(route.calls.last.request.url)
+        assert "from=2024-01" in url_str
+        assert "to=2025-11" in url_str
+        assert "annual_only=true" in url_str
+        assert "adjustment=nsa" in url_str
+        client.close()
+
+    @respx.mock
+    def test_state_unemployment_puerto_rico(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/72/unemployment").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.state_unemployment("72")
+
+        assert route.called
+        assert "/states/72/" in str(route.calls.last.request.url)
+        client.close()
+
+
+class TestStateUnemploymentCompare:
+    @respx.mock
+    def test_state_unemployment_compare_sa(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.bls.state_unemployment_compare(["06", "48"], year=2025, month=11, adjustment="sa")
+
+        url_str = str(route.calls.last.request.url)
+        assert "fips=06%2C48" in url_str
+        assert "adjustment=sa" in url_str
+        assert isinstance(result, LausStateComparisonResponse)
+        assert result.data[0].labor_force_participation_rate == 63.1
+        client.close()
+
+    @respx.mock
+    def test_state_unemployment_compare_nsa(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.bls.state_unemployment_compare(["06", "48"], adjustment="nsa")
+
+        assert "adjustment=nsa" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_state_unemployment_compare_rejects_empty_list(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/bls/states/compare").mock(
+            return_value=httpx.Response(200, json=LAUS_STATE_COMPARE_RESPONSE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ValueError, match="empty"):
+            client.bls.state_unemployment_compare([])
+        assert not route.called
         client.close()
