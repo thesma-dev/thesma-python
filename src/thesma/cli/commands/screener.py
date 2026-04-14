@@ -49,6 +49,30 @@ def screener_group() -> None:
 @click.option("--max-industry-quits-rate", default=None, type=float, help="Max industry quits rate (%%).")
 @click.option("--min-industry-openings-rate", default=None, type=float, help="Min industry job openings rate (%%).")
 @click.option("--max-industry-openings-rate", default=None, type=float, help="Max industry job openings rate (%%).")
+@click.option(
+    "--min-local-unemployment-rate",
+    default=None,
+    type=float,
+    help="Minimum HQ county unemployment rate (%%).",
+)
+@click.option(
+    "--max-local-unemployment-rate",
+    default=None,
+    type=float,
+    help="Maximum HQ county unemployment rate (%%).",
+)
+@click.option(
+    "--local-unemployment-trend",
+    default=None,
+    type=click.Choice(["improving", "stable", "worsening"], case_sensitive=False),
+    help="Filter by HQ county unemployment trend.",
+)
+@click.option(
+    "--min-local-labor-force",
+    default=None,
+    type=int,
+    help="Minimum HQ county labour force size.",
+)
 @click.option("--sort-by", default=None, help="Sort by field.")
 @click.option("--order", default=None, help="Sort order (asc, desc).")
 @click.option("--page", default=1, type=int, help="Page number.")
@@ -79,6 +103,10 @@ def screener_screen(
     max_industry_quits_rate: float | None,
     min_industry_openings_rate: float | None,
     max_industry_openings_rate: float | None,
+    min_local_unemployment_rate: float | None,
+    max_local_unemployment_rate: float | None,
+    local_unemployment_trend: str | None,
+    min_local_labor_force: int | None,
     sort_by: str | None,
     order: str | None,
     page: int,
@@ -110,6 +138,10 @@ def screener_screen(
         max_industry_quits_rate=max_industry_quits_rate,
         min_industry_openings_rate=min_industry_openings_rate,
         max_industry_openings_rate=max_industry_openings_rate,
+        min_local_unemployment_rate=min_local_unemployment_rate,
+        max_local_unemployment_rate=max_local_unemployment_rate,
+        local_unemployment_trend=local_unemployment_trend,
+        min_local_labor_force=min_local_labor_force,
         sort_by=sort_by,
         order=order,
         page=page,

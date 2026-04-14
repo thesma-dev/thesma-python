@@ -21,6 +21,45 @@ OCCUPATION_LIST_COLUMNS = ("soc_code", "title", "major_group")
 OCCUPATION_WAGES_COLUMNS = ("area_name", "reference_year", "median_annual_wage", "mean_annual_wage", "employment")
 METRIC_LIST_COLUMNS = ("canonical_name", "display_name", "category", "source_dataset")
 TURNOVER_COLUMNS = ("period", "job_openings", "hires", "quits", "total_separations")
+LAUS_COUNTY_OBSERVATION_COLUMNS = (
+    "year",
+    "month",
+    "unemployment_rate",
+    "unemployment",
+    "employment",
+    "labor_force",
+    "preliminary",
+)
+LAUS_STATE_OBSERVATION_COLUMNS = (
+    "year",
+    "month",
+    "unemployment_rate",
+    "unemployment",
+    "labor_force",
+    "labor_force_participation_rate",
+    "preliminary",
+)
+LAUS_COUNTY_COMPARE_COLUMNS = (
+    "county_fips",
+    "county_name",
+    "unemployment_rate",
+    "unemployment",
+    "labor_force",
+)
+LAUS_STATE_COMPARE_COLUMNS = (
+    "state_fips",
+    "state_name",
+    "unemployment_rate",
+    "unemployment",
+    "labor_force",
+    "labor_force_participation_rate",
+)
+LAUS_COMPARE_ERROR_COLUMNS = ("fips", "message")
+
+
+def _split_fips(raw: str) -> list[str]:
+    """Split a comma-separated FIPS string into a trimmed list."""
+    return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 @click.group("bls")
@@ -466,3 +505,153 @@ def bls_turnover_by_size(
         per_page=per_page,
     )
     output(result.data, ctx.obj["format"], TURNOVER_COLUMNS)
+
+
+# --- Unemployment data (LAUS) ---
+
+
+def _format_benchmark(rate: float | None) -> str:
+    """Render the national unemployment benchmark for header display."""
+    return f"{rate}" if rate is not None else "unavailable"
+
+
+@bls_group.command("county-unemployment")
+@click.argument("fips")
+@click.option("--from", "from_date", default=None, help="Start date (YYYY-MM).")
+@click.option("--to", "to_date", default=None, help="End date (YYYY-MM).")
+@click.option("--annual-only", is_flag=True, default=False, help="Return only M13 annual averages.")
+@click.option("--page", default=1, type=int, help="Page number.")
+@click.option("--per-page", default=25, type=int, help="Results per page.")
+@click.pass_context
+def bls_county_unemployment(
+    ctx: click.Context,
+    fips: str,
+    from_date: str | None,
+    to_date: str | None,
+    annual_only: bool,
+    page: int,
+    per_page: int,
+) -> None:
+    """Get monthly LAUS unemployment time series for a county."""
+    client = get_client(ctx)
+    result = client.bls.county_unemployment(
+        fips,
+        from_date=from_date,
+        to_date=to_date,
+        annual_only=annual_only,
+        page=page,
+        per_page=per_page,
+    )
+    output(result.data, ctx.obj["format"], LAUS_COUNTY_OBSERVATION_COLUMNS)
+
+
+@bls_group.command("county-unemployment-compare")
+@click.argument("fips")
+@click.option("--year", default=None, type=int, help="Comparison year (requires --month).")
+@click.option("--month", default=None, type=int, help="Comparison month 1-12, or 13 for annual average.")
+@click.pass_context
+def bls_county_unemployment_compare(
+    ctx: click.Context,
+    fips: str,
+    year: int | None,
+    month: int | None,
+) -> None:
+    """Compare unemployment across up to 10 counties (comma-separated FIPS)."""
+    client = get_client(ctx)
+    fips_list = _split_fips(fips)
+    result = client.bls.county_unemployment_compare(fips=fips_list, year=year, month=month)
+    fmt = ctx.obj["format"]
+    if fmt == "json":
+        output(result, fmt, ())
+        return
+    click.echo(
+        f"Period: {result.year}-{result.month:02d}  "
+        f"Adjustment: {result.seasonal_adjustment}  "
+        f"National unemployment rate: {_format_benchmark(result.national_unemployment_rate)}"
+    )
+    output(result.data, fmt, LAUS_COUNTY_COMPARE_COLUMNS)
+    if result.errors:
+        click.echo("")
+        click.echo("Errors:")
+        output(result.errors, fmt, LAUS_COMPARE_ERROR_COLUMNS)
+
+
+@bls_group.command("state-unemployment")
+@click.argument("fips")
+@click.option("--from", "from_date", default=None, help="Start date (YYYY-MM).")
+@click.option("--to", "to_date", default=None, help="End date (YYYY-MM).")
+@click.option(
+    "--adjustment",
+    default="sa",
+    type=click.Choice(["sa", "nsa"], case_sensitive=False),
+    help="Seasonal adjustment.",
+)
+@click.option("--annual-only", is_flag=True, default=False, help="Return only M13 annual averages.")
+@click.option("--page", default=1, type=int, help="Page number.")
+@click.option("--per-page", default=25, type=int, help="Results per page.")
+@click.pass_context
+def bls_state_unemployment(
+    ctx: click.Context,
+    fips: str,
+    from_date: str | None,
+    to_date: str | None,
+    adjustment: str,
+    annual_only: bool,
+    page: int,
+    per_page: int,
+) -> None:
+    """Get monthly LAUS unemployment time series for a state."""
+    client = get_client(ctx)
+    result = client.bls.state_unemployment(
+        fips,
+        from_date=from_date,
+        to_date=to_date,
+        adjustment=adjustment,
+        annual_only=annual_only,
+        page=page,
+        per_page=per_page,
+    )
+    output(result.data, ctx.obj["format"], LAUS_STATE_OBSERVATION_COLUMNS)
+
+
+@bls_group.command("state-unemployment-compare")
+@click.argument("fips")
+@click.option("--year", default=None, type=int, help="Comparison year (requires --month).")
+@click.option("--month", default=None, type=int, help="Comparison month 1-12, or 13 for annual average.")
+@click.option(
+    "--adjustment",
+    default="sa",
+    type=click.Choice(["sa", "nsa"], case_sensitive=False),
+    help="Seasonal adjustment.",
+)
+@click.pass_context
+def bls_state_unemployment_compare(
+    ctx: click.Context,
+    fips: str,
+    year: int | None,
+    month: int | None,
+    adjustment: str,
+) -> None:
+    """Compare unemployment across up to 10 states (comma-separated FIPS)."""
+    client = get_client(ctx)
+    fips_list = _split_fips(fips)
+    result = client.bls.state_unemployment_compare(
+        fips=fips_list,
+        year=year,
+        month=month,
+        adjustment=adjustment,
+    )
+    fmt = ctx.obj["format"]
+    if fmt == "json":
+        output(result, fmt, ())
+        return
+    click.echo(
+        f"Period: {result.year}-{result.month:02d}  "
+        f"Adjustment: {result.seasonal_adjustment}  "
+        f"National unemployment rate: {_format_benchmark(result.national_unemployment_rate)}"
+    )
+    output(result.data, fmt, LAUS_STATE_COMPARE_COLUMNS)
+    if result.errors:
+        click.echo("")
+        click.echo("Errors:")
+        output(result.errors, fmt, LAUS_COMPARE_ERROR_COLUMNS)

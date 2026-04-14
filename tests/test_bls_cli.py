@@ -240,6 +240,91 @@ def _make_bls_mock_client() -> MagicMock:
     ]
     client.bls.turnover_by_size.return_value = turnover_by_size_response
 
+    # --- SDK-18 mocks (LAUS) ---
+
+    # county_unemployment() -> PaginatedResponse with .data as list of dicts
+    county_unemployment_response = MagicMock()
+    county_unemployment_response.data = [
+        {
+            "year": 2025,
+            "month": 11,
+            "unemployment_rate": 2.8,
+            "unemployment": 29450,
+            "employment": 1021000,
+            "labor_force": 1050450,
+            "preliminary": False,
+            "county_name": "Santa Clara County, CA",
+        },
+    ]
+    client.bls.county_unemployment.return_value = county_unemployment_response
+
+    # county_unemployment_compare() -> LausCountyComparisonResponse-like envelope
+    county_compare_response = MagicMock()
+    county_compare_response.year = 2025
+    county_compare_response.month = 11
+    county_compare_response.seasonal_adjustment = "not_seasonally_adjusted"
+    county_compare_response.national_unemployment_rate = 4.0
+    county_compare_response.data = [
+        {
+            "county_fips": "06085",
+            "county_name": "Santa Clara County, CA",
+            "unemployment_rate": 2.8,
+            "unemployment": 29450,
+            "labor_force": 1050450,
+        },
+        {
+            "county_fips": "48201",
+            "county_name": "Harris County, TX",
+            "unemployment_rate": 4.1,
+            "unemployment": 98200,
+            "labor_force": 2394200,
+        },
+    ]
+    county_compare_response.errors = []
+    client.bls.county_unemployment_compare.return_value = county_compare_response
+
+    # state_unemployment() -> PaginatedResponse with .data as list of dicts
+    state_unemployment_response = MagicMock()
+    state_unemployment_response.data = [
+        {
+            "year": 2025,
+            "month": 11,
+            "unemployment_rate": 5.1,
+            "unemployment": 987000,
+            "labor_force": 19332000,
+            "labor_force_participation_rate": 63.1,
+            "preliminary": False,
+        },
+    ]
+    client.bls.state_unemployment.return_value = state_unemployment_response
+
+    # state_unemployment_compare() -> LausStateComparisonResponse-like envelope
+    state_compare_response = MagicMock()
+    state_compare_response.year = 2025
+    state_compare_response.month = 11
+    state_compare_response.seasonal_adjustment = "seasonally_adjusted"
+    state_compare_response.national_unemployment_rate = 4.0
+    state_compare_response.data = [
+        {
+            "state_fips": "06",
+            "state_name": "California",
+            "unemployment_rate": 5.1,
+            "unemployment": 987000,
+            "labor_force": 19332000,
+            "labor_force_participation_rate": 63.1,
+        },
+        {
+            "state_fips": "48",
+            "state_name": "Texas",
+            "unemployment_rate": 4.3,
+            "unemployment": 680000,
+            "labor_force": 15820000,
+            "labor_force_participation_rate": 64.5,
+        },
+    ]
+    state_compare_response.errors = []
+    client.bls.state_unemployment_compare.return_value = state_compare_response
+
     return client
 
 
@@ -378,3 +463,145 @@ class TestValidateDateRange:
 
         bls = Bls(client=MagicMock())
         bls._validate_date_range(from_date=None, to_date=None)  # should not raise
+
+
+class TestBlsCliSdk18:
+    def test_county_unemployment_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(
+            runner,
+            ["bls", "county-unemployment", "06085", "--from", "2024-01", "--to", "2025-11"],
+            mock_client,
+        )
+        assert result.exit_code == 0, result.output
+        call = mock_client.bls.county_unemployment.call_args
+        assert call.kwargs["from_date"] == "2024-01"
+        assert call.kwargs["to_date"] == "2025-11"
+        assert "2.8" in result.output
+
+    def test_county_unemployment_command_annual_only(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "county-unemployment", "06085", "--annual-only"], mock_client)
+        assert result.exit_code == 0, result.output
+        assert mock_client.bls.county_unemployment.call_args.kwargs["annual_only"] is True
+
+    def test_county_unemployment_compare_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(
+            runner,
+            ["bls", "county-unemployment-compare", "06085,48201", "--year", "2025", "--month", "11"],
+            mock_client,
+        )
+        assert result.exit_code == 0, result.output
+        call = mock_client.bls.county_unemployment_compare.call_args
+        assert call.kwargs["fips"] == ["06085", "48201"]
+        assert call.kwargs["year"] == 2025
+        assert call.kwargs["month"] == 11
+        assert "06085" in result.output
+        assert "48201" in result.output
+        assert "4.0" in result.output
+
+    def test_county_unemployment_compare_command_strips_whitespace(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(
+            runner,
+            ["bls", "county-unemployment-compare", "06085, 48201, 17031"],
+            mock_client,
+        )
+        assert result.exit_code == 0, result.output
+        assert mock_client.bls.county_unemployment_compare.call_args.kwargs["fips"] == [
+            "06085",
+            "48201",
+            "17031",
+        ]
+
+    def test_county_unemployment_compare_command_partial_results(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        partial_response = MagicMock()
+        partial_response.year = 2025
+        partial_response.month = 11
+        partial_response.seasonal_adjustment = "not_seasonally_adjusted"
+        partial_response.national_unemployment_rate = 4.0
+        partial_response.data = [
+            {
+                "county_fips": "06085",
+                "county_name": "Santa Clara County, CA",
+                "unemployment_rate": 2.8,
+                "unemployment": 29450,
+                "labor_force": 1050450,
+            }
+        ]
+        partial_response.errors = [{"fips": "99999", "message": "No LAUS data found for county FIPS 99999"}]
+        mock_client.bls.county_unemployment_compare.return_value = partial_response
+
+        result = _invoke(runner, ["bls", "county-unemployment-compare", "06085,99999"], mock_client)
+        assert result.exit_code == 0, result.output
+        assert "06085" in result.output
+        assert "99999" in result.output
+
+    def test_county_unemployment_compare_command_null_benchmark(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        null_response = MagicMock()
+        null_response.year = 2025
+        null_response.month = 11
+        null_response.seasonal_adjustment = "not_seasonally_adjusted"
+        null_response.national_unemployment_rate = None
+        null_response.data = [
+            {
+                "county_fips": "06085",
+                "county_name": "Santa Clara County, CA",
+                "unemployment_rate": 2.8,
+                "unemployment": 29450,
+                "labor_force": 1050450,
+            }
+        ]
+        null_response.errors = []
+        mock_client.bls.county_unemployment_compare.return_value = null_response
+
+        result = _invoke(runner, ["bls", "county-unemployment-compare", "06085"], mock_client)
+        assert result.exit_code == 0, result.output
+        assert "unavailable" in result.output.lower()
+
+    def test_state_unemployment_command_default_sa(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "state-unemployment", "06"], mock_client)
+        assert result.exit_code == 0, result.output
+        assert mock_client.bls.state_unemployment.call_args.kwargs["adjustment"] == "sa"
+
+    def test_state_unemployment_command_nsa(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "state-unemployment", "06", "--adjustment", "nsa"], mock_client)
+        assert result.exit_code == 0, result.output
+        assert mock_client.bls.state_unemployment.call_args.kwargs["adjustment"] == "nsa"
+
+    def test_state_unemployment_compare_command(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(
+            runner,
+            [
+                "bls",
+                "state-unemployment-compare",
+                "06,48",
+                "--adjustment",
+                "sa",
+                "--year",
+                "2025",
+                "--month",
+                "11",
+            ],
+            mock_client,
+        )
+        assert result.exit_code == 0, result.output
+        call = mock_client.bls.state_unemployment_compare.call_args
+        assert call.kwargs["fips"] == ["06", "48"]
+        assert call.kwargs["adjustment"] == "sa"
+        assert "06" in result.output
+        assert "48" in result.output
+
+    def test_state_unemployment_compare_command_help(self, runner: CliRunner) -> None:
+        mock_client = _make_bls_mock_client()
+        result = _invoke(runner, ["bls", "state-unemployment-compare", "--help"], mock_client)
+        assert result.exit_code == 0
+        assert "--adjustment" in result.output
+        assert "--year" in result.output
+        assert "--month" in result.output

@@ -47,6 +47,10 @@ class Screener:
         max_industry_quits_rate: float | None = None,
         min_industry_openings_rate: float | None = None,
         max_industry_openings_rate: float | None = None,
+        min_local_unemployment_rate: float | None = None,
+        max_local_unemployment_rate: float | None = None,
+        local_unemployment_trend: str | None = None,
+        min_local_labor_force: int | None = None,
         include: str | None = None,
         sort_by: str | None = None,
         order: str | None = None,
@@ -56,6 +60,25 @@ class Screener:
         """Screen companies by financial ratio thresholds.
 
         ``GET /v1/us/sec/screener``
+
+        The four LAUS filters ``min_local_unemployment_rate``,
+        ``max_local_unemployment_rate``, ``local_unemployment_trend``, and
+        ``min_local_labor_force`` screen on HQ-county local labour market
+        data from BLS LAUS. Trend values are ``"improving"``, ``"stable"``,
+        or ``"worsening"``.
+
+        .. note::
+
+           ``local_unemployment_trend`` is **case-sensitive** at the
+           resource layer — direct Python callers must pass lowercase
+           strings (``"improving"``, ``"stable"``, ``"worsening"``) or the
+           API will return 422. The ``thesma screener screen`` CLI command
+           normalises case via ``click.Choice(case_sensitive=False)``
+           before calling this method, but that normalisation does not
+           apply here. When ``local_unemployment_trend`` is set, companies
+           with no YoY LAUS data (and therefore a null trend) are excluded
+           from results — this matches the ``industry_hiring_trend``
+           behaviour.
         """
         params: dict[str, Any] = {
             "min_revenue": min_revenue,
@@ -88,6 +111,10 @@ class Screener:
             "max_industry_quits_rate": max_industry_quits_rate,
             "min_industry_openings_rate": min_industry_openings_rate,
             "max_industry_openings_rate": max_industry_openings_rate,
+            "min_local_unemployment_rate": min_local_unemployment_rate,
+            "max_local_unemployment_rate": max_local_unemployment_rate,
+            "local_unemployment_trend": local_unemployment_trend,
+            "min_local_labor_force": min_local_labor_force,
             "include": include,
             "sort": sort_by,
             "order": order,

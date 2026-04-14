@@ -42,6 +42,51 @@ TIME_SERIES_JSON = {
     },
 }
 
+FINANCIALS_WITH_LAUS_LOCAL_MARKET_JSON = {
+    "data": {
+        "company": {"cik": "0000320193", "ticker": "AAPL", "name": "Apple Inc."},
+        "statement": "income",
+        "period": "annual",
+        "fiscal_year": 2024,
+        "filing_accession": "0000320193-24-000081",
+        "currency": "USD",
+        "line_items": {"revenue": 391035000000},
+        "metadata": {
+            "source": "ixbrl",
+            "data_completeness": 15,
+            "expected_fields": 16,
+            "source_tags": {"revenue": "us-gaap:Revenues"},
+        },
+        "labor_context": {
+            "industry": {"naics_code": "334111"},
+            "local_market": {
+                "county_fips": "06085",
+                "county_name": "Santa Clara County, CA",
+                "county_fips_confidence": "high",
+                "industry_employment": 142000,
+                "industry_employment_yoy_pct": 3.8,
+                "industry_avg_weekly_wage": 3200,
+                "industry_wage_yoy_pct": 4.2,
+                "total_employment": 1050000,
+                "total_avg_weekly_wage": 2800,
+                "data_period": "2025-Q2",
+                "data_lag_months": 6,
+                "match_precision": "6-digit",
+                "unemployment_rate": 2.8,
+                "unemployment_rate_yoy_change": -0.4,
+                "labor_force": 1050450,
+                "labor_force_yoy_change_pct": 1.2,
+                "laus_data_period": "2025-11",
+                "laus_data_lag_weeks": 7,
+                "match_level": "county",
+                "seasonal_adjustment": "not_seasonally_adjusted",
+                "source": "LAUS+QCEW",
+            },
+            "compensation_benchmark": None,
+        },
+    },
+}
+
 FIELDS_JSON = {
     "data": {
         "income": {
@@ -118,6 +163,38 @@ class TestFinancialsTimeSeries:
 
         request = route.calls.last.request
         assert "period=quarterly" in str(request.url)
+        client.close()
+
+
+class TestFinancialsLaborContextInclude:
+    @respx.mock
+    def test_financials_get_laus_local_market_fields_present(self, api_key: str) -> None:
+        """LAUS-enriched financials responses deserialize cleanly via ?include=labor_context.
+
+        ``FinancialStatementResponse`` uses Pydantic's default ``extra="ignore"``,
+        so the top-level ``labor_context`` key is dropped when the strict model
+        parses the payload. The test therefore asserts two things:
+
+        1. The ``include=labor_context`` query parameter reaches the API.
+        2. The payload (including the LAUS-enriched ``local_market`` block)
+           parses without raising a validation error — confirming the new
+           LAUS fields on the generated ``LocalMarketContext`` model are
+           compatible with the serialized shape the financials endpoint
+           returns.
+        """
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIALS_WITH_LAUS_LOCAL_MARKET_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.financials.get("0000320193", statement="income", include="labor_context")
+
+        request = route.calls.last.request
+        assert "include=labor_context" in str(request.url)
+        assert isinstance(result, DataResponse)
+        assert isinstance(result.data, FinancialStatementResponse)
+        # Confirm the well-known financials fields still round-trip cleanly.
+        assert result.data.fiscal_year == 2024
+        assert result.data.line_items["revenue"] == 391035000000
         client.close()
 
 

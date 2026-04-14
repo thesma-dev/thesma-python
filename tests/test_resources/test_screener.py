@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._types import PaginatedResponse
 from thesma.client import ThesmaClient
+from thesma.errors import ThesmaError
 
 BASE = "https://api.thesma.dev"
 
@@ -63,6 +65,54 @@ SCREENER_JSON_NULL_FINANCIALS = {
                 "debt_to_equity": 1.87,
             },
         },
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+
+SCREENER_LAUS_JSON = {
+    "data": [
+        {
+            "cik": "0000320193",
+            "ticker": "AAPL",
+            "name": "Apple Inc.",
+            "company_tier": "sp500",
+            "fiscal_year": 2024,
+            "financials": {
+                "revenue": 383285000000,
+                "net_income": 96995000000,
+                "eps_diluted": 6.08,
+                "common_shares_outstanding": 15550061000,
+                "total_equity": 62146000000,
+                "dividends_paid": -15025000000,
+                "institutional_ownership_pct": 62.5,
+            },
+            "ratios": {
+                "gross_margin": 46.2,
+                "operating_margin": 31.5,
+                "net_margin": 26.4,
+                "debt_to_equity": 1.87,
+            },
+            "labor_context": {
+                "industry_hiring_trend": "stable",
+                "industry_employment_growth_yoy": 1.2,
+                "industry_wage_growth_yoy": 3.5,
+                "hq_county_wage_growth_yoy": 4.1,
+                "comp_to_market_ratio": None,
+                "industry_quits_rate": None,
+                "industry_openings_rate": None,
+                "labour_market_tightness": None,
+                "local_unemployment_rate": 2.8,
+                "local_unemployment_trend": "improving",
+                "local_labor_force": 1050450,
+                "data_freshness": {
+                    "ces_period": "2025-11",
+                    "qcew_period": "2025-Q2",
+                    "jolts_period": "2025-10",
+                    "laus_period": "2025-11",
+                },
+            },
+        }
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
 }
@@ -287,4 +337,171 @@ class TestScreenerBlsFilters:
         url_str = str(route.calls.last.request.url)
         assert "min_revenue=1000000" in url_str
         assert "industry_hiring_trend=accelerating" in url_str
+        client.close()
+
+
+class TestScreenerLausFilters:
+    @respx.mock
+    def test_screener_min_local_unemployment_rate(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_local_unemployment_rate=2.0)
+
+        assert "min_local_unemployment_rate=2.0" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_max_local_unemployment_rate(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(max_local_unemployment_rate=4.0)
+
+        assert "max_local_unemployment_rate=4.0" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_local_unemployment_trend_improving(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(local_unemployment_trend="improving")
+
+        assert "local_unemployment_trend=improving" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_local_unemployment_trend_stable(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(local_unemployment_trend="stable")
+
+        assert "local_unemployment_trend=stable" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_local_unemployment_trend_worsening(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(local_unemployment_trend="worsening")
+
+        assert "local_unemployment_trend=worsening" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_min_local_labor_force(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_local_labor_force=500_000)
+
+        url_str = str(route.calls.last.request.url)
+        assert "min_local_labor_force=500000" in url_str
+        # Ensure no scientific notation from float coercion
+        assert "5e" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_all_laus_filters_combined(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(
+            min_local_unemployment_rate=2.0,
+            max_local_unemployment_rate=4.0,
+            local_unemployment_trend="improving",
+            min_local_labor_force=500_000,
+            min_revenue=1_000_000,
+        )
+
+        url_str = str(route.calls.last.request.url)
+        assert "min_local_unemployment_rate=2.0" in url_str
+        assert "max_local_unemployment_rate=4.0" in url_str
+        assert "local_unemployment_trend=improving" in url_str
+        assert "min_local_labor_force=500000" in url_str
+        assert "min_revenue=1000000" in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_laus_filters_omitted_when_none(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen()
+
+        url_str = str(route.calls.last.request.url)
+        assert "min_local_unemployment_rate" not in url_str
+        assert "max_local_unemployment_rate" not in url_str
+        assert "local_unemployment_trend" not in url_str
+        assert "min_local_labor_force" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_response_includes_laus_fields(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(min_local_unemployment_rate=2.0)
+
+        labor_context = result.data[0].labor_context  # type: ignore[attr-defined]
+        assert labor_context["local_unemployment_rate"] == 2.8
+        assert labor_context["local_unemployment_trend"] == "improving"
+        assert labor_context["local_labor_force"] == 1050450
+        client.close()
+
+    @respx.mock
+    def test_screener_response_includes_laus_period_in_data_freshness(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen()
+
+        labor_context = result.data[0].labor_context  # type: ignore[attr-defined]
+        assert labor_context["data_freshness"]["laus_period"] == "2025-11"
+        client.close()
+
+    @respx.mock
+    def test_screener_invalid_trend_propagates_422(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(
+                422,
+                json={
+                    "error": {
+                        "message": "Invalid value for local_unemployment_trend",
+                        "code": "validation_error",
+                    }
+                },
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ThesmaError):
+            client.screener.screen(local_unemployment_trend="foo")
+        client.close()
+
+    @respx.mock
+    def test_screener_existing_data_freshness_assertions_still_pass(self, api_key: str) -> None:
+        """Sanity: the pre-existing ``ces_period`` field still parses after regeneration."""
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen()
+
+        labor_context = result.data[0].labor_context  # type: ignore[attr-defined]
+        assert labor_context["data_freshness"]["ces_period"] == "2025-11"
+        assert labor_context["data_freshness"]["qcew_period"] == "2025-Q2"
+        assert labor_context["data_freshness"]["jolts_period"] == "2025-10"
         client.close()

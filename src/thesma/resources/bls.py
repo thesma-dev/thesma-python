@@ -16,6 +16,10 @@ from thesma._generated.models import (
     JoltsStateTurnoverPoint,
     JoltsTurnoverLatest,
     JoltsTurnoverPoint,
+    LausCountyComparisonResponse,
+    LausCountyObservation,
+    LausStateComparisonResponse,
+    LausStateObservation,
     OccupationDetail,
     OccupationSummary,
     OccupationWages,
@@ -446,4 +450,146 @@ class Bls:
             "/v1/us/bls/turnover/by-size",
             params=params,
             response_model=PaginatedResponse[JoltsSizeClassPoint],
+        )
+
+    # --- Unemployment data (LAUS) ---
+
+    def county_unemployment(
+        self,
+        fips: str,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        annual_only: bool = False,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> PaginatedResponse[LausCountyObservation]:
+        """Get monthly LAUS unemployment time series for a single county.
+
+        ``GET /v1/us/bls/counties/{fips}/unemployment``
+
+        County LAUS data is never seasonally adjusted — there is no
+        ``adjustment`` parameter. When ``annual_only`` is ``True`` the API
+        returns only M13 annual averages and the month component of the
+        ``from_date``/``to_date`` filters is ignored. ``annual_only`` is
+        always sent on the wire (``false`` by default) because ``False``
+        is a user-meaningful explicit value.
+        """
+        params = {
+            "from": from_date,
+            "to": to_date,
+            "annual_only": annual_only,
+            "page": page,
+            "per_page": per_page,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            f"/v1/us/bls/counties/{fips}/unemployment",
+            params=params,
+            response_model=PaginatedResponse[LausCountyObservation],
+        )
+
+    def county_unemployment_compare(
+        self,
+        fips: list[str],
+        *,
+        year: int | None = None,
+        month: int | None = None,
+    ) -> LausCountyComparisonResponse:
+        """Compare unemployment metrics across up to 10 counties.
+
+        ``GET /v1/us/bls/counties/compare``
+
+        The SDK joins ``fips`` with commas before calling the API. When
+        ``year`` and ``month`` are both omitted the API resolves the
+        latest period for which data is available; supplying exactly one
+        of the two returns 400.
+
+        Raises:
+            ValueError: if ``fips`` is an empty list.
+        """
+        if not fips:
+            raise ValueError("fips list must not be empty")
+        params = {
+            "fips": ",".join(f.strip() for f in fips),
+            "year": year,
+            "month": month,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            "/v1/us/bls/counties/compare",
+            params=params,
+            response_model=LausCountyComparisonResponse,
+        )
+
+    def state_unemployment(
+        self,
+        fips: str,
+        *,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        adjustment: str = "sa",
+        annual_only: bool = False,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> PaginatedResponse[LausStateObservation]:
+        """Get monthly LAUS unemployment time series for a single state.
+
+        ``GET /v1/us/bls/states/{fips}/unemployment``
+
+        ``adjustment`` is a pass-through string — valid values are
+        ``"sa"`` (default) or ``"nsa"``; the API rejects anything else
+        with a 400. When ``annual_only`` is ``True`` the API returns only
+        M13 annual averages and the month component of the date filters
+        is ignored. ``annual_only`` is always sent on the wire.
+        """
+        params = {
+            "from": from_date,
+            "to": to_date,
+            "adjustment": adjustment,
+            "annual_only": annual_only,
+            "page": page,
+            "per_page": per_page,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            f"/v1/us/bls/states/{fips}/unemployment",
+            params=params,
+            response_model=PaginatedResponse[LausStateObservation],
+        )
+
+    def state_unemployment_compare(
+        self,
+        fips: list[str],
+        *,
+        year: int | None = None,
+        month: int | None = None,
+        adjustment: str = "sa",
+    ) -> LausStateComparisonResponse:
+        """Compare unemployment metrics across up to 10 states.
+
+        ``GET /v1/us/bls/states/compare``
+
+        The SDK joins ``fips`` with commas before calling the API. When
+        ``year`` and ``month`` are both omitted the API resolves the
+        latest period for which data is available; supplying exactly one
+        of the two returns 400. ``adjustment`` selects the SA or NSA
+        national benchmark to match the requested series.
+
+        Raises:
+            ValueError: if ``fips`` is an empty list.
+        """
+        if not fips:
+            raise ValueError("fips list must not be empty")
+        params = {
+            "fips": ",".join(f.strip() for f in fips),
+            "year": year,
+            "month": month,
+            "adjustment": adjustment,
+        }
+        return self._client.request(  # type: ignore[no-any-return]
+            "GET",
+            "/v1/us/bls/states/compare",
+            params=params,
+            response_model=LausStateComparisonResponse,
         )
