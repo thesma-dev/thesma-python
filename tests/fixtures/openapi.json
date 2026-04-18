@@ -2862,7 +2862,7 @@
           "Companies"
         ],
         "summary": "List Companies",
-        "description": "List companies with optional filtering by ticker, name, SIC code, tier, or FIPS code.",
+        "description": "List companies with optional filtering by ticker, name, SIC code, tier, FIPS code, exchange, or domicile.",
         "operationId": "list_companies_v1_us_sec_companies_get",
         "parameters": [
           {
@@ -2975,6 +2975,45 @@
               "title": "County Fips"
             },
             "description": "Filter by 5-digit county FIPS code (e.g. '06037')"
+          },
+          {
+            "name": "exchange",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by stock exchange (nyse, nasdaq). Case-insensitive. Repeat parameter for multiple values.",
+              "title": "Exchange"
+            },
+            "description": "Filter by stock exchange (nyse, nasdaq). Case-insensitive. Repeat parameter for multiple values."
+          },
+          {
+            "name": "domicile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by company domicile (us, adr). Case-insensitive. Single value only.",
+              "title": "Domicile"
+            },
+            "description": "Filter by company domicile (us, adr). Case-insensitive. Single value only."
           },
           {
             "name": "page",
@@ -6254,6 +6293,45 @@
             "description": "Filter by SIC code(s). Repeat parameter for multiple values."
           },
           {
+            "name": "exchange",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by stock exchange (nyse, nasdaq). Case-insensitive. Repeat parameter for multiple values.",
+              "title": "Exchange"
+            },
+            "description": "Filter by stock exchange (nyse, nasdaq). Case-insensitive. Repeat parameter for multiple values."
+          },
+          {
+            "name": "domicile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by company domicile (us, adr). Case-insensitive. Single value only.",
+              "title": "Domicile"
+            },
+            "description": "Filter by company domicile (us, adr). Case-insensitive. Single value only."
+          },
+          {
             "name": "has_insider_buying",
             "in": "query",
             "required": false,
@@ -9399,6 +9477,38 @@
             ],
             "title": "Company Tier",
             "description": "Index membership tier."
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "NYSE",
+                  "NASDAQ"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange",
+            "description": "Stock exchange listing (NYSE or NASDAQ). Null if not listed or not yet classified."
+          },
+          "domicile": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "us",
+                  "adr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domicile",
+            "description": "Company domicile: 'us' for domestic filers, 'adr' for foreign private issuers. Null if unknown."
           },
           "state_fips": {
             "anyOf": [

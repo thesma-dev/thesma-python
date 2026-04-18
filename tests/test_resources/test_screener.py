@@ -8,7 +8,7 @@ import respx
 
 from thesma._types import PaginatedResponse
 from thesma.client import ThesmaClient
-from thesma.errors import ThesmaError
+from thesma.errors import BadRequestError, ThesmaError
 
 BASE = "https://api.thesma.dev"
 
@@ -19,6 +19,8 @@ SCREENER_JSON = {
             "name": "Apple Inc.",
             "ticker": "AAPL",
             "company_tier": "sp500",
+            "exchange": "NASDAQ",
+            "domicile": "us",
             "fiscal_year": 2024,
             "financials": {
                 "revenue": 383285000000,
@@ -504,4 +506,108 @@ class TestScreenerLausFilters:
         assert labor_context["data_freshness"]["ces_period"] == "2025-11"
         assert labor_context["data_freshness"]["qcew_period"] == "2025-Q2"
         assert labor_context["data_freshness"]["jolts_period"] == "2025-10"
+        client.close()
+
+
+class TestScreenerExchangeDomicile:
+    @respx.mock
+    def test_screener_with_exchange_single(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(exchange="nyse")
+
+        assert "exchange=nyse" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_with_exchange_multiple(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(exchange=["nyse", "nasdaq"])
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=nyse" in url_str
+        assert "exchange=nasdaq" in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_with_domicile(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(domicile="us")
+
+        assert "domicile=us" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_exchange_domicile_combined_with_financial_filters(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(exchange=["nyse"], domicile="us", tier="sp500", min_revenue=1_000_000)
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=nyse" in url_str
+        assert "domicile=us" in url_str
+        assert "tier=sp500" in url_str
+        assert "min_revenue=1000000" in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_exchange_domicile_omitted_when_none(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen()
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=" not in url_str
+        assert "domicile=" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_exchange_empty_list_omitted(self, api_key: str) -> None:
+        """Empty list must be normalised to None so httpx does not attempt to serialise it."""
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(exchange=[])
+
+        assert "exchange=" not in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_screener_response_carries_exchange_and_domicile(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen()
+
+        # ScreenerResultItem remains an extra="allow" stub post-regeneration;
+        # access via the stub-attr pattern.
+        assert result.data[0].exchange == "NASDAQ"  # type: ignore[attr-defined]
+        assert result.data[0].domicile == "us"  # type: ignore[attr-defined]
+        client.close()
+
+    @respx.mock
+    def test_screener_invalid_exchange_raises_400(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(
+                400,
+                json={"error": {"code": "invalid_parameter", "message": "Invalid exchange 'amex'..."}},
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.screener.screen(exchange="amex")
         client.close()

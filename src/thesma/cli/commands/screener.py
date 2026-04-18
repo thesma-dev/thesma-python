@@ -7,7 +7,7 @@ import click
 from thesma.cli._formatters import output
 from thesma.cli._utils import get_client
 
-SCREENER_COLUMNS = ("ticker", "name", "company_tier", "fiscal_year")
+SCREENER_COLUMNS = ("ticker", "name", "company_tier", "exchange", "domicile", "fiscal_year")
 
 
 @click.group("screener")
@@ -18,6 +18,18 @@ def screener_group() -> None:
 @screener_group.command("screen")
 @click.option("--sic", multiple=True, help="Filter by SIC code(s). Repeat for multiple.")
 @click.option("--tier", default=None, help="Filter by index tier.")
+@click.option(
+    "--exchange",
+    multiple=True,
+    type=click.Choice(["nyse", "nasdaq"], case_sensitive=False),
+    help="Filter by stock exchange (nyse, nasdaq). Repeat for multiple.",
+)
+@click.option(
+    "--domicile",
+    default=None,
+    type=click.Choice(["us", "adr"], case_sensitive=False),
+    help="Filter by company domicile (us or adr).",
+)
 @click.option("--min-gross-margin", default=None, type=float, help="Minimum gross margin (%).")
 @click.option("--min-operating-margin", default=None, type=float, help="Minimum operating margin (%).")
 @click.option("--min-net-margin", default=None, type=float, help="Minimum net margin (%).")
@@ -82,6 +94,8 @@ def screener_screen(
     ctx: click.Context,
     sic: tuple[str, ...],
     tier: str | None,
+    exchange: tuple[str, ...],
+    domicile: str | None,
     min_gross_margin: float | None,
     min_operating_margin: float | None,
     min_net_margin: float | None,
@@ -117,6 +131,8 @@ def screener_screen(
     result = client.screener.screen(
         sic=sic if sic else None,
         tier=tier,
+        exchange=list(exchange) if exchange else None,
+        domicile=domicile,
         min_gross_margin=min_gross_margin,
         min_operating_margin=min_operating_margin,
         min_net_margin=min_net_margin,

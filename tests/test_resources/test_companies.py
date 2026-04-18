@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._generated.models import EnrichedCompanyData
 from thesma._types import DataResponse, PaginatedResponse
 from thesma.client import ThesmaClient
+from thesma.errors import BadRequestError
 
 BASE = "https://api.thesma.dev"
 
@@ -19,6 +21,25 @@ PAGINATED_COMPANIES_JSON = {
             "ticker": "AAPL",
             "sic_code": "3571",
             "company_tier": "sp500",
+            "exchange": "NASDAQ",
+            "domicile": "us",
+            "state_fips": "06",
+            "county_fips": "06073",
+        },
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+PAGINATED_COMPANIES_JSON_NULL_EXCHANGE_DOMICILE = {
+    "data": [
+        {
+            "cik": "0000320193",
+            "name": "Apple Inc.",
+            "ticker": "AAPL",
+            "sic_code": "3571",
+            "company_tier": "sp500",
+            "exchange": None,
+            "domicile": None,
             "state_fips": "06",
             "county_fips": "06073",
         },
@@ -34,6 +55,8 @@ COMPANY_DETAIL_JSON = {
         "sic_code": "3571",
         "sic_description": "Electronic Computers",
         "company_tier": "sp500",
+        "exchange": "NASDAQ",
+        "domicile": "us",
         "state_fips": "06",
         "county_fips": "06073",
         "filings_url": "/v1/us/sec/companies/0000320193/filings",
@@ -409,4 +432,154 @@ class TestCompaniesGetLausLocalMarket:
         local_market = result.data.labor_context["local_market"]  # type: ignore[attr-defined]
         assert local_market["unemployment_rate_yoy_change"] is None
         assert local_market["labor_force_yoy_change_pct"] is None
+        client.close()
+
+
+class TestCompaniesListExchangeDomicile:
+    @respx.mock
+    def test_list_with_exchange_single(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(exchange="nyse")
+
+        request = route.calls.last.request
+        assert "exchange=nyse" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_exchange_multiple(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(exchange=["nyse", "nasdaq"])
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=nyse" in url_str
+        assert "exchange=nasdaq" in url_str
+        client.close()
+
+    @respx.mock
+    def test_list_with_domicile(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(domicile="us")
+
+        request = route.calls.last.request
+        assert "domicile=us" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_exchange_and_domicile_and_tier_combined(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(exchange=["nyse", "nasdaq"], domicile="us", tier="russell1000")
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=nyse" in url_str
+        assert "exchange=nasdaq" in url_str
+        assert "domicile=us" in url_str
+        assert "tier=russell1000" in url_str
+        client.close()
+
+    @respx.mock
+    def test_list_exchange_domicile_omitted_when_none(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list()
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=" not in url_str
+        assert "domicile=" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_list_exchange_empty_list_omitted(self, api_key: str) -> None:
+        """Empty list must be normalised to None so httpx does not attempt to serialise it."""
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(exchange=[])
+
+        url_str = str(route.calls.last.request.url)
+        assert "exchange=" not in url_str
+        client.close()
+
+    @respx.mock
+    def test_list_response_parses_exchange_and_domicile(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.list()
+
+        # CompanyListItem is typed post-regeneration; .exchange and .domicile
+        # resolve to Enum members whose .value matches the API string.
+        assert result.data[0].exchange is not None
+        assert result.data[0].exchange.value == "NASDAQ"
+        assert result.data[0].domicile is not None
+        assert result.data[0].domicile.value == "us"
+        client.close()
+
+    @respx.mock
+    def test_list_response_parses_null_exchange_and_domicile(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON_NULL_EXCHANGE_DOMICILE),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.list()
+
+        assert result.data[0].exchange is None
+        assert result.data[0].domicile is None
+        client.close()
+
+    @respx.mock
+    def test_list_invalid_exchange_raises_400(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(
+                400,
+                json={"error": {"code": "invalid_parameter", "message": "Invalid exchange 'amex'..."}},
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.companies.list(exchange="amex")
+        client.close()
+
+    @respx.mock
+    def test_list_invalid_domicile_raises_400(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(
+                400,
+                json={"error": {"code": "invalid_parameter", "message": "Invalid domicile 'uk'..."}},
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.companies.list(domicile="uk")
+        client.close()
+
+
+class TestCompaniesGetExchangeDomicile:
+    @respx.mock
+    def test_get_response_carries_exchange_and_domicile(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=COMPANY_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193")
+
+        # EnrichedCompanyData is still an extra="allow" stub post-regeneration;
+        # access via the stub-attr pattern.
+        assert result.data.exchange == "NASDAQ"  # type: ignore[attr-defined]
+        assert result.data.domicile == "us"  # type: ignore[attr-defined]
         client.close()
