@@ -611,3 +611,253 @@ class TestScreenerExchangeDomicile:
         with pytest.raises(BadRequestError):
             client.screener.screen(exchange="amex")
         client.close()
+
+
+SCREENER_SBA_JSON = {
+    "data": [
+        {
+            "cik": "0000320193",
+            "ticker": "AAPL",
+            "name": "Apple Inc.",
+            "company_tier": "sp500",
+            "fiscal_year": 2024,
+            "financials": {
+                "revenue": 383285000000,
+                "net_income": 96995000000,
+                "eps_diluted": 6.08,
+                "common_shares_outstanding": 15550061000,
+                "total_equity": 62146000000,
+                "dividends_paid": -15025000000,
+                "institutional_ownership_pct": 62.5,
+            },
+            "ratios": {
+                "gross_margin": 46.2,
+                "operating_margin": 31.5,
+                "net_margin": 26.4,
+                "debt_to_equity": 1.87,
+            },
+            "lending_context": {
+                "local_sba_loan_count_4q": 520,
+                "local_sba_lending_growth_yoy": 8.4,
+                "industry_sba_lending_growth_yoy": 6.1,
+                "industry_sba_charge_off_rate": 1.9,
+            },
+            "data_freshness": {"sba_period": "2025-Q4"},
+        }
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+
+SCREENER_DUAL_CONTEXT_JSON = {
+    "data": [
+        {
+            "cik": "0000320193",
+            "ticker": "AAPL",
+            "name": "Apple Inc.",
+            "company_tier": "sp500",
+            "fiscal_year": 2024,
+            "financials": {
+                "revenue": 383285000000,
+                "net_income": 96995000000,
+                "eps_diluted": 6.08,
+                "common_shares_outstanding": 15550061000,
+                "total_equity": 62146000000,
+                "dividends_paid": -15025000000,
+                "institutional_ownership_pct": 62.5,
+            },
+            "ratios": {
+                "gross_margin": 46.2,
+                "operating_margin": 31.5,
+                "net_margin": 26.4,
+                "debt_to_equity": 1.87,
+            },
+            "labor_context": {
+                "industry_hiring_trend": "stable",
+                "data_freshness": {
+                    "ces_period": "2025-11",
+                    "qcew_period": "2025-Q2",
+                    "jolts_period": "2025-10",
+                    "laus_period": "2025-11",
+                },
+            },
+            "lending_context": {
+                "local_sba_loan_count_4q": 520,
+                "local_sba_lending_growth_yoy": 8.4,
+                "industry_sba_lending_growth_yoy": 6.1,
+                "industry_sba_charge_off_rate": 1.9,
+            },
+            "data_freshness": {"sba_period": "2025-Q4"},
+        }
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+
+class TestScreenerSbaFilters:
+    @respx.mock
+    def test_min_local_sba_loan_count_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_local_sba_loan_count=100)
+
+        assert "min_local_sba_loan_count=100" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_max_local_sba_loan_count_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(max_local_sba_loan_count=1000)
+
+        assert "max_local_sba_loan_count=1000" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_min_local_sba_lending_growth_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_local_sba_lending_growth=5.0)
+
+        url_str = str(route.calls.last.request.url)
+        assert "min_local_sba_lending_growth=5" in url_str
+        client.close()
+
+    @respx.mock
+    def test_max_local_sba_lending_growth_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(max_local_sba_lending_growth=20.0)
+
+        assert "max_local_sba_lending_growth=20" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_min_industry_sba_lending_growth_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_industry_sba_lending_growth=3.5)
+
+        assert "min_industry_sba_lending_growth=3.5" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_max_industry_sba_charge_off_rate_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(max_industry_sba_charge_off_rate=10.0)
+
+        assert "max_industry_sba_charge_off_rate=10" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_no_sba_filter_omits_all_six_params(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen()
+
+        url_str = str(route.calls.last.request.url)
+        for name in (
+            "min_local_sba_loan_count",
+            "max_local_sba_loan_count",
+            "min_local_sba_lending_growth",
+            "max_local_sba_lending_growth",
+            "min_industry_sba_lending_growth",
+            "max_industry_sba_charge_off_rate",
+        ):
+            assert name not in url_str
+        client.close()
+
+    @respx.mock
+    def test_combined_sba_and_bls_filters(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_local_sba_loan_count=100, min_industry_employment_growth=2.0)
+
+        url_str = str(route.calls.last.request.url)
+        assert "min_local_sba_loan_count=100" in url_str
+        assert "min_industry_employment_growth=2" in url_str
+        client.close()
+
+    @respx.mock
+    def test_screener_response_includes_lending_context(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(min_local_sba_loan_count=100)
+
+        lending_context = result.data[0].lending_context  # type: ignore[attr-defined]
+        assert lending_context["local_sba_loan_count_4q"] == 520
+        assert lending_context["industry_sba_charge_off_rate"] == 1.9
+        assert "data_freshness" not in lending_context
+        client.close()
+
+    @respx.mock
+    def test_screener_response_includes_top_level_data_freshness_with_sba_period(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen()
+
+        data_freshness = result.data[0].data_freshness  # type: ignore[attr-defined]
+        assert data_freshness["sba_period"] == "2025-Q4"
+        client.close()
+
+    @respx.mock
+    def test_include_lending_context_alone(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_SBA_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(include="lending_context")
+
+        assert "include=lending_context" in str(route.calls.last.request.url)
+        assert result.data[0].lending_context is not None  # type: ignore[attr-defined]
+        client.close()
+
+    @respx.mock
+    def test_include_labor_and_lending_context_combined(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_DUAL_CONTEXT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(include="labor_context,lending_context")
+
+        url_str = str(route.calls.last.request.url)
+        assert "include=labor_context%2Clending_context" in url_str
+        item = result.data[0]
+        assert item.labor_context is not None  # type: ignore[attr-defined]
+        assert item.lending_context is not None  # type: ignore[attr-defined]
+        assert item.data_freshness is not None  # type: ignore[attr-defined]
+        client.close()
+
+    @respx.mock
+    def test_two_freshness_objects_coexist(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_DUAL_CONTEXT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(include="labor_context,lending_context")
+
+        item = result.data[0]
+        assert item.labor_context["data_freshness"]["ces_period"] == "2025-11"  # type: ignore[attr-defined]
+        assert item.data_freshness["sba_period"] == "2025-Q4"  # type: ignore[attr-defined]
+        client.close()

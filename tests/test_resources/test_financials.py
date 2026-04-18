@@ -198,6 +198,41 @@ class TestFinancialsLaborContextInclude:
         client.close()
 
 
+class TestFinancialsLendingContextInclude:
+    @respx.mock
+    def test_get_with_include_lending_context_forwards_param(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.financials.get("0000320193", statement="income", period="annual", include="lending_context")
+
+        assert "include=lending_context" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_combined_forwards_param(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.financials.get("0000320193", include="labor_context,lending_context")
+
+        assert "include=labor_context%2Clending_context" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_get_without_include_omits_param(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.financials.get("0000320193", statement="income")
+
+        assert "include=" not in str(route.calls.last.request.url)
+        client.close()
+
+
 class TestFinancialsFields:
     @respx.mock
     def test_fields(self, api_key: str) -> None:

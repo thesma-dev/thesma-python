@@ -18,6 +18,7 @@ from thesma.cli.commands.financials import financials_group
 from thesma.cli.commands.holdings import holdings_group
 from thesma.cli.commands.insider_trades import insider_trades_group
 from thesma.cli.commands.ratios import ratios_group
+from thesma.cli.commands.sba import sba_group
 from thesma.cli.commands.screener import screener_group
 from thesma.errors import ThesmaError
 
@@ -58,6 +59,7 @@ cli.add_command(companies_group)
 cli.add_command(financials_group)
 cli.add_command(filings_group)
 cli.add_command(ratios_group)
+cli.add_command(sba_group)
 cli.add_command(screener_group)
 cli.add_command(insider_trades_group)
 cli.add_command(holdings_group)

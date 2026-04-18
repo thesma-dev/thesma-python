@@ -27,6 +27,17 @@ class Financials:
         """Get a financial statement for a company.
 
         ``GET /v1/us/sec/companies/{cik}/financials``
+
+        ``include`` is a comma-separated list of enrichment surfaces —
+        ``"labor_context"`` and/or ``"lending_context"`` (e.g.
+        ``include="lending_context"`` or
+        ``include="labor_context,lending_context"``). The API returns the
+        enrichment fields at the envelope root, but
+        ``FinancialStatementResponse`` uses Pydantic ``extra="ignore"`` so
+        the values are silently dropped from the parsed result today;
+        hoisting them to consumer-visible attributes is tracked as
+        follow-up work. The query parameter is still forwarded to the
+        API.
         """
         params: dict[str, Any] = {
             "statement": statement,

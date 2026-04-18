@@ -6656,6 +6656,114 @@
             "description": "Minimum HQ county labour force size. Requires BLS dataset."
           },
           {
+            "name": "min_local_sba_loan_count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum SBA loans in company's HQ county (trailing 4Q).",
+              "title": "Min Local Sba Loan Count"
+            },
+            "description": "Minimum SBA loans in company's HQ county (trailing 4Q)."
+          },
+          {
+            "name": "max_local_sba_loan_count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum SBA loans in company's HQ county (trailing 4Q).",
+              "title": "Max Local Sba Loan Count"
+            },
+            "description": "Maximum SBA loans in company's HQ county (trailing 4Q)."
+          },
+          {
+            "name": "min_local_sba_lending_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum YoY % change in county SBA lending volume.",
+              "title": "Min Local Sba Lending Growth"
+            },
+            "description": "Minimum YoY % change in county SBA lending volume."
+          },
+          {
+            "name": "max_local_sba_lending_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum YoY % change in county SBA lending volume.",
+              "title": "Max Local Sba Lending Growth"
+            },
+            "description": "Maximum YoY % change in county SBA lending volume."
+          },
+          {
+            "name": "min_industry_sba_lending_growth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum YoY % change in national NAICS SBA lending volume.",
+              "title": "Min Industry Sba Lending Growth"
+            },
+            "description": "Minimum YoY % change in national NAICS SBA lending volume."
+          },
+          {
+            "name": "max_industry_sba_charge_off_rate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum charge-off rate (%) in company's NAICS nationally (mature vintages).",
+              "title": "Max Industry Sba Charge Off Rate"
+            },
+            "description": "Maximum charge-off rate (%) in company's NAICS nationally (mature vintages)."
+          },
+          {
             "name": "include",
             "in": "query",
             "required": false,
@@ -6668,10 +6776,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Include additional data: labor_context",
+              "description": "Include additional data: labor_context, lending_context",
               "title": "Include"
             },
-            "description": "Include additional data: labor_context"
+            "description": "Include additional data: labor_context, lending_context"
           },
           {
             "name": "sort",
@@ -6738,6 +6846,1158 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ScreenerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/counties/{fips}/lending": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "County Lending",
+        "operationId": "county_lending_v1_us_sba_counties__fips__lending_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "5-digit county FIPS",
+              "title": "Fips"
+            },
+            "description": "5-digit county FIPS"
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "NAICS code; triggers fallback cascade when <5 loans.",
+              "title": "Industry"
+            },
+            "description": "NAICS code; triggers fallback cascade when <5 loans."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CountyLendingPoint_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/states/{fips}/lending": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "State Lending",
+        "operationId": "state_lending_v1_us_sba_states__fips__lending_get",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "2-digit state FIPS",
+              "title": "Fips"
+            },
+            "description": "2-digit state FIPS"
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "NAICS code; triggers fallback cascade when <5 loans.",
+              "title": "Industry"
+            },
+            "description": "NAICS code; triggers fallback cascade when <5 loans."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_StateLendingPoint_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/industries/{naics}/lending": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "Industry Lending",
+        "operationId": "industry_lending_v1_us_sba_industries__naics__lending_get",
+        "parameters": [
+          {
+            "name": "naics",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "2-6 digit NAICS code",
+              "title": "Naics"
+            },
+            "description": "2-6 digit NAICS code"
+          },
+          {
+            "name": "geo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "national|state|county",
+              "default": "national",
+              "title": "Geo"
+            },
+            "description": "national|state|county"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2-digit state FIPS (required when geo=state)",
+              "title": "State"
+            },
+            "description": "2-digit state FIPS (required when geo=state)"
+          },
+          {
+            "name": "county",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "5-digit county FIPS (required when geo=county)",
+              "title": "County"
+            },
+            "description": "5-digit county FIPS (required when geo=county)"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_IndustryLendingPoint_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/lenders": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "Lender List",
+        "operationId": "lender_list_v1_us_sba_lenders_get",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "2-digit state FIPS filter",
+              "title": "State"
+            },
+            "description": "2-digit state FIPS filter"
+          },
+          {
+            "name": "county",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "5-digit county FIPS filter",
+              "title": "County"
+            },
+            "description": "5-digit county FIPS filter"
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "NAICS code filter (exact match, no cascade)",
+              "title": "Industry"
+            },
+            "description": "NAICS code filter (exact match, no cascade)"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Sort by: loan_count, total_amount, avg_amount",
+              "default": "loan_count",
+              "title": "Sort"
+            },
+            "description": "Sort by: loan_count, total_amount, avg_amount"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LenderSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/lenders/{lender_id}": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "Lender Detail",
+        "operationId": "lender_detail_v1_us_sba_lenders__lender_id__get",
+        "parameters": [
+          {
+            "name": "lender_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Lender Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_LenderDetail_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/lending/characteristics": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "Lending Characteristics",
+        "description": "Distribution analysis \u2014 reads from raw sba_7a_loans. Requires year+quarter.",
+        "operationId": "lending_characteristics_v1_us_sba_lending_characteristics_get",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "county",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "County"
+            }
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Industry"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_CharacteristicsDistribution_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/lending/outcomes": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "Lending Outcomes",
+        "description": "Charge-off rates by approval vintage year. No NAICS cascade \u2014 direct query.",
+        "operationId": "lending_outcomes_v1_us_sba_lending_outcomes_get",
+        "parameters": [
+          {
+            "name": "vintage_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start vintage year (required)",
+              "title": "Vintage From"
+            },
+            "description": "Start vintage year (required)"
+          },
+          {
+            "name": "vintage_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End vintage year",
+              "title": "Vintage To"
+            },
+            "description": "End vintage year"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "county",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "County"
+            }
+          },
+          {
+            "name": "industry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Industry"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_VintageOutcomePoint_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/metrics": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "List Metrics",
+        "operationId": "list_metrics_v1_us_sba_metrics_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by category: volume, outcomes, characteristics",
+              "title": "Category"
+            },
+            "description": "Filter by category: volume, outcomes, characteristics"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search on name and description",
+              "title": "Search"
+            },
+            "description": "Search on name and description"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (1-indexed)",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number (1-indexed)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page (max 100)",
+              "default": 25,
+              "title": "Per Page"
+            },
+            "description": "Results per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SbaMetricSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/us/sba/metrics/{metric}": {
+      "get": {
+        "tags": [
+          "SBA Lending"
+        ],
+        "summary": "Get Metric",
+        "operationId": "get_metric_v1_us_sba_metrics__metric__get",
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_SbaMetricDetail_"
                 }
               }
             }
@@ -9144,6 +10404,62 @@
         "title": "BreakdownResponse",
         "description": "Response for breakdown endpoint."
       },
+      "BucketCount": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "pct": {
+            "type": "number",
+            "title": "Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "loan_count",
+          "total_amount",
+          "pct"
+        ],
+        "title": "BucketCount"
+      },
+      "CategoryCount": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "pct": {
+            "type": "number",
+            "title": "Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "loan_count",
+          "total_amount",
+          "pct"
+        ],
+        "title": "CategoryCount"
+      },
       "CensusTimeSeriesPoint": {
         "properties": {
           "year": {
@@ -9409,6 +10725,97 @@
         ],
         "title": "CesEmploymentPoint",
         "description": "A single pivoted CES employment observation."
+      },
+      "CharacteristicsDistribution": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "total_loans": {
+            "type": "integer",
+            "title": "Total Loans"
+          },
+          "filter_scope": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Filter Scope"
+          },
+          "loan_size_buckets": {
+            "items": {
+              "$ref": "#/components/schemas/BucketCount"
+            },
+            "type": "array",
+            "title": "Loan Size Buckets"
+          },
+          "term_length_buckets": {
+            "items": {
+              "$ref": "#/components/schemas/BucketCount"
+            },
+            "type": "array",
+            "title": "Term Length Buckets"
+          },
+          "interest_rate_histogram": {
+            "items": {
+              "$ref": "#/components/schemas/BucketCount"
+            },
+            "type": "array",
+            "title": "Interest Rate Histogram"
+          },
+          "sub_programme_mix": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryCount"
+            },
+            "type": "array",
+            "title": "Sub Programme Mix"
+          },
+          "business_type_mix": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryCount"
+            },
+            "type": "array",
+            "title": "Business Type Mix"
+          },
+          "revolving_vs_term": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryCount"
+            },
+            "type": "array",
+            "title": "Revolving Vs Term"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "quarter",
+          "period",
+          "total_loans",
+          "filter_scope",
+          "loan_size_buckets",
+          "term_length_buckets",
+          "interest_rate_histogram",
+          "sub_programme_mix",
+          "business_type_mix",
+          "revolving_vs_term"
+        ],
+        "title": "CharacteristicsDistribution"
       },
       "CommitteeDetail": {
         "properties": {
@@ -10120,6 +11527,148 @@
         "title": "CompensationResponse",
         "description": "Full compensation response for a company/year."
       },
+      "CountyLendingPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period",
+            "description": "Formatted as YYYY-Qq, e.g. 2024-Q3"
+          },
+          "county_fips": {
+            "type": "string",
+            "title": "County Fips"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "avg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Amount"
+          },
+          "median_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Amount",
+            "description": "Populated when scoped to a single NAICS code. None when aggregating across all NAICS (medians are not summable)."
+          },
+          "guaranteed_amount": {
+            "type": "number",
+            "title": "Guaranteed Amount"
+          },
+          "avg_guarantee_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Guarantee Pct"
+          },
+          "jobs_supported": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobs Supported"
+          },
+          "charge_off_count": {
+            "type": "integer",
+            "title": "Charge Off Count"
+          },
+          "charge_off_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Off Rate",
+            "description": "charge_off_count / loan_count * 100"
+          },
+          "charge_off_amount": {
+            "type": "number",
+            "title": "Charge Off Amount"
+          },
+          "naics_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naics Code"
+          },
+          "naics_match_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naics Match Level"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "quarter",
+          "period",
+          "county_fips",
+          "loan_count",
+          "total_amount",
+          "avg_amount",
+          "guaranteed_amount",
+          "avg_guarantee_pct",
+          "jobs_supported",
+          "charge_off_count",
+          "charge_off_rate",
+          "charge_off_amount"
+        ],
+        "title": "CountyLendingPoint"
+      },
       "DataAvailability": {
         "properties": {
           "years": {
@@ -10201,6 +11750,18 @@
             ],
             "title": "Laus Period",
             "description": "LAUS data period (e.g. '2025-11')."
+          },
+          "sba_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sba Period",
+            "description": "SBA aggregation period (e.g. '2025-Q3')."
           }
         },
         "type": "object",
@@ -10498,6 +12059,18 @@
         ],
         "title": "DataResponse[CesEmploymentLatest]"
       },
+      "DataResponse_CharacteristicsDistribution_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CharacteristicsDistribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[CharacteristicsDistribution]"
+      },
       "DataResponse_DataQualityReportResponse_": {
         "properties": {
           "data": {
@@ -10557,6 +12130,18 @@
           "data"
         ],
         "title": "DataResponse[JoltsTurnoverLatest]"
+      },
+      "DataResponse_LenderDetail_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LenderDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[LenderDetail]"
       },
       "DataResponse_MetricDetail_": {
         "properties": {
@@ -10629,6 +12214,18 @@
           "data"
         ],
         "title": "DataResponse[RatioTimeSeriesResponse]"
+      },
+      "DataResponse_SbaMetricDetail_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SbaMetricDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[SbaMetricDetail]"
       },
       "DataResponse_SectionChangeResponse_": {
         "properties": {
@@ -11905,6 +13502,240 @@
         ],
         "title": "IndustryContext",
         "description": "CES-based industry employment context for a company's NAICS sector."
+      },
+      "IndustryLending": {
+        "properties": {
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code"
+          },
+          "naics_description": {
+            "type": "string",
+            "title": "Naics Description"
+          },
+          "naics_match_level": {
+            "type": "string",
+            "title": "Naics Match Level",
+            "description": "e.g. '6-digit', '4-digit'"
+          },
+          "national_quarterly_loan_count": {
+            "type": "integer",
+            "title": "National Quarterly Loan Count"
+          },
+          "national_quarterly_total_amount": {
+            "type": "integer",
+            "title": "National Quarterly Total Amount"
+          },
+          "national_avg_loan_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Avg Loan Size"
+          },
+          "national_yoy_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Yoy Change Pct"
+          },
+          "national_charge_off_rate_trailing_4q": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Charge Off Rate Trailing 4Q"
+          },
+          "data_period": {
+            "type": "string",
+            "title": "Data Period"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "naics_code",
+          "naics_description",
+          "naics_match_level",
+          "national_quarterly_loan_count",
+          "national_quarterly_total_amount",
+          "data_period"
+        ],
+        "title": "IndustryLending",
+        "description": "National NAICS-scoped SBA lending summary."
+      },
+      "IndustryLendingPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "naics_code": {
+            "type": "string",
+            "title": "Naics Code"
+          },
+          "naics_match_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naics Match Level"
+          },
+          "geo": {
+            "type": "string",
+            "title": "Geo"
+          },
+          "state_fips": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Fips"
+          },
+          "county_fips": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "County Fips"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "avg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Amount"
+          },
+          "median_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Amount",
+            "description": "Populated for single-NAICS queries; None for cross-NAICS aggregations."
+          },
+          "guaranteed_amount": {
+            "type": "number",
+            "title": "Guaranteed Amount"
+          },
+          "avg_guarantee_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Guarantee Pct"
+          },
+          "jobs_supported": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobs Supported"
+          },
+          "charge_off_count": {
+            "type": "integer",
+            "title": "Charge Off Count"
+          },
+          "charge_off_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Off Rate"
+          },
+          "charge_off_amount": {
+            "type": "number",
+            "title": "Charge Off Amount"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "quarter",
+          "period",
+          "naics_code",
+          "geo",
+          "loan_count",
+          "total_amount",
+          "avg_amount",
+          "guaranteed_amount",
+          "avg_guarantee_pct",
+          "jobs_supported",
+          "charge_off_count",
+          "charge_off_rate",
+          "charge_off_amount"
+        ],
+        "title": "IndustryLendingPoint"
       },
       "InsiderHoldingItem": {
         "properties": {
@@ -13777,6 +15608,414 @@
         "title": "LausStateObservation",
         "description": "Monthly LAUS observation for a single state (SA or NSA)."
       },
+      "LenderDetail": {
+        "properties": {
+          "lender_id": {
+            "type": "integer",
+            "title": "Lender Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "first_seen_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/LenderQuarterPoint"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lender_id",
+          "display_name",
+          "city",
+          "state",
+          "source",
+          "first_seen_at",
+          "last_seen_at",
+          "history"
+        ],
+        "title": "LenderDetail"
+      },
+      "LenderQuarterPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "avg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Amount"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "quarter",
+          "period",
+          "loan_count",
+          "total_amount",
+          "avg_amount"
+        ],
+        "title": "LenderQuarterPoint"
+      },
+      "LenderSummary": {
+        "properties": {
+          "lender_id": {
+            "type": "integer",
+            "title": "Lender Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "avg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Amount"
+          },
+          "market_share_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Share Pct"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lender_id",
+          "display_name",
+          "city",
+          "state",
+          "loan_count",
+          "total_amount",
+          "avg_amount",
+          "market_share_pct"
+        ],
+        "title": "LenderSummary"
+      },
+      "LendingContext": {
+        "properties": {
+          "local_market": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalLendingMarket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "industry_lending": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IndustryLending"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "LendingContext",
+        "description": "Top-level envelope for lending_context enrichment."
+      },
+      "LendingContextSummary": {
+        "properties": {
+          "local_sba_loan_count_4q": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Sba Loan Count 4Q",
+            "description": "SBA loans in company's HQ county over trailing 4 quarters (all industries)."
+          },
+          "local_sba_lending_growth_yoy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Sba Lending Growth Yoy",
+            "description": "YoY % change in SBA lending volume in company's HQ county."
+          },
+          "industry_sba_lending_growth_yoy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Sba Lending Growth Yoy",
+            "description": "YoY % change in national SBA lending volume for company's NAICS."
+          },
+          "industry_sba_charge_off_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry Sba Charge Off Rate",
+            "description": "Charge-off rate (%) for company's NAICS nationally (mature vintages only)."
+          }
+        },
+        "type": "object",
+        "title": "LendingContextSummary",
+        "description": "Flat SBA lending context summary for screener results, read from pre-computed company columns."
+      },
+      "LocalLendingMarket": {
+        "properties": {
+          "county_fips": {
+            "type": "string",
+            "title": "County Fips"
+          },
+          "county_name": {
+            "type": "string",
+            "title": "County Name"
+          },
+          "county_fips_confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "unknown"
+            ],
+            "title": "County Fips Confidence"
+          },
+          "quarterly_loan_count": {
+            "type": "integer",
+            "title": "Quarterly Loan Count"
+          },
+          "quarterly_total_amount": {
+            "type": "integer",
+            "title": "Quarterly Total Amount"
+          },
+          "avg_loan_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Loan Size",
+            "description": "total_amount // loan_count; null when count is zero."
+          },
+          "quarterly_yoy_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarterly Yoy Change Pct",
+            "description": "YoY change in total amount; null when prior is zero."
+          },
+          "charge_off_rate_trailing_4q": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Off Rate Trailing 4Q",
+            "description": "Lifetime charge-off rate for mature vintages; null when no mature denominator."
+          },
+          "top_industry_naics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Industry Naics"
+          },
+          "top_industry_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Industry Name"
+          },
+          "data_period": {
+            "type": "string",
+            "title": "Data Period",
+            "description": "e.g. '2025-Q3'"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "county_fips",
+          "county_name",
+          "county_fips_confidence",
+          "quarterly_loan_count",
+          "quarterly_total_amount",
+          "data_period"
+        ],
+        "title": "LocalLendingMarket",
+        "description": "County-scoped SBA lending summary."
+      },
       "LocalMarketContext": {
         "properties": {
           "county_fips": {
@@ -14709,6 +16948,26 @@
         ],
         "title": "PaginatedResponse[CompanyPositionChange]"
       },
+      "PaginatedResponse_CountyLendingPoint_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CountyLendingPoint"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[CountyLendingPoint]"
+      },
       "PaginatedResponse_DataQualityReportResponse_": {
         "properties": {
           "data": {
@@ -14868,6 +17127,26 @@
           "pagination"
         ],
         "title": "PaginatedResponse[HolderListItem]"
+      },
+      "PaginatedResponse_IndustryLendingPoint_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/IndustryLendingPoint"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[IndustryLendingPoint]"
       },
       "PaginatedResponse_InsiderHoldingListItem_": {
         "properties": {
@@ -15029,6 +17308,26 @@
         ],
         "title": "PaginatedResponse[LausStateObservation]"
       },
+      "PaginatedResponse_LenderSummary_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LenderSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[LenderSummary]"
+      },
       "PaginatedResponse_OccupationSummary_": {
         "properties": {
           "data": {
@@ -15129,6 +17428,26 @@
         ],
         "title": "PaginatedResponse[QcewEmployment]"
       },
+      "PaginatedResponse_SbaMetricSummary_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SbaMetricSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[SbaMetricSummary]"
+      },
       "PaginatedResponse_SectionSummary_": {
         "properties": {
           "data": {
@@ -15148,6 +17467,46 @@
           "pagination"
         ],
         "title": "PaginatedResponse[SectionSummary]"
+      },
+      "PaginatedResponse_StateLendingPoint_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/StateLendingPoint"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[StateLendingPoint]"
+      },
+      "PaginatedResponse_VintageOutcomePoint_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/VintageOutcomePoint"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[VintageOutcomePoint]"
       },
       "PaginatedResponse_WebhookDeliveryResponse_": {
         "properties": {
@@ -16211,6 +18570,125 @@
         "title": "RelatedOccupation",
         "description": "Related occupation in the same major group."
       },
+      "SbaMetricDetail": {
+        "properties": {
+          "canonical_name": {
+            "type": "string",
+            "title": "Canonical Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "update_cadence": {
+            "type": "string",
+            "title": "Update Cadence"
+          },
+          "typical_lag_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Lag Months"
+          },
+          "data_availability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricYearRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "related_endpoints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Related Endpoints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canonical_name",
+          "display_name",
+          "description",
+          "category",
+          "unit",
+          "update_cadence",
+          "typical_lag_months",
+          "data_availability",
+          "related_endpoints"
+        ],
+        "title": "SbaMetricDetail"
+      },
+      "SbaMetricSummary": {
+        "properties": {
+          "canonical_name": {
+            "type": "string",
+            "title": "Canonical Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "update_cadence": {
+            "type": "string",
+            "title": "Update Cadence"
+          },
+          "typical_lag_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Lag Months"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canonical_name",
+          "display_name",
+          "description",
+          "category",
+          "unit",
+          "update_cadence",
+          "typical_lag_months"
+        ],
+        "title": "SbaMetricSummary"
+      },
       "ScreenerFinancials": {
         "properties": {
           "revenue": {
@@ -17273,6 +19751,146 @@
         "title": "SourceVariable",
         "description": "Source Census variable mapping."
       },
+      "StateLendingPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "state_fips": {
+            "type": "string",
+            "title": "State Fips"
+          },
+          "loan_count": {
+            "type": "integer",
+            "title": "Loan Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "avg_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Amount"
+          },
+          "median_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Amount",
+            "description": "Populated for single-NAICS queries; None for cross-NAICS aggregations."
+          },
+          "guaranteed_amount": {
+            "type": "number",
+            "title": "Guaranteed Amount"
+          },
+          "avg_guarantee_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Guarantee Pct"
+          },
+          "jobs_supported": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobs Supported"
+          },
+          "charge_off_count": {
+            "type": "integer",
+            "title": "Charge Off Count"
+          },
+          "charge_off_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Off Rate"
+          },
+          "charge_off_amount": {
+            "type": "number",
+            "title": "Charge Off Amount"
+          },
+          "naics_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naics Code"
+          },
+          "naics_match_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Naics Match Level"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "quarter",
+          "period",
+          "state_fips",
+          "loan_count",
+          "total_amount",
+          "avg_amount",
+          "guaranteed_amount",
+          "avg_guarantee_pct",
+          "jobs_supported",
+          "charge_off_count",
+          "charge_off_rate",
+          "charge_off_amount"
+        ],
+        "title": "StateLendingPoint"
+      },
       "StatementFields": {
         "properties": {
           "fields": {
@@ -17628,6 +20246,74 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VintageOutcomePoint": {
+        "properties": {
+          "vintage_year": {
+            "type": "integer",
+            "title": "Vintage Year"
+          },
+          "loans_in_vintage": {
+            "type": "integer",
+            "title": "Loans In Vintage"
+          },
+          "charged_off_count": {
+            "type": "integer",
+            "title": "Charged Off Count"
+          },
+          "charge_off_rate_pct": {
+            "type": "number",
+            "title": "Charge Off Rate Pct"
+          },
+          "gross_charge_off_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Charge Off Amount"
+          },
+          "avg_time_to_chargeoff_months": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Time To Chargeoff Months"
+          },
+          "active_loan_count": {
+            "type": "integer",
+            "title": "Active Loan Count"
+          },
+          "vintage_maturity": {
+            "type": "string",
+            "title": "Vintage Maturity",
+            "description": "'mature' if age >= 12 quarters, else 'incomplete'"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "SBA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vintage_year",
+          "loans_in_vintage",
+          "charged_off_count",
+          "charge_off_rate_pct",
+          "gross_charge_off_amount",
+          "avg_time_to_chargeoff_months",
+          "active_loan_count",
+          "vintage_maturity"
+        ],
+        "title": "VintageOutcomePoint"
       },
       "WebhookCreateRequest": {
         "properties": {
@@ -18154,6 +20840,10 @@
       "description": "BLS metric definitions and available data series."
     },
     {
+      "name": "SBA Lending",
+      "description": "SBA 7(a) small business loan data \u2014 lending volume, lender activity, and charge-off outcomes by county, state, and NAICS industry."
+    },
+    {
       "name": "Census Geographies",
       "description": "US Census geographic hierarchies \u2014 states, counties, and ZIPs."
     },
@@ -18223,6 +20913,12 @@
         "BLS Occupations",
         "BLS States",
         "BLS Metrics"
+      ]
+    },
+    {
+      "name": "Small Business Administration",
+      "tags": [
+        "SBA Lending"
       ]
     },
     {
