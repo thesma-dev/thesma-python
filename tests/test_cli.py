@@ -512,6 +512,113 @@ class TestScreenerScreen:
         assert "--exchange" in result.output
         assert "--domicile" in result.output
 
+    def test_cli_screener_min_local_sba_loan_count(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--min-local-sba-loan-count", "100"], mock_client)
+        assert result.exit_code == 0
+        kwargs = mock_client.screener.screen.call_args.kwargs
+        assert kwargs["min_local_sba_loan_count"] == 100
+        assert isinstance(kwargs["min_local_sba_loan_count"], int)
+
+    def test_cli_screener_max_local_sba_loan_count(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--max-local-sba-loan-count", "1000"], mock_client)
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["max_local_sba_loan_count"] == 1000
+
+    def test_cli_screener_min_local_sba_lending_growth(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--min-local-sba-lending-growth", "5.0"], mock_client)
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["min_local_sba_lending_growth"] == 5.0
+
+    def test_cli_screener_max_local_sba_lending_growth(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--max-local-sba-lending-growth", "20.0"], mock_client)
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["max_local_sba_lending_growth"] == 20.0
+
+    def test_cli_screener_min_industry_sba_lending_growth(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--min-industry-sba-lending-growth", "3.5"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["min_industry_sba_lending_growth"] == 3.5
+
+    def test_cli_screener_max_industry_sba_charge_off_rate(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--max-industry-sba-charge-off-rate", "10.0"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["max_industry_sba_charge_off_rate"] == 10.0
+
+    def test_cli_screener_combined_sba_options(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            [
+                "screener",
+                "screen",
+                "--min-local-sba-loan-count",
+                "100",
+                "--max-local-sba-loan-count",
+                "1000",
+                "--min-local-sba-lending-growth",
+                "5.0",
+                "--max-local-sba-lending-growth",
+                "20.0",
+                "--min-industry-sba-lending-growth",
+                "3.5",
+                "--max-industry-sba-charge-off-rate",
+                "10.0",
+            ],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        kwargs = mock_client.screener.screen.call_args.kwargs
+        assert kwargs["min_local_sba_loan_count"] == 100
+        assert kwargs["max_local_sba_loan_count"] == 1000
+        assert kwargs["min_local_sba_lending_growth"] == 5.0
+        assert kwargs["max_local_sba_lending_growth"] == 20.0
+        assert kwargs["min_industry_sba_lending_growth"] == 3.5
+        assert kwargs["max_industry_sba_charge_off_rate"] == 10.0
+
+    def test_cli_screener_help_shows_sba_options(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        for option in (
+            "--min-local-sba-loan-count",
+            "--max-local-sba-loan-count",
+            "--min-local-sba-lending-growth",
+            "--max-local-sba-lending-growth",
+            "--min-industry-sba-lending-growth",
+            "--max-industry-sba-charge-off-rate",
+            "--include",
+        ):
+            assert option in result.output, f"Missing option: {option}"
+
+    def test_cli_screener_include_lending_context_option(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--include", "lending_context"], mock_client)
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["include"] == "lending_context"
+
+    def test_cli_screener_include_combined_option(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--include", "labor_context,lending_context"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs["include"] == "labor_context,lending_context"
+
 
 # --- Holdings CLI ---
 

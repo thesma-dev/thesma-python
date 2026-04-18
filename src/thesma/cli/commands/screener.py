@@ -85,6 +85,47 @@ def screener_group() -> None:
     type=int,
     help="Minimum HQ county labour force size.",
 )
+@click.option(
+    "--min-local-sba-loan-count",
+    default=None,
+    type=int,
+    help="Min trailing 4Q SBA loan count in HQ county.",
+)
+@click.option(
+    "--max-local-sba-loan-count",
+    default=None,
+    type=int,
+    help="Max trailing 4Q SBA loan count in HQ county.",
+)
+@click.option(
+    "--min-local-sba-lending-growth",
+    default=None,
+    type=float,
+    help="Min YoY %% change in HQ county SBA lending.",
+)
+@click.option(
+    "--max-local-sba-lending-growth",
+    default=None,
+    type=float,
+    help="Max YoY %% change in HQ county SBA lending.",
+)
+@click.option(
+    "--min-industry-sba-lending-growth",
+    default=None,
+    type=float,
+    help="Min YoY %% change in NAICS national SBA lending.",
+)
+@click.option(
+    "--max-industry-sba-charge-off-rate",
+    default=None,
+    type=float,
+    help="Max SBA charge-off rate (%%) for NAICS nationally.",
+)
+@click.option(
+    "--include",
+    default=None,
+    help="Comma-separated enrichments (e.g. 'labor_context', 'lending_context', 'labor_context,lending_context').",
+)
 @click.option("--sort-by", default=None, help="Sort by field.")
 @click.option("--order", default=None, help="Sort order (asc, desc).")
 @click.option("--page", default=1, type=int, help="Page number.")
@@ -121,6 +162,13 @@ def screener_screen(
     max_local_unemployment_rate: float | None,
     local_unemployment_trend: str | None,
     min_local_labor_force: int | None,
+    min_local_sba_loan_count: int | None,
+    max_local_sba_loan_count: int | None,
+    min_local_sba_lending_growth: float | None,
+    max_local_sba_lending_growth: float | None,
+    min_industry_sba_lending_growth: float | None,
+    max_industry_sba_charge_off_rate: float | None,
+    include: str | None,
     sort_by: str | None,
     order: str | None,
     page: int,
@@ -158,6 +206,13 @@ def screener_screen(
         max_local_unemployment_rate=max_local_unemployment_rate,
         local_unemployment_trend=local_unemployment_trend,
         min_local_labor_force=min_local_labor_force,
+        min_local_sba_loan_count=min_local_sba_loan_count,
+        max_local_sba_loan_count=max_local_sba_loan_count,
+        min_local_sba_lending_growth=min_local_sba_lending_growth,
+        max_local_sba_lending_growth=max_local_sba_lending_growth,
+        min_industry_sba_lending_growth=min_industry_sba_lending_growth,
+        max_industry_sba_charge_off_rate=max_industry_sba_charge_off_rate,
+        include=include,
         sort_by=sort_by,
         order=order,
         page=page,

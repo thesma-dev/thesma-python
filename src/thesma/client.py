@@ -31,6 +31,7 @@ from thesma.resources.insider_holdings import InsiderHoldings
 from thesma.resources.insider_trades import InsiderTrades
 from thesma.resources.proxy_votes import ProxyVotes
 from thesma.resources.ratios import Ratios
+from thesma.resources.sba import Sba
 from thesma.resources.screener import Screener
 from thesma.resources.sections import Sections
 from thesma.resources.webhooks import Webhooks
@@ -92,6 +93,7 @@ class ThesmaClient:
         self.insider_trades = InsiderTrades(self)
         self.proxy_votes = ProxyVotes(self)
         self.ratios = Ratios(self)
+        self.sba = Sba(self)
         self.screener = Screener(self)
         self.sections = Sections(self)
         self.webhooks = Webhooks(self)
@@ -255,6 +257,7 @@ class AsyncThesmaClient:
         self.insider_trades = InsiderTrades(self)
         self.proxy_votes = ProxyVotes(self)
         self.ratios = Ratios(self)
+        self.sba = Sba(self)
         self.screener = Screener(self)
         self.sections = Sections(self)
         self.webhooks = Webhooks(self)

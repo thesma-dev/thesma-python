@@ -63,6 +63,21 @@ class Companies:
         """Get a single company by CIK.
 
         ``GET /v1/us/sec/companies/{cik}``
+
+        ``include`` is a comma-separated list of enrichment surfaces. The
+        supported values are ``"labor_context"`` and ``"lending_context"``
+        (e.g. ``include="lending_context"`` or
+        ``include="labor_context,lending_context"``). Unknown values
+        return 400 as ``BadRequestError``.
+
+        When ``include="lending_context"`` is requested, the response's
+        ``data.lending_context`` field carries a ``LendingContext`` object
+        with ``local_market`` and ``industry_lending`` sub-objects. Three
+        states are possible: the key is omitted entirely when the company
+        has no ``county_fips`` mapping, both sub-objects are ``None`` when
+        FIPS exists but no SBA data is available, or one or both are
+        populated. Consumers can distinguish omitted vs null-children via
+        ``result.data.model_dump(exclude_unset=True)``.
         """
         params: dict[str, Any] = {"include": include}
         return self._client.request(  # type: ignore[no-any-return]

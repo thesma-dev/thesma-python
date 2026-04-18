@@ -53,6 +53,12 @@ class Screener:
         max_local_unemployment_rate: float | None = None,
         local_unemployment_trend: str | None = None,
         min_local_labor_force: int | None = None,
+        min_local_sba_loan_count: int | None = None,
+        max_local_sba_loan_count: int | None = None,
+        min_local_sba_lending_growth: float | None = None,
+        max_local_sba_lending_growth: float | None = None,
+        min_industry_sba_lending_growth: float | None = None,
+        max_industry_sba_charge_off_rate: float | None = None,
         include: str | None = None,
         sort_by: str | None = None,
         order: str | None = None,
@@ -87,6 +93,20 @@ class Screener:
         (``"us"`` or ``"adr"``). Unlike ``local_unemployment_trend``,
         both filters are **case-insensitive** — the API normalises case
         before querying, so callers may pass any case.
+
+        The six SBA filters (``min_local_sba_loan_count``,
+        ``max_local_sba_loan_count``, ``min_local_sba_lending_growth``,
+        ``max_local_sba_lending_growth``,
+        ``min_industry_sba_lending_growth``,
+        ``max_industry_sba_charge_off_rate``) screen on HQ-county and
+        NAICS-industry SBA 7(a) lending signals. Loan counts are integer
+        trailing-4Q totals; growth values are YoY percentages (floats);
+        the charge-off rate is a percentage (float). When any SBA filter
+        is applied or ``include="lending_context"`` is passed, each
+        ``ScreenerResultItem`` gains a flat ``lending_context`` summary
+        (no nested ``data_freshness``) — SBA freshness lives in the new
+        top-level ``data_freshness`` object on each result item, next to
+        ``labor_context.data_freshness`` (which remains nested for BLS).
         """
         if isinstance(exchange, list) and not exchange:
             exchange = None
@@ -127,6 +147,12 @@ class Screener:
             "max_local_unemployment_rate": max_local_unemployment_rate,
             "local_unemployment_trend": local_unemployment_trend,
             "min_local_labor_force": min_local_labor_force,
+            "min_local_sba_loan_count": min_local_sba_loan_count,
+            "max_local_sba_loan_count": max_local_sba_loan_count,
+            "min_local_sba_lending_growth": min_local_sba_lending_growth,
+            "max_local_sba_lending_growth": max_local_sba_lending_growth,
+            "min_industry_sba_lending_growth": min_industry_sba_lending_growth,
+            "max_industry_sba_charge_off_rate": max_industry_sba_charge_off_rate,
             "include": include,
             "sort": sort_by,
             "order": order,

@@ -583,3 +583,155 @@ class TestCompaniesGetExchangeDomicile:
         assert result.data.exchange == "NASDAQ"  # type: ignore[attr-defined]
         assert result.data.domicile == "us"  # type: ignore[attr-defined]
         client.close()
+
+
+_LENDING_CONTEXT_FULL = {
+    "local_market": {
+        "county_fips": "06037",
+        "county_name": "Los Angeles County, CA",
+        "county_fips_confidence": "high",
+        "quarterly_loan_count": 142,
+        "quarterly_total_amount": 38_500_000,
+        "avg_loan_size": 271_127,
+        "quarterly_yoy_change_pct": 8.4,
+        "charge_off_rate_trailing_4q": 2.1,
+        "top_industry_naics": "722511",
+        "top_industry_name": "Full-Service Restaurants",
+        "data_period": "2025-Q3",
+        "source": "SBA",
+    },
+    "industry_lending": {
+        "naics_code": "511210",
+        "naics_description": "Software Publishers",
+        "naics_match_level": "6-digit",
+        "national_quarterly_loan_count": 920,
+        "national_quarterly_total_amount": 210_000_000,
+        "national_avg_loan_size": 228_260,
+        "national_yoy_change_pct": 6.1,
+        "national_charge_off_rate_trailing_4q": 1.3,
+        "data_period": "2025-Q3",
+        "source": "SBA",
+    },
+}
+
+
+def _build_company_with_lending_context(lending_context: dict | None, *, omit_key: bool = False) -> dict:
+    data: dict = {
+        "cik": "0000320193",
+        "name": "Apple Inc.",
+        "ticker": "AAPL",
+        "sic_code": "3571",
+        "company_tier": "sp500",
+        "state_fips": "06",
+        "county_fips": "06085",
+        "filings_url": "/v1/us/sec/companies/0000320193/filings",
+        "financials_url": "/v1/us/sec/companies/0000320193/financials",
+    }
+    if not omit_key:
+        data["lending_context"] = lending_context
+    return {"data": data}
+
+
+class TestCompaniesGetLendingContext:
+    @respx.mock
+    def test_get_with_include_lending_context_populated(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=_build_company_with_lending_context(_LENDING_CONTEXT_FULL)),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="lending_context")
+
+        lending_context = result.data.lending_context  # type: ignore[attr-defined]
+        assert lending_context["local_market"]["county_fips"] == "06037"
+        assert lending_context["industry_lending"]["naics_code"] == "511210"
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_lending_context_omitted_key(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=_build_company_with_lending_context(None, omit_key=True)),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="lending_context")
+
+        assert getattr(result.data, "lending_context", None) is None
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_lending_context_null_children(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(
+                200,
+                json=_build_company_with_lending_context({"local_market": None, "industry_lending": None}),
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="lending_context")
+
+        lending_context = result.data.lending_context  # type: ignore[attr-defined]
+        assert lending_context is not None
+        assert lending_context["local_market"] is None
+        assert lending_context["industry_lending"] is None
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_lending_context_partial_local_only(self, api_key: str) -> None:
+        partial = {"local_market": _LENDING_CONTEXT_FULL["local_market"], "industry_lending": None}
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=_build_company_with_lending_context(partial)),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="lending_context")
+
+        lending_context = result.data.lending_context  # type: ignore[attr-defined]
+        assert lending_context["local_market"]["county_fips"] == "06037"
+        assert lending_context["industry_lending"] is None
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_labor_and_lending_combined(self, api_key: str) -> None:
+        combined_data = _build_company_with_lending_context(_LENDING_CONTEXT_FULL)
+        combined_data["data"]["labor_context"] = {"industry": {"naics_code": "334111"}}
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=combined_data),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="labor_context,lending_context")
+
+        assert "include=labor_context%2Clending_context" in str(route.calls.last.request.url)
+        assert result.data.labor_context is not None  # type: ignore[attr-defined]
+        assert result.data.lending_context is not None  # type: ignore[attr-defined]
+        client.close()
+
+    @respx.mock
+    def test_get_with_unknown_include_value_raises_400(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(
+                400, json={"error": {"code": "bad_request", "message": "unknown include value"}}
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.companies.get("0000320193", include="bogus")
+        client.close()
+
+    @respx.mock
+    def test_get_county_fips_confidence_unknown_parses(self, api_key: str) -> None:
+        payload = _build_company_with_lending_context(
+            {
+                "local_market": {
+                    **_LENDING_CONTEXT_FULL["local_market"],
+                    "county_fips_confidence": "unknown",
+                },
+                "industry_lending": _LENDING_CONTEXT_FULL["industry_lending"],
+            }
+        )
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=payload),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="lending_context")
+
+        lending_context = result.data.lending_context  # type: ignore[attr-defined]
+        assert lending_context["local_market"]["county_fips_confidence"] == "unknown"
+        client.close()

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0.12] - 2026-04-18
+
+### Added
+- Screener: 6 new SBA filters on `screener.screen()` — `min_local_sba_loan_count`, `max_local_sba_loan_count`, `min_local_sba_lending_growth`, `max_local_sba_lending_growth`, `min_industry_sba_lending_growth`, `max_industry_sba_charge_off_rate`. Matching CLI options on `thesma screener screen` with kebab-case spellings.
+- Screener CLI: new `--include` option on `thesma screener screen` accepting comma-separated values (`labor_context`, `lending_context`, or both). Previously only the Python kwarg was exposed.
+- Screener response: `ScreenerResultItem.lending_context` (flat `LendingContextSummary` — `local_sba_loan_count_4q`, `local_sba_lending_growth_yoy`, `industry_sba_lending_growth_yoy`, `industry_sba_charge_off_rate`) and a new top-level `ScreenerResultItem.data_freshness` carrying `sba_period`. BLS `labor_context.data_freshness` remains nested.
+- Company enrichment: `companies.get(cik, include="lending_context")` returns `data.lending_context` (`LendingContext` with `local_market` and `industry_lending` sub-objects). Combined `include="labor_context,lending_context"` returns both enrichment surfaces independently.
+- Financials enrichment: `financials.get(cik, include="lending_context")` forwards the query parameter; the enrichment object is dropped by `FinancialStatementResponse` (`extra="ignore"`) until the envelope is hoisted — matches the existing `labor_context` limitation.
+- New model classes: `LendingContext`, `LocalLendingMarket`, `IndustryLending`, `LendingContextSummary`, plus `DataFreshness.sba_period` (additive 5th period field).
+
+## [0.9.0.11] - 2026-04-18
+
+### Added
+- New top-level `client.sba` resource wrapping the 9 SBA 7(a) standalone endpoints: `county_lending`, `state_lending`, `industry_lending`, `lenders`, `lender`, `lending_characteristics`, `lending_outcomes`, `metrics`, `metric`.
+- New CLI command group `thesma sba` with 9 subcommands mirroring the resource methods (`county-lending`, `state-lending`, `industry-lending`, `lenders`, `lender`, `lending-characteristics`, `lending-outcomes`, `metrics`, `metric`).
+- Response models (from OpenAPI regeneration): `CountyLendingPoint`, `StateLendingPoint`, `IndustryLendingPoint`, `LenderSummary`, `LenderDetail`, `LenderQuarterPoint`, `CharacteristicsDistribution`, `BucketCount`, `CategoryCount`, `VintageOutcomePoint`, `SbaMetricSummary`, `SbaMetricDetail`.
+
 ## [0.9.0.10] - 2026-04-18
 
 ### Added
