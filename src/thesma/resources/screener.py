@@ -32,6 +32,8 @@ class Screener:
         min_eps_growth: float | None = None,
         tier: str | None = None,
         sic: str | list[str] | None = None,
+        exchange: str | list[str] | None = None,
+        domicile: str | None = None,
         has_insider_buying: bool | None = None,
         has_institutional_increase: bool | None = None,
         max_net_income: float | None = None,
@@ -79,7 +81,15 @@ class Screener:
            with no YoY LAUS data (and therefore a null trend) are excluded
            from results — this matches the ``industry_hiring_trend``
            behaviour.
+
+        ``exchange`` accepts a single string (``"nyse"``) or list
+        (``["nyse", "nasdaq"]``). ``domicile`` is a single value
+        (``"us"`` or ``"adr"``). Unlike ``local_unemployment_trend``,
+        both filters are **case-insensitive** — the API normalises case
+        before querying, so callers may pass any case.
         """
+        if isinstance(exchange, list) and not exchange:
+            exchange = None
         params: dict[str, Any] = {
             "min_revenue": min_revenue,
             "min_net_income": min_net_income,
@@ -96,6 +106,8 @@ class Screener:
             "min_eps_growth": min_eps_growth,
             "tier": tier,
             "sic": sic,
+            "exchange": exchange,
+            "domicile": domicile,
             "has_insider_buying": has_insider_buying,
             "has_institutional_increase": has_institutional_increase,
             "max_net_income": max_net_income,

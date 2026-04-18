@@ -31,7 +31,14 @@ def _make_mock_client() -> MagicMock:
     # companies.list() returns PaginatedResponse with .data as list of dicts
     companies_response = MagicMock()
     companies_response.data = [
-        {"ticker": "AAPL", "cik": "0000320193", "name": "Apple Inc.", "company_tier": "sp500"},
+        {
+            "ticker": "AAPL",
+            "cik": "0000320193",
+            "name": "Apple Inc.",
+            "company_tier": "sp500",
+            "exchange": "NASDAQ",
+            "domicile": "us",
+        },
     ]
     client.companies.list.return_value = companies_response
 
@@ -44,6 +51,8 @@ def _make_mock_client() -> MagicMock:
         "ticker": "AAPL",
         "name": "Apple Inc.",
         "company_tier": "sp500",
+        "exchange": "NASDAQ",
+        "domicile": "us",
     }
     get_response = MagicMock()
     get_response.data = company_detail
@@ -60,7 +69,14 @@ def _make_mock_client() -> MagicMock:
     # screener.screen() returns PaginatedResponse with .data as list of dicts
     screener_response = MagicMock()
     screener_response.data = [
-        {"ticker": "AAPL", "name": "Apple Inc.", "company_tier": "sp500", "fiscal_year": 2024},
+        {
+            "ticker": "AAPL",
+            "name": "Apple Inc.",
+            "company_tier": "sp500",
+            "exchange": "NASDAQ",
+            "domicile": "us",
+            "fiscal_year": 2024,
+        },
     ]
     client.screener.screen.return_value = screener_response
 
@@ -138,6 +154,47 @@ class TestCompaniesListJson:
         call_kwargs = mock_client.companies.list.call_args
         assert call_kwargs.kwargs.get("tier") == "sp500" or call_kwargs[1].get("tier") == "sp500"
 
+    def test_cli_companies_list_exchange(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["companies", "list", "--exchange", "nyse", "--exchange", "nasdaq"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.companies.list.call_args
+        assert call_kwargs.kwargs.get("exchange") == ["nyse", "nasdaq"]
+
+    def test_cli_companies_list_domicile(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--domicile", "us"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.companies.list.call_args
+        assert call_kwargs.kwargs.get("domicile") == "us"
+
+    def test_cli_companies_list_case_insensitive_exchange(self, runner: CliRunner) -> None:
+        """Click's ``Choice(case_sensitive=False)`` accepts any case and
+        normalises the stored value to the canonical choice (lowercase here).
+        The API also normalises, so the round-trip is lossless either way.
+        """
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--exchange", "NYSE"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.companies.list.call_args
+        assert call_kwargs.kwargs.get("exchange") == ["nyse"]
+
+    def test_cli_companies_list_invalid_exchange_rejected(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--exchange", "amex"], mock_client)
+        assert result.exit_code != 0
+        mock_client.companies.list.assert_not_called()
+
+    def test_cli_companies_list_help_shows_new_options(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["companies", "list", "--help"])
+        assert result.exit_code == 0
+        assert "--exchange" in result.output
+        assert "--domicile" in result.output
+
 
 class TestCompaniesListCsv:
     def test_outputs_valid_csv_with_headers(self, runner: CliRunner) -> None:
@@ -162,6 +219,15 @@ class TestCompaniesListTable:
         assert "ticker" in result.output
         assert "AAPL" in result.output
         assert "Apple Inc." in result.output
+
+    def test_cli_companies_list_default_columns_include_exchange_domicile(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list"], mock_client, fmt="table")
+        assert result.exit_code == 0
+        assert "exchange" in result.output
+        assert "domicile" in result.output
+        assert "NASDAQ" in result.output
+        assert "us" in result.output
 
 
 class TestCompaniesGet:
@@ -405,6 +471,46 @@ class TestScreenerScreen:
         assert "--max-industry-quits-rate" in result.output
         assert "--min-industry-openings-rate" in result.output
         assert "--max-industry-openings-rate" in result.output
+
+    def test_cli_screener_screen_exchange(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(
+            runner,
+            ["screener", "screen", "--exchange", "nyse", "--exchange", "nasdaq"],
+            mock_client,
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("exchange") == ["nyse", "nasdaq"]
+
+    def test_cli_screener_screen_case_insensitive_exchange(self, runner: CliRunner) -> None:
+        """Click's ``Choice(case_sensitive=False)`` accepts any case and
+        normalises to the canonical choice value (lowercase here).
+        """
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--exchange", "NASDAQ"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("exchange") == ["nasdaq"]
+
+    def test_cli_screener_screen_domicile(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--domicile", "us"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("domicile") == "us"
+
+    def test_cli_screener_screen_invalid_domicile_rejected(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--domicile", "uk"], mock_client)
+        assert result.exit_code != 0
+        mock_client.screener.screen.assert_not_called()
+
+    def test_cli_screener_screen_help_shows_new_options(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "--exchange" in result.output
+        assert "--domicile" in result.output
 
 
 # --- Holdings CLI ---

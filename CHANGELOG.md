@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screener: 4 new BLS LAUS filters — `min_local_unemployment_rate`, `max_local_unemployment_rate`, `local_unemployment_trend`, `min_local_labor_force` (and matching CLI options on `thesma screener screen`)
 - Screener response: `labor_context.local_unemployment_rate`, `labor_context.local_unemployment_trend`, `labor_context.local_labor_force`, `labor_context.data_freshness.laus_period`
 - Company enrichment: `labor_context.local_market` extended with 8 LAUS fields (`unemployment_rate`, `unemployment_rate_yoy_change`, `labor_force`, `labor_force_yoy_change_pct`, `laus_data_period`, `laus_data_lag_weeks`, `match_level`, `seasonal_adjustment`)
+- `companies.list()`: new `exchange` (str or list) and `domicile` (str) filter parameters, matching the UE-03 API expansion. Exposed as `--exchange` (repeatable) and `--domicile` on `thesma companies list`.
+- `screener.screen()`: same `exchange` and `domicile` filter parameters. Exposed as `--exchange` (repeatable) and `--domicile` on `thesma screener screen`.
+- Response: `CompanyListItem.exchange`, `CompanyListItem.domicile` (typed `Literal` fields from OpenAPI regeneration). Screener results and `companies.get()` also carry these fields via the existing `extra="allow"` stub pattern (untyped access).
+- CLI table output: `thesma companies list` and `thesma screener screen` now render `exchange` and `domicile` columns by default.
 
 ### Changed (BREAKING)
 - `LocalMarketContext.source` type changed from `str` (always `"QCEW"`) to `Optional[str]` with values `"QCEW"`, `"LAUS+QCEW"`, `"LAUS"`, or `None`. Consumers doing `local_market.source == "QCEW"` will silently miss LAUS-enriched responses. Migration: switch to `if local_market.source and "QCEW" in local_market.source:` or accept any non-None value.

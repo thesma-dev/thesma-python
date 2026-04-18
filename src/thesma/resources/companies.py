@@ -21,6 +21,8 @@ class Companies:
         search: str | None = None,
         sic: str | list[str] | None = None,
         tier: str | None = None,
+        exchange: str | list[str] | None = None,
+        domicile: str | None = None,
         state_fips: str | None = None,
         county_fips: str | None = None,
         page: int = 1,
@@ -29,12 +31,22 @@ class Companies:
         """List companies with optional filters.
 
         ``GET /v1/us/sec/companies``
+
+        ``exchange`` accepts a single string (``"nyse"``) or a list
+        (``["nyse", "nasdaq"]``) mirroring the ``sic`` parameter shape.
+        ``domicile`` is a single value (``"us"`` or ``"adr"``). Both
+        filters are case-insensitive — the API normalises case before
+        querying, so callers may pass any case.
         """
+        if isinstance(exchange, list) and not exchange:
+            exchange = None
         params: dict[str, Any] = {
             "ticker": ticker,
             "search": search,
             "sic": sic,
             "tier": tier,
+            "exchange": exchange,
+            "domicile": domicile,
             "state_fips": state_fips,
             "county_fips": county_fips,
             "page": page,
