@@ -30,6 +30,11 @@ def screener_group() -> None:
     type=click.Choice(["us", "adr"], case_sensitive=False),
     help="Filter by company domicile (us or adr).",
 )
+@click.option(
+    "--search",
+    default=None,
+    help="Filter by company name (substring) or ticker (prefix), case-insensitive.",
+)
 @click.option("--min-gross-margin", default=None, type=float, help="Minimum gross margin (%).")
 @click.option("--min-operating-margin", default=None, type=float, help="Minimum operating margin (%).")
 @click.option("--min-net-margin", default=None, type=float, help="Minimum net margin (%).")
@@ -137,6 +142,7 @@ def screener_screen(
     tier: str | None,
     exchange: tuple[str, ...],
     domicile: str | None,
+    search: str | None,
     min_gross_margin: float | None,
     min_operating_margin: float | None,
     min_net_margin: float | None,
@@ -181,6 +187,7 @@ def screener_screen(
         tier=tier,
         exchange=list(exchange) if exchange else None,
         domicile=domicile,
+        search=search,
         min_gross_margin=min_gross_margin,
         min_operating_margin=min_operating_margin,
         min_net_margin=min_net_margin,
