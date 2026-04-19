@@ -34,6 +34,7 @@ class Screener:
         sic: str | list[str] | None = None,
         exchange: str | list[str] | None = None,
         domicile: str | None = None,
+        search: str | None = None,
         has_insider_buying: bool | None = None,
         has_institutional_increase: bool | None = None,
         max_net_income: float | None = None,
@@ -107,6 +108,20 @@ class Screener:
         (no nested ``data_freshness``) — SBA freshness lives in the new
         top-level ``data_freshness`` object on each result item, next to
         ``labor_context.data_freshness`` (which remains nested for BLS).
+
+        ``search`` filters by company name substring OR ticker prefix,
+        case-insensitive. The value is passed through to the API verbatim
+        — the server trims whitespace, escapes SQL LIKE wildcards, and
+        silently skips the ticker branch for companies with a null
+        ticker. Known v1 limitations inherited from the API: separators
+        differ between the filing record and common market conventions
+        (``BRK-B`` on EDGAR vs ``BRK.B`` on Yahoo Finance) so matches are
+        separator-sensitive, and there is no ticker alias resolution.
+        Because the screener inner-joins against annual ratios, any
+        match whose latest annual ratio row has been filtered out (e.g.
+        an insufficient fiscal-year window) is silently excluded from
+        the result set — use ``companies.list(search=...)`` if you need
+        pure company discovery without the ratio-availability filter.
         """
         if isinstance(exchange, list) and not exchange:
             exchange = None
@@ -128,6 +143,7 @@ class Screener:
             "sic": sic,
             "exchange": exchange,
             "domicile": domicile,
+            "search": search,
             "has_insider_buying": has_insider_buying,
             "has_institutional_increase": has_institutional_increase,
             "max_net_income": max_net_income,

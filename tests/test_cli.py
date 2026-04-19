@@ -619,6 +619,26 @@ class TestScreenerScreen:
         assert result.exit_code == 0
         assert mock_client.screener.screen.call_args.kwargs["include"] == "labor_context,lending_context"
 
+    def test_screener_screen_passes_search(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--search", "AAPL"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("search") == "AAPL"
+
+    def test_cli_screener_help_shows_search_option(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "--search" in result.output
+
+    def test_cli_screener_search_default_is_none(self, runner: CliRunner) -> None:
+        """No ``--search`` flag must forward ``None``, not an empty string."""
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.screener.screen.call_args
+        assert call_kwargs.kwargs.get("search") is None
+
 
 # --- Holdings CLI ---
 

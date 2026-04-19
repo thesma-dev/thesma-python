@@ -17,7 +17,7 @@ def companies_group() -> None:
 
 @companies_group.command("list")
 @click.option("--ticker", default=None, help="Filter by ticker symbol.")
-@click.option("--search", default=None, help="Search by company name.")
+@click.option("--search", default=None, help="Filter by company name (substring) or ticker (prefix), case-insensitive.")
 @click.option("--sic", multiple=True, help="Filter by SIC code(s). Repeat for multiple.")
 @click.option("--tier", default=None, help="Filter by index tier (sp500, russell1000, etc.).")
 @click.option(

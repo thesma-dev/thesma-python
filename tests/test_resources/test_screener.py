@@ -7,7 +7,7 @@ import pytest
 import respx
 
 from thesma._types import PaginatedResponse
-from thesma.client import ThesmaClient
+from thesma.client import AsyncThesmaClient, ThesmaClient
 from thesma.errors import BadRequestError, ThesmaError
 
 BASE = "https://api.thesma.dev"
@@ -287,6 +287,102 @@ class TestScreenerEnhancements:
 
         assert result.data[0].ratios["gross_margin"] == 46.2
         client.close()
+
+    @respx.mock
+    def test_search_kwarg_passed_to_api(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(search="AAPL")
+
+        assert "search=AAPL" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_lowercase_passes_through(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(search="aapl")
+
+        assert "search=aapl" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_combined_with_financial_filter(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(search="GO", min_gross_margin=40.0)
+
+        url_str = str(route.calls.last.request.url)
+        assert "search=GO" in url_str
+        assert "min_gross_margin=40" in url_str
+        client.close()
+
+    @respx.mock
+    def test_search_none_omits_param(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_gross_margin=40.0)
+
+        assert "search=" not in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_empty_string_ships_with_empty_value(self, api_key: str) -> None:
+        """``search=""`` must round-trip as ``?search=`` — the SDK must
+        not silently coerce empty strings to ``None``. The API treats
+        empty/whitespace-only as "no filter", so this is harmless.
+        """
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(search="")
+
+        assert "search=" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_preserved_across_pagination(self, api_key: str) -> None:
+        """Guards against a ``_fetch_page`` refactor silently dropping filters."""
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(search="AAPL", page=2, per_page=5)
+
+        url_str = str(route.calls.last.request.url)
+        assert "search=AAPL" in url_str
+        assert "page=2" in url_str
+        assert "per_page=5" in url_str
+
+        # Second-page fetch must preserve the search filter. The private
+        # ``_fetch_page`` hook is what ``next_page`` / ``auto_paging_iter``
+        # call through — exercise it directly to avoid depending on the
+        # mock returning ``total_pages > 1``.
+        assert result._fetch_page is not None
+        result._fetch_page(3)
+        second_url = str(route.calls.last.request.url)
+        assert "search=AAPL" in second_url
+        client.close()
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_async_screen_passes_search(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        async with AsyncThesmaClient(api_key=api_key) as client:
+            await client.screener.screen(search="AAPL")
+
+        assert "search=AAPL" in str(route.calls.last.request.url)
 
 
 class TestScreenerBlsFilters:

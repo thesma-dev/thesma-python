@@ -2896,10 +2896,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Search by company name (case-insensitive, partial match)",
+              "description": "Search by company name (substring) or ticker (prefix), case-insensitive",
               "title": "Search"
             },
-            "description": "Search by company name (case-insensitive, partial match)"
+            "description": "Search by company name (substring) or ticker (prefix), case-insensitive"
           },
           {
             "name": "sic",
@@ -6270,6 +6270,24 @@
               "title": "Tier"
             },
             "description": "Company tier: sp500, russell1000"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by company name (substring) or ticker (prefix), case-insensitive",
+              "title": "Search"
+            },
+            "description": "Search by company name (substring) or ticker (prefix), case-insensitive"
           },
           {
             "name": "sic",

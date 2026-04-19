@@ -37,6 +37,16 @@ class Companies:
         ``domicile`` is a single value (``"us"`` or ``"adr"``). Both
         filters are case-insensitive — the API normalises case before
         querying, so callers may pass any case.
+
+        ``search`` filters by company name substring OR ticker prefix,
+        case-insensitive. The value is passed through to the API
+        verbatim — the server trims whitespace, escapes SQL LIKE
+        wildcards, and silently skips the ticker branch for companies
+        with a null ticker. Known v1 limitations inherited from the
+        API: separators differ between the filing record and common
+        market conventions (``BRK-B`` on EDGAR vs ``BRK.B`` on Yahoo
+        Finance) so matches are separator-sensitive, and there is no
+        ticker alias resolution.
         """
         if isinstance(exchange, list) and not exchange:
             exchange = None

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0.13] - 2026-04-19
+
+### Added
+- Screener: new `search` kwarg on `screener.screen()` — filters by company name substring OR ticker prefix, case-insensitive. Matches the `companies.list(search=...)` semantics expanded in the govdata-api T-186 + T-190 changes. Exposed on the CLI as `thesma screener screen --search`.
+- Companies: `companies.list(search=...)` docstring now documents the expanded name-or-ticker semantics (substring match on name OR prefix match on ticker, both case-insensitive, with null tickers silently skipped). The signature was already wired; only the documentation changed.
+- CLI: `thesma companies list --search` help text updated to reflect the expanded semantics (previously read "Search by company name.").
+
 ## [0.9.0.12] - 2026-04-18
 
 ### Added
