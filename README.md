@@ -16,7 +16,7 @@ pip install thesma
 ```python
 from thesma import ThesmaClient
 
-client = ThesmaClient(api_key="th_live_...")
+client = ThesmaClient(api_key="gd_live_...")
 
 # List companies
 companies = client.companies.list()
@@ -32,21 +32,21 @@ financials = client.financials.list("AAPL", period="annual")
 ```python
 from thesma import AsyncThesmaClient
 
-async with AsyncThesmaClient(api_key="th_live_...") as client:
+async with AsyncThesmaClient(api_key="gd_live_...") as client:
     companies = await client.companies.list()
 ```
 
 ## CLI
 
 ```bash
-export THESMA_API_KEY=th_live_...
+export THESMA_API_KEY=gd_live_...
 thesma companies list
 thesma financials list AAPL --period annual --format json
 ```
 
 ## Documentation
 
-Full API documentation is available at [api.thesma.dev/docs](https://api.thesma.dev/docs).
+Full documentation is available at [docs.thesma.dev](https://docs.thesma.dev).
 
 ## License
 
