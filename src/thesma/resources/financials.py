@@ -38,6 +38,22 @@ class Financials:
         hoisting them to consumer-visible attributes is tracked as
         follow-up work. The query parameter is still forwarded to the
         API.
+
+        The returned ``data`` model also exposes typed ``taxonomy``,
+        ``currency``, and ``reporting_notes`` attributes —
+        ``result.data.taxonomy`` (``"us-gaap"`` / ``"ifrs-full"`` / other),
+        ``result.data.currency`` (ISO 4217 code), and
+        ``result.data.reporting_notes.presentation_format`` (``"by_function"``
+        / ``"by_nature"`` / ``"unknown"``). The ``reporting_notes`` Python
+        attribute serialises to the wire-level JSON key ``_reporting_notes``
+        (leading underscore) via a Pydantic alias;
+        ``model_config=ConfigDict(populate_by_name=True)`` means both
+        ``FinancialStatementResponse(reporting_notes=...)`` and
+        ``FinancialStatementResponse(_reporting_notes=...)`` work for
+        construction. ``result.data.model_dump()`` uses the Python
+        attribute name by default (Pydantic v2 ``by_alias=False``); pass
+        ``by_alias=True`` to round-trip the wire-level ``_reporting_notes``
+        key back to the API.
         """
         params: dict[str, Any] = {
             "statement": statement,
