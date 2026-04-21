@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0.15] - 2026-04-21
+
+### Added
+- `companies.list(taxonomy=..., currency=...)` — two new filter kwargs matching query-parameter additions on the `/v1/us/sec/companies` endpoint. `taxonomy` accepts `"us-gaap"` or `"ifrs-full"` (server-validated; unknown values return 400 as `BadRequestError`); `currency` accepts a case-insensitive ISO-4217 code (`"USD"`, `"EUR"`, `"JPY"`, …). Companies with no parsed financials are excluded from filtered results.
+- `screener.screen(taxonomy=..., currency=...)` — same two kwargs on the screener resource, for filtering screener output by the company's most-recent statement taxonomy and/or presentation currency.
+- CLI: `thesma companies list --taxonomy` (`click.Choice(["us-gaap","ifrs-full"], case_sensitive=False)`) and `--currency` (free-form ISO-4217 string). Same options on `thesma screener screen`.
+
 ## [0.9.0.14] - 2026-04-21
 
 ### Added

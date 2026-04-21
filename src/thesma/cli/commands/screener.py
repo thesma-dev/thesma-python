@@ -35,6 +35,17 @@ def screener_group() -> None:
     default=None,
     help="Filter by company name (substring) or ticker (prefix), case-insensitive.",
 )
+@click.option(
+    "--taxonomy",
+    default=None,
+    type=click.Choice(["us-gaap", "ifrs-full"], case_sensitive=False),
+    help="Filter by filing taxonomy (us-gaap or ifrs-full).",
+)
+@click.option(
+    "--currency",
+    default=None,
+    help="Filter by presentation currency (ISO-4217 code, e.g. USD, EUR).",
+)
 @click.option("--min-gross-margin", default=None, type=float, help="Minimum gross margin (%).")
 @click.option("--min-operating-margin", default=None, type=float, help="Minimum operating margin (%).")
 @click.option("--min-net-margin", default=None, type=float, help="Minimum net margin (%).")
@@ -143,6 +154,8 @@ def screener_screen(
     exchange: tuple[str, ...],
     domicile: str | None,
     search: str | None,
+    taxonomy: str | None,
+    currency: str | None,
     min_gross_margin: float | None,
     min_operating_margin: float | None,
     min_net_margin: float | None,
@@ -188,6 +201,8 @@ def screener_screen(
         exchange=list(exchange) if exchange else None,
         domicile=domicile,
         search=search,
+        taxonomy=taxonomy,
+        currency=currency,
         min_gross_margin=min_gross_margin,
         min_operating_margin=min_operating_margin,
         min_net_margin=min_net_margin,

@@ -384,6 +384,54 @@ class TestScreenerEnhancements:
 
         assert "search=AAPL" in str(route.calls.last.request.url)
 
+    @respx.mock
+    def test_taxonomy_kwarg_passed_to_api(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(taxonomy="ifrs-full")
+
+        assert "taxonomy=ifrs-full" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_currency_kwarg_passed_to_api(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(currency="EUR")
+
+        assert "currency=EUR" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_taxonomy_and_currency_combined(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(taxonomy="us-gaap", currency="USD")
+
+        url_str = str(route.calls.last.request.url)
+        assert "taxonomy=us-gaap" in url_str
+        assert "currency=USD" in url_str
+        client.close()
+
+    @respx.mock
+    def test_taxonomy_and_currency_none_omit_params(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_gross_margin=40.0)
+
+        url_str = str(route.calls.last.request.url)
+        assert "taxonomy=" not in url_str
+        assert "currency=" not in url_str
+        client.close()
+
 
 class TestScreenerBlsFilters:
     @respx.mock

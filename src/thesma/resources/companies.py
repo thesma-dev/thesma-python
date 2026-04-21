@@ -23,6 +23,8 @@ class Companies:
         tier: str | None = None,
         exchange: str | list[str] | None = None,
         domicile: str | None = None,
+        taxonomy: str | None = None,
+        currency: str | None = None,
         state_fips: str | None = None,
         county_fips: str | None = None,
         page: int = 1,
@@ -37,6 +39,15 @@ class Companies:
         ``domicile`` is a single value (``"us"`` or ``"adr"``). Both
         filters are case-insensitive — the API normalises case before
         querying, so callers may pass any case.
+
+        ``taxonomy`` filters by the filing taxonomy of the company's
+        most-recent parsed statement — accepted values are ``"us-gaap"``
+        and ``"ifrs-full"``; other inputs return 400 as
+        ``BadRequestError``. ``currency`` filters by the presentation
+        currency of that same statement — case-insensitive 3-letter
+        ISO-4217 code (``"USD"``, ``"EUR"``, ``"JPY"``…); unknown codes
+        return 400. Companies with no parsed financials are excluded
+        from filtered results on either filter.
 
         ``search`` filters by company name substring OR ticker prefix,
         case-insensitive. The value is passed through to the API
@@ -57,6 +68,8 @@ class Companies:
             "tier": tier,
             "exchange": exchange,
             "domicile": domicile,
+            "taxonomy": taxonomy,
+            "currency": currency,
             "state_fips": state_fips,
             "county_fips": county_fips,
             "page": page,

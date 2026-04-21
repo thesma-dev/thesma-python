@@ -32,6 +32,17 @@ def companies_group() -> None:
     type=click.Choice(["us", "adr"], case_sensitive=False),
     help="Filter by company domicile (us or adr).",
 )
+@click.option(
+    "--taxonomy",
+    default=None,
+    type=click.Choice(["us-gaap", "ifrs-full"], case_sensitive=False),
+    help="Filter by filing taxonomy (us-gaap or ifrs-full).",
+)
+@click.option(
+    "--currency",
+    default=None,
+    help="Filter by presentation currency (ISO-4217 code, e.g. USD, EUR).",
+)
 @click.option("--page", default=1, type=int, help="Page number.")
 @click.option("--per-page", default=25, type=int, help="Results per page.")
 @click.pass_context
@@ -43,6 +54,8 @@ def companies_list(
     tier: str | None,
     exchange: tuple[str, ...],
     domicile: str | None,
+    taxonomy: str | None,
+    currency: str | None,
     page: int,
     per_page: int,
 ) -> None:
@@ -55,6 +68,8 @@ def companies_list(
         tier=tier,
         exchange=list(exchange) if exchange else None,
         domicile=domicile,
+        taxonomy=taxonomy,
+        currency=currency,
         page=page,
         per_page=per_page,
     )
