@@ -5,6 +5,12 @@
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
     "version": "0.0.0-dev"
   },
+  "servers": [
+    {
+      "url": "https://api.thesma.dev",
+      "description": "Production"
+    }
+  ],
   "paths": {
     "/healthz": {
       "get": {
@@ -2862,7 +2868,7 @@
           "Companies"
         ],
         "summary": "List Companies",
-        "description": "List companies with optional filtering by ticker, name, SIC code, tier, FIPS code, exchange, or domicile.",
+        "description": "List companies with optional filtering by ticker, name, SIC code, tier, FIPS code, exchange, domicile, taxonomy, or currency.",
         "operationId": "list_companies_v1_us_sec_companies_get",
         "parameters": [
           {
@@ -3014,6 +3020,42 @@
               "title": "Domicile"
             },
             "description": "Filter by company domicile (us, adr). Case-insensitive. Single value only."
+          },
+          {
+            "name": "taxonomy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by the taxonomy of the company's most-recent filing. Accepted values: 'us-gaap' or 'ifrs-full'. Rejects other inputs with a 400 validation error. Companies with no parsed financials are excluded from filtered results.",
+              "title": "Taxonomy"
+            },
+            "description": "Filter by the taxonomy of the company's most-recent filing. Accepted values: 'us-gaap' or 'ifrs-full'. Rejects other inputs with a 400 validation error. Companies with no parsed financials are excluded from filtered results."
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by the presentation currency of the company's most-recent filing. Case-insensitive 3-letter ISO-4217 code (e.g. 'USD', 'EUR', 'JPY'). Only active ISO-4217 codes are accepted; others return 400. Companies with no parsed financials are excluded from filtered results.",
+              "title": "Currency"
+            },
+            "description": "Filter by the presentation currency of the company's most-recent filing. Case-insensitive 3-letter ISO-4217 code (e.g. 'USD', 'EUR', 'JPY'). Only active ISO-4217 codes are accepted; others return 400. Companies with no parsed financials are excluded from filtered results."
           },
           {
             "name": "page",
@@ -4294,7 +4336,7 @@
           "Financials"
         ],
         "summary": "Get Financials",
-        "description": "Return a financial statement (income, balance sheet, or cash flow) for a company.",
+        "description": "Return a financial statement (income, balance sheet, or cash flow) for a company. Values are reported in the filer's presentation currency with no FX conversion. See [Reporting basis and comparability](./financials-reporting-basis.md) for details on taxonomy (us-gaap vs ifrs-full), currency, presentation format, and the six comparability caveats \u2014 including the bank-extension caveat that applies to Nu Holdings, HSBC, and Deutsche Bank.",
         "operationId": "get_financials_v1_us_sec_companies__cik__financials_get",
         "parameters": [
           {
@@ -6348,6 +6390,42 @@
               "title": "Domicile"
             },
             "description": "Filter by company domicile (us, adr). Case-insensitive. Single value only."
+          },
+          {
+            "name": "taxonomy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by the taxonomy of the company's most-recent filing. Accepted values: 'us-gaap' or 'ifrs-full'. Rejects other inputs with a 400 validation error. Companies with no parsed financials are excluded from filtered results.",
+              "title": "Taxonomy"
+            },
+            "description": "Filter by the taxonomy of the company's most-recent filing. Accepted values: 'us-gaap' or 'ifrs-full'. Rejects other inputs with a 400 validation error. Companies with no parsed financials are excluded from filtered results."
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by the presentation currency of the company's most-recent filing. Case-insensitive 3-letter ISO-4217 code (e.g. 'USD', 'EUR'). Only active ISO-4217 codes are accepted; others return 400. Companies with no parsed financials are excluded from filtered results.",
+              "title": "Currency"
+            },
+            "description": "Filter by the presentation currency of the company's most-recent filing. Case-insensitive 3-letter ISO-4217 code (e.g. 'USD', 'EUR'). Only active ISO-4217 codes are accepted; others return 400. Companies with no parsed financials are excluded from filtered results."
           },
           {
             "name": "has_insider_buying",
@@ -12979,6 +13057,15 @@
             "title": "Filing Accession",
             "description": "Accession number of the source filing."
           },
+          "taxonomy": {
+            "type": "string",
+            "enum": [
+              "us-gaap",
+              "ifrs-full"
+            ],
+            "title": "Taxonomy",
+            "description": "XBRL taxonomy used for the filing. Existing US-GAAP-only data always returns 'us-gaap'. IFRS-full parsing lands with IFRS-04."
+          },
           "currency": {
             "type": "string",
             "title": "Currency",
@@ -13017,6 +13104,10 @@
           "metadata": {
             "$ref": "#/components/schemas/StatementMetadata",
             "description": "Data quality and source metadata."
+          },
+          "_reporting_notes": {
+            "$ref": "#/components/schemas/ReportingNotes",
+            "description": "Reporting metadata: presentation format, IFRS 18 applied, and any conditional edge-case flags that fired during parse. The two primary keys (presentation_format, ifrs_18_applied) are always present; conditional keys appear only when their condition fires."
           }
         },
         "type": "object",
@@ -13026,9 +13117,11 @@
           "period",
           "fiscal_year",
           "filing_accession",
+          "taxonomy",
           "currency",
           "line_items",
-          "metadata"
+          "metadata",
+          "_reporting_notes"
         ],
         "title": "FinancialStatementResponse",
         "description": "Full financial statement for a company in a given period."
@@ -18330,6 +18423,34 @@
             "title": "Fiscal Quarter",
             "description": "Fiscal quarter (1-4) for quarterly ratios, null for annual."
           },
+          "taxonomy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "us-gaap",
+                  "ifrs-full"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy",
+            "description": "XBRL taxonomy of the underlying financial statement. 'us-gaap' for existing data; IFRS-full parsing lands with IFRS-04. Null when no underlying statement row is linked."
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "description": "ISO 4217 presentation currency of the underlying financial statement. Null when no underlying statement row is linked."
+          },
           "ratios": {
             "$ref": "#/components/schemas/RatioValues",
             "description": "Computed financial ratios for this period."
@@ -18587,6 +18708,81 @@
         ],
         "title": "RelatedOccupation",
         "description": "Related occupation in the same major group."
+      },
+      "ReportingNotes": {
+        "properties": {
+          "presentation_format": {
+            "type": "string",
+            "enum": [
+              "by_function",
+              "by_nature",
+              "unknown"
+            ],
+            "title": "Presentation Format",
+            "description": "Income-statement presentation format. 'by_function' groups expenses by function (cost of sales, distribution, admin) \u2014 most US-GAAP filers and a majority of IFRS filers. 'by_nature' groups by nature (raw materials, employee benefits, depreciation) \u2014 many European industrials and manufacturers, where cost_of_revenue, gross_profit, and selling_general_admin are NULL by design (not a parser bug). 'unknown' means detection could not classify the filing; income-statement subtotals should be treated as unreliable on these filings, though top-level totals are still populated where possible."
+          },
+          "ifrs_18_applied": {
+            "type": "boolean",
+            "title": "Ifrs 18 Applied",
+            "description": "True if the filing applies IFRS 18 (effective for annual periods beginning on or after 2027-01-01). Always false for US-GAAP filings and for any fiscal year before 2027. When true, operating-income semantics and certain subtotal categorisations follow IFRS 18's mandated structure rather than the pre-IFRS-18 election regime."
+          },
+          "taxonomy_changed_in_amendment": {
+            "type": "boolean",
+            "title": "Taxonomy Changed In Amendment",
+            "description": "Conditional: present only when an amendment changes the filing's taxonomy (us-gaap vs ifrs-full) versus the original filing. Absent \u2014 not null \u2014 when no mismatch. Signals that cross-period comparisons within this CIK must account for the mid-series taxonomy switch."
+          },
+          "currency_changed_in_amendment": {
+            "type": "boolean",
+            "title": "Currency Changed In Amendment",
+            "description": "Conditional: present only when an amendment changes the filing's presentation currency versus the original. Absent \u2014 not null \u2014 when no mismatch. Rare (typically post-merger); flag is here so downstream consumers can handle the cross-currency discontinuity explicitly."
+          },
+          "taxonomy_detection_ambiguous": {
+            "type": "boolean",
+            "title": "Taxonomy Detection Ambiguous",
+            "description": "Conditional: present only when the ratio of minority-to-majority taxonomy-tag counts on the filing is >= 10%. Majority still wins and the filing still parses normally; the flag is ops-visible and signals the taxonomy attribution is less confident than usual. Absent \u2014 not null \u2014 when detection is unambiguous."
+          },
+          "currency_detection_ambiguous": {
+            "type": "boolean",
+            "title": "Currency Detection Ambiguous",
+            "description": "Conditional: present only when multiple ISO-4217 codes appear on the filing's monetary facts AND the minority currency's share exceeds 20% of total monetary facts. Majority still wins; flag signals a blended-currency filing that may warrant manual review. Absent \u2014 not null \u2014 when detection is unambiguous."
+          },
+          "presentation_format_detection_note": {
+            "properties": {
+              "scanned_by_function_tags": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "scanned_by_nature_tags": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "matched": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object",
+            "required": [
+              "scanned_by_function_tags",
+              "scanned_by_nature_tags",
+              "matched"
+            ],
+            "title": "PresentationFormatDetectionNote",
+            "description": "Conditional: forensic provenance of the presentation-format detection. Present ONLY when presentation_format='unknown'. Lists the by-function and by-nature indicator tags scanned on the filing, plus any that matched. Diagnostic surface for support/ops investigations \u2014 not intended for customer code paths. Absent (not null) on filings where detection succeeded."
+          }
+        },
+        "type": "object",
+        "required": [
+          "presentation_format",
+          "ifrs_18_applied"
+        ],
+        "title": "ReportingNotes"
       },
       "SbaMetricDetail": {
         "properties": {
@@ -20058,13 +20254,29 @@
             "type": "string",
             "title": "Filing Accession",
             "description": "Accession number of the source filing."
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "ISO 4217 currency code for this point. Authoritative over the top-level response currency when a filer changes presentation currency mid-series."
+          },
+          "taxonomy": {
+            "type": "string",
+            "enum": [
+              "us-gaap",
+              "ifrs-full"
+            ],
+            "title": "Taxonomy",
+            "description": "XBRL taxonomy for this point. Authoritative over the top-level response taxonomy when a filer transitions between taxonomies mid-series."
           }
         },
         "type": "object",
         "required": [
           "fiscal_year",
           "value",
-          "filing_accession"
+          "filing_accession",
+          "currency",
+          "taxonomy"
         ],
         "title": "TimeSeriesPoint",
         "description": "A single data point in a time series."
@@ -20092,7 +20304,7 @@
           "currency": {
             "type": "string",
             "title": "Currency",
-            "description": "ISO 4217 currency code for monetary values (e.g. 'USD')."
+            "description": "ISO 4217 currency code for monetary values. Mirrors the most-recent point's currency as a convenience; per-point ``currency`` on each ``TimeSeriesPoint`` is authoritative when a filer changes presentation currency mid-series."
           },
           "series": {
             "items": {
@@ -20762,6 +20974,19 @@
         "title": "YearRange",
         "description": "Min/max year range for OEWS data."
       }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Your Thesma API key, prefixed `gd_live_`."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Same Thesma API key, passed as `Authorization: Bearer <key>`."
+      }
     }
   },
   "tags": [
@@ -20951,6 +21176,14 @@
         "Data Quality",
         "Health"
       ]
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    },
+    {
+      "BearerAuth": []
     }
   ]
 }

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0.15] - 2026-04-21
+
+### Added
+- `companies.list(taxonomy=..., currency=...)` — two new filter kwargs matching query-parameter additions on the `/v1/us/sec/companies` endpoint. `taxonomy` accepts `"us-gaap"` or `"ifrs-full"` (server-validated; unknown values return 400 as `BadRequestError`); `currency` accepts a case-insensitive ISO-4217 code (`"USD"`, `"EUR"`, `"JPY"`, …). Companies with no parsed financials are excluded from filtered results.
+- `screener.screen(taxonomy=..., currency=...)` — same two kwargs on the screener resource, for filtering screener output by the company's most-recent statement taxonomy and/or presentation currency.
+- CLI: `thesma companies list --taxonomy` (`click.Choice(["us-gaap","ifrs-full"], case_sensitive=False)`) and `--currency` (free-form ISO-4217 string). Same options on `thesma screener screen`.
+
+## [0.9.0.14] - 2026-04-21
+
+### Added
+- `FinancialStatementResponse.taxonomy` typed attribute (`str`) — US-GAAP and IFRS filings now surface their detected XBRL taxonomy (`"us-gaap"`, `"ifrs-full"`, or other/empty for the small residual cohort that could not be classified). The SDK deliberately keeps the type as `str` (not `Literal`) so future taxonomy-version strings do not break consumer code with `ValidationError`.
+- `FinancialStatementResponse.reporting_notes` typed attribute (`ReportingNotes | None`) — presentation format (`"by_function"` / `"by_nature"` / `"unknown"`), IFRS-18 applicability, amendment / ambiguity detection flags, and an optional nested `presentation_format_detection_note` for ambiguous cases. The Python attribute is `reporting_notes` while the wire-level JSON key is `_reporting_notes`; Pydantic's `Field(alias=...)` plus a new `model_config = ConfigDict(populate_by_name=True)` block on `FinancialStatementResponse` makes both construction forms work (`FinancialStatementResponse(reporting_notes=...)` and `FinancialStatementResponse(**{"_reporting_notes": ...})`).
+- New model classes: `ReportingNotes` (7 fields — 2 required, 5 optional) and `PresentationFormatDetectionNote` (3 required `list[str]` fields).
+- README: coverage tagline now explicitly mentions IFRS alongside US-GAAP, with a new SPOT / EUR quickstart block and a "Typed responses" subsection documenting the hoisted typed attributes.
+
+### Changed
+- `FinancialStatementResponse` now declares `model_config = ConfigDict(populate_by_name=True)` — consumers instantiating the model directly (e.g. in test fixtures) can now pass either `reporting_notes=` (Python attribute) or `_reporting_notes=` (wire alias). `.model_dump()` emits the wire key by default; use `.model_dump(by_alias=False)` for the Python attribute form. Additive change; existing consumers that only read attributes are unaffected.
+- IFRS 20-F filings (Spotify, Nu Holdings, ASML, and other US-listed IFRS reporters) now return native-currency financials with a correctly-detected `currency` and `taxonomy` — the govdata-api-side IFRS-01 / IFRS-07 work that this SDK release surfaces end-to-end.
+
 ## [0.9.0.13] - 2026-04-19
 
 ### Added

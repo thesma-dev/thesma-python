@@ -35,6 +35,8 @@ class Screener:
         exchange: str | list[str] | None = None,
         domicile: str | None = None,
         search: str | None = None,
+        taxonomy: str | None = None,
+        currency: str | None = None,
         has_insider_buying: bool | None = None,
         has_institutional_increase: bool | None = None,
         max_net_income: float | None = None,
@@ -95,6 +97,14 @@ class Screener:
         both filters are **case-insensitive** — the API normalises case
         before querying, so callers may pass any case.
 
+        ``taxonomy`` filters by the filing taxonomy of the company's
+        most-recent parsed statement — accepted values are ``"us-gaap"``
+        and ``"ifrs-full"``; other inputs return 400 as
+        ``BadRequestError``. ``currency`` filters by the presentation
+        currency — case-insensitive 3-letter ISO-4217 code (``"USD"``,
+        ``"EUR"``, ``"JPY"``…); unknown codes return 400. Companies with
+        no parsed financials are excluded from results on either filter.
+
         The six SBA filters (``min_local_sba_loan_count``,
         ``max_local_sba_loan_count``, ``min_local_sba_lending_growth``,
         ``max_local_sba_lending_growth``,
@@ -144,6 +154,8 @@ class Screener:
             "exchange": exchange,
             "domicile": domicile,
             "search": search,
+            "taxonomy": taxonomy,
+            "currency": currency,
             "has_insider_buying": has_insider_buying,
             "has_institutional_increase": has_institutional_increase,
             "max_net_income": max_net_income,

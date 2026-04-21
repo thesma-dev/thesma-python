@@ -569,6 +569,56 @@ class TestCompaniesListExchangeDomicile:
         client.close()
 
 
+class TestCompaniesListTaxonomyCurrency:
+    @respx.mock
+    def test_list_with_taxonomy(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(taxonomy="ifrs-full")
+
+        assert "taxonomy=ifrs-full" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_currency(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(currency="EUR")
+
+        assert "currency=EUR" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_with_taxonomy_and_currency_combined(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(taxonomy="us-gaap", currency="USD")
+
+        url_str = str(route.calls.last.request.url)
+        assert "taxonomy=us-gaap" in url_str
+        assert "currency=USD" in url_str
+        client.close()
+
+    @respx.mock
+    def test_list_taxonomy_currency_omitted_when_none(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list()
+
+        url_str = str(route.calls.last.request.url)
+        assert "taxonomy=" not in url_str
+        assert "currency=" not in url_str
+        client.close()
+
+
 class TestCompaniesGetExchangeDomicile:
     @respx.mock
     def test_get_response_carries_exchange_and_domicile(self, api_key: str) -> None:

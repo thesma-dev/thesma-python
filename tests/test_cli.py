@@ -194,6 +194,28 @@ class TestCompaniesListJson:
         assert result.exit_code == 0
         assert "--exchange" in result.output
         assert "--domicile" in result.output
+        assert "--taxonomy" in result.output
+        assert "--currency" in result.output
+
+    def test_cli_companies_list_taxonomy(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--taxonomy", "ifrs-full"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.companies.list.call_args
+        assert call_kwargs.kwargs.get("taxonomy") == "ifrs-full"
+
+    def test_cli_companies_list_currency(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--currency", "EUR"], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.companies.list.call_args
+        assert call_kwargs.kwargs.get("currency") == "EUR"
+
+    def test_cli_companies_list_invalid_taxonomy_rejected(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--taxonomy", "bogus"], mock_client)
+        assert result.exit_code != 0
+        mock_client.companies.list.assert_not_called()
 
 
 class TestCompaniesListCsv:
@@ -638,6 +660,30 @@ class TestScreenerScreen:
         assert result.exit_code == 0
         call_kwargs = mock_client.screener.screen.call_args
         assert call_kwargs.kwargs.get("search") is None
+
+    def test_screener_screen_passes_taxonomy(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--taxonomy", "ifrs-full"], mock_client)
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs.get("taxonomy") == "ifrs-full"
+
+    def test_screener_screen_passes_currency(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--currency", "EUR"], mock_client)
+        assert result.exit_code == 0
+        assert mock_client.screener.screen.call_args.kwargs.get("currency") == "EUR"
+
+    def test_cli_screener_help_shows_taxonomy_and_currency(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "--taxonomy" in result.output
+        assert "--currency" in result.output
+
+    def test_cli_screener_invalid_taxonomy_rejected(self, runner: CliRunner) -> None:
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--taxonomy", "bogus"], mock_client)
+        assert result.exit_code != 0
+        mock_client.screener.screen.assert_not_called()
 
 
 # --- Holdings CLI ---

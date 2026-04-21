@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._generated.models import FieldsResponse, FinancialStatementResponse, TimeSeriesResponse
 from thesma._types import DataResponse
-from thesma.client import ThesmaClient
+from thesma.client import AsyncThesmaClient, ThesmaClient
 
 BASE = "https://api.thesma.dev"
 
@@ -19,6 +20,11 @@ FINANCIAL_STATEMENT_JSON = {
         "fiscal_year": 2024,
         "filing_accession": "0000320193-24-000081",
         "currency": "USD",
+        "taxonomy": "us-gaap",
+        "_reporting_notes": {
+            "presentation_format": "by_function",
+            "ifrs_18_applied": False,
+        },
         "line_items": {"revenue": 391035000000},
         "metadata": {
             "source": "ixbrl",
@@ -36,8 +42,20 @@ TIME_SERIES_JSON = {
         "period": "annual",
         "currency": "USD",
         "series": [
-            {"fiscal_year": 2024, "value": 391035000000, "filing_accession": "0000320193-24-000081"},
-            {"fiscal_year": 2023, "value": 383285000000, "filing_accession": "0000320193-23-000077"},
+            {
+                "fiscal_year": 2024,
+                "value": 391035000000,
+                "filing_accession": "0000320193-24-000081",
+                "currency": "USD",
+                "taxonomy": "us-gaap",
+            },
+            {
+                "fiscal_year": 2023,
+                "value": 383285000000,
+                "filing_accession": "0000320193-23-000077",
+                "currency": "USD",
+                "taxonomy": "us-gaap",
+            },
         ],
     },
 }
@@ -50,6 +68,11 @@ FINANCIALS_WITH_LAUS_LOCAL_MARKET_JSON = {
         "fiscal_year": 2024,
         "filing_accession": "0000320193-24-000081",
         "currency": "USD",
+        "taxonomy": "us-gaap",
+        "_reporting_notes": {
+            "presentation_format": "by_function",
+            "ifrs_18_applied": False,
+        },
         "line_items": {"revenue": 391035000000},
         "metadata": {
             "source": "ixbrl",
@@ -103,6 +126,61 @@ FIELDS_JSON = {
             "fields": [
                 {"name": "operating_cash_flow", "description": "Operating cash flow", "bank_specific": False},
             ],
+        },
+    },
+}
+
+FINANCIAL_STATEMENT_IFRS_JSON = {
+    "data": {
+        "company": {"cik": "0001639920", "ticker": "SPOT", "name": "Spotify Technology S.A."},
+        "statement": "income",
+        "period": "annual",
+        "fiscal_year": 2024,
+        "filing_accession": "0001639920-25-000012",
+        "currency": "EUR",
+        "taxonomy": "ifrs-full",
+        "_reporting_notes": {
+            "presentation_format": "by_nature",
+            "ifrs_18_applied": True,
+            "taxonomy_changed_in_amendment": False,
+            "currency_changed_in_amendment": False,
+            "taxonomy_detection_ambiguous": False,
+            "currency_detection_ambiguous": False,
+        },
+        "line_items": {"revenue": 15670000000},
+        "metadata": {
+            "source": "ixbrl",
+            "data_completeness": 15,
+            "expected_fields": 16,
+            "source_tags": {"revenue": "ifrs-full:Revenue"},
+        },
+    },
+}
+
+FINANCIAL_STATEMENT_WITH_DETECTION_NOTE_JSON = {
+    "data": {
+        "company": {"cik": "0001639920", "ticker": "SPOT", "name": "Spotify Technology S.A."},
+        "statement": "income",
+        "period": "annual",
+        "fiscal_year": 2024,
+        "filing_accession": "0001639920-25-000012",
+        "currency": "EUR",
+        "taxonomy": "ifrs-full",
+        "_reporting_notes": {
+            "presentation_format": "unknown",
+            "ifrs_18_applied": False,
+            "presentation_format_detection_note": {
+                "scanned_by_function_tags": ["ifrs-full:CostOfSales"],
+                "scanned_by_nature_tags": ["ifrs-full:RawMaterialsAndConsumablesUsed"],
+                "matched": [],
+            },
+        },
+        "line_items": {"revenue": 15670000000},
+        "metadata": {
+            "source": "ixbrl",
+            "data_completeness": 15,
+            "expected_fields": 16,
+            "source_tags": {"revenue": "ifrs-full:Revenue"},
         },
     },
 }
@@ -231,6 +309,156 @@ class TestFinancialsLendingContextInclude:
 
         assert "include=" not in str(route.calls.last.request.url)
         client.close()
+
+
+class TestFinancialsIfrsTypedFields:
+    """SDK-24: hoisted ``taxonomy`` and ``reporting_notes`` typed fields flow through live parsing."""
+
+    @respx.mock
+    def test_get_us_gaap_payload_exposes_taxonomy_and_reporting_notes(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.financials.get("0000320193", statement="income", period="annual")
+
+        assert result is not None
+        assert result.data.taxonomy == "us-gaap"
+        assert result.data.currency == "USD"
+        assert result.data.reporting_notes is not None
+        assert result.data.reporting_notes.presentation_format == "by_function"
+        assert result.data.reporting_notes.ifrs_18_applied is False
+        client.close()
+
+    @respx.mock
+    def test_get_ifrs_payload_exposes_eur_currency_and_ifrs_full(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0001639920/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_IFRS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.financials.get("0001639920", statement="income", period="annual")
+
+        assert result is not None
+        assert result.data.taxonomy == "ifrs-full"
+        assert result.data.currency == "EUR"
+        assert result.data.reporting_notes is not None
+        assert result.data.reporting_notes.presentation_format == "by_nature"
+        assert result.data.reporting_notes.ifrs_18_applied is True
+        assert result.data.reporting_notes.taxonomy_changed_in_amendment is False
+        assert result.data.reporting_notes.currency_changed_in_amendment is False
+        assert result.data.reporting_notes.taxonomy_detection_ambiguous is False
+        assert result.data.reporting_notes.currency_detection_ambiguous is False
+        client.close()
+
+    @respx.mock
+    def test_get_with_detection_note_populated(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0001639920/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_WITH_DETECTION_NOTE_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.financials.get("0001639920", statement="income", period="annual")
+
+        assert result is not None
+        assert result.data.reporting_notes is not None
+        assert result.data.reporting_notes.presentation_format == "unknown"
+        assert result.data.reporting_notes.presentation_format_detection_note is not None
+        note = result.data.reporting_notes.presentation_format_detection_note
+        assert note.scanned_by_function_tags == ["ifrs-full:CostOfSales"]
+        assert note.scanned_by_nature_tags == ["ifrs-full:RawMaterialsAndConsumablesUsed"]
+        assert note.matched == []
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_labor_context_still_drops_envelope_key(self, api_key: str) -> None:
+        """Regression guard: new typed fields ride with the envelope, ``labor_context`` still drops."""
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIALS_WITH_LAUS_LOCAL_MARKET_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.financials.get("0000320193", statement="income", include="labor_context")
+
+        assert result is not None
+        assert result.data.taxonomy == "us-gaap"
+        assert result.data.reporting_notes is not None
+        # Envelope-sibling enrichment still drops per ``extra="ignore"`` — SDK-24 does NOT change this.
+        assert getattr(result.data, "labor_context", None) is None
+        client.close()
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_async_get_exposes_typed_fields(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0001639920/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_IFRS_JSON),
+        )
+        async with AsyncThesmaClient(api_key=api_key) as client:
+            result = await client.financials.get("0001639920", statement="income", period="annual")
+
+        assert result is not None
+        assert result.data.taxonomy == "ifrs-full"
+        assert result.data.currency == "EUR"
+        assert result.data.reporting_notes is not None
+        assert result.data.reporting_notes.presentation_format == "by_nature"
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_async_get_with_detection_note_populated(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0001639920/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_WITH_DETECTION_NOTE_JSON),
+        )
+        async with AsyncThesmaClient(api_key=api_key) as client:
+            result = await client.financials.get("0001639920", statement="income", period="annual")
+
+        assert result is not None
+        assert result.data.reporting_notes is not None
+        assert result.data.reporting_notes.presentation_format == "unknown"
+        assert result.data.reporting_notes.presentation_format_detection_note is not None
+        note = result.data.reporting_notes.presentation_format_detection_note
+        assert note.scanned_by_function_tags == ["ifrs-full:CostOfSales"]
+        assert note.scanned_by_nature_tags == ["ifrs-full:RawMaterialsAndConsumablesUsed"]
+        assert note.matched == []
+
+    def test_pre_ifrs07_payload_shape_behaviour(self) -> None:
+        """Backwards-compat guard: pre-IFRS-07 shapes fail cleanly; partial IFRS-07 shapes parse."""
+        import pydantic
+
+        # Sub-case (a): pre-IFRS-07 payload — ``taxonomy`` entirely absent.
+        pre_ifrs_payload = {
+            "company": {"cik": "0000320193", "ticker": "AAPL", "name": "Apple Inc."},
+            "statement": "income",
+            "period": "annual",
+            "fiscal_year": 2024,
+            "filing_accession": "0000320193-24-000081",
+            "currency": "USD",
+            "line_items": {"revenue": 391035000000},
+            "metadata": {
+                "source": "ixbrl",
+                "data_completeness": 15,
+                "expected_fields": 16,
+                "source_tags": {"revenue": "us-gaap:Revenues"},
+            },
+        }
+        with pytest.raises(pydantic.ValidationError):
+            FinancialStatementResponse.model_validate(pre_ifrs_payload)
+
+        # Sub-case (b): partial-IFRS-07 payload — ``taxonomy`` present, ``_reporting_notes`` absent.
+        partial_ifrs_payload = {
+            "company": {"cik": "0000320193", "ticker": "AAPL", "name": "Apple Inc."},
+            "statement": "income",
+            "period": "annual",
+            "fiscal_year": 2024,
+            "filing_accession": "0000320193-24-000081",
+            "currency": "USD",
+            "taxonomy": "us-gaap",
+            "line_items": {"revenue": 391035000000},
+            "metadata": {
+                "source": "ixbrl",
+                "data_completeness": 15,
+                "expected_fields": 16,
+                "source_tags": {"revenue": "us-gaap:Revenues"},
+            },
+        }
+        resp = FinancialStatementResponse.model_validate(partial_ifrs_payload)
+        assert resp.reporting_notes is None
 
 
 class TestFinancialsFields:

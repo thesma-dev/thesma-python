@@ -54,9 +54,9 @@ class ThesmaClient:
 
     Usage::
 
-        client = ThesmaClient(api_key="th_live_...")
+        client = ThesmaClient(api_key="gd_live_...")
         # or as a context manager:
-        with ThesmaClient(api_key="th_live_...") as client:
+        with ThesmaClient(api_key="gd_live_...") as client:
             ...
     """
 
@@ -220,7 +220,7 @@ class AsyncThesmaClient:
 
     Usage::
 
-        async with AsyncThesmaClient(api_key="th_live_...") as client:
+        async with AsyncThesmaClient(api_key="gd_live_...") as client:
             ...
     """
 
