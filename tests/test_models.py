@@ -257,17 +257,26 @@ class TestSbaEnrichmentModels:
         assert "data_freshness" not in dumped
 
     def test_data_freshness_with_sba_period(self) -> None:
-        from thesma._generated.models import DataFreshness
+        """SBA period tracking lives on ``LendingDataFreshness`` post-S3.
 
-        df = DataFreshness(sba_period="2025-Q4")
+        Prior SDK-22 shape put ``sba_period`` on the unified ``DataFreshness``;
+        S3 split labor-BLS freshness (``DataFreshness``) from lending-SBA
+        freshness (``LendingDataFreshness``) so the SBA surface is owned by
+        ``LendingContext`` and labor-cluster freshness isn't polluted by SBA
+        cadence.
+        """
+        from thesma._generated.models import LendingDataFreshness
+
+        df = LendingDataFreshness(sba_period="2025-Q4")
         dumped = df.model_dump()
         assert dumped["sba_period"] == "2025-Q4"
-        assert dumped["ces_period"] is None
-        assert dumped["qcew_period"] is None
-        assert dumped["jolts_period"] is None
-        assert dumped["laus_period"] is None
 
     def test_data_freshness_with_all_five_periods(self) -> None:
+        """Labor-side ``DataFreshness`` carries the 6 BLS/SEC period anchors post-S3.
+
+        ``oews_period`` and ``sec_exec_comp_snapshot_date`` are new per S3;
+        ``sba_period`` moved to ``LendingDataFreshness``.
+        """
         from thesma._generated.models import DataFreshness
 
         df = DataFreshness(
@@ -275,14 +284,296 @@ class TestSbaEnrichmentModels:
             qcew_period="2025-Q2",
             jolts_period="2025-10",
             laus_period="2025-11",
-            sba_period="2025-Q4",
+            oews_period="2024",
+            sec_exec_comp_snapshot_date="2025-03-15",
         )
         dumped = df.model_dump()
         assert dumped["ces_period"] == "2025-11"
         assert dumped["qcew_period"] == "2025-Q2"
         assert dumped["jolts_period"] == "2025-10"
         assert dumped["laus_period"] == "2025-11"
-        assert dumped["sba_period"] == "2025-Q4"
+        assert dumped["oews_period"] == "2024"
+        assert dumped["sec_exec_comp_snapshot_date"] == "2025-03-15"
+        # sba_period is NOT on DataFreshness post-S3 — it lives on LendingDataFreshness.
+        assert "sba_period" not in dumped
+
+
+# --- SDK-28: unified LaborContext + SDK-29: holders temporal + SDK-31: enrichment warnings ---
+
+
+class TestUnifiedLaborContext:
+    """S3 reshaped ``LaborContextSummary`` to 4 derived fields and added ``summary`` +
+    ``data_freshness`` on ``LaborContext``. Regression tests lock the post-S3 shape.
+    """
+
+    def test_labor_context_summary_exactly_four_fields(self) -> None:
+        from thesma._generated.models import LaborContextSummary
+
+        summary_fields = set(LaborContextSummary.model_fields.keys())
+        assert summary_fields == {
+            "industry_hiring_trend",
+            "local_unemployment_trend",
+            "comp_to_market_ratio",
+            "labour_market_tightness",
+        }
+
+    def test_labor_context_gained_summary_and_data_freshness(self) -> None:
+        from thesma._generated.models import LaborContext
+
+        ctx_fields = set(LaborContext.model_fields.keys())
+        assert "summary" in ctx_fields
+        assert "data_freshness" in ctx_fields
+        # Existing sub-objects preserved:
+        for name in ("industry", "local_market", "turnover", "compensation_benchmark"):
+            assert name in ctx_fields
+
+    def test_data_freshness_has_new_post_s3_fields(self) -> None:
+        from thesma._generated.models import DataFreshness
+
+        df_fields = set(DataFreshness.model_fields.keys())
+        assert "oews_period" in df_fields
+        assert "sec_exec_comp_snapshot_date" in df_fields
+        # Existing fields preserved:
+        for name in ("ces_period", "qcew_period", "jolts_period", "laus_period"):
+            assert name in df_fields
+
+    def test_labor_context_summary_roundtrip(self) -> None:
+        from thesma._generated.models import LaborContextSummary
+
+        summary = LaborContextSummary(
+            industry_hiring_trend="accelerating",
+            local_unemployment_trend="improving",
+            comp_to_market_ratio=1.12,
+            labour_market_tightness=1.3,
+        )
+        dumped = summary.model_dump()
+        assert dumped == {
+            "industry_hiring_trend": "accelerating",
+            "local_unemployment_trend": "improving",
+            "comp_to_market_ratio": 1.12,
+            "labour_market_tightness": 1.3,
+        }
+
+    def test_labor_context_summary_drops_pre_s3_extra_fields(self) -> None:
+        """Pre-S3 flat shape fields (e.g. ``industry_employment_growth_yoy``) are silently
+        dropped by the regenerated class (codegen default ``extra="ignore"``).
+        """
+        from thesma._generated.models import LaborContextSummary
+
+        summary = LaborContextSummary.model_validate(
+            {
+                "industry_hiring_trend": "stable",
+                "industry_employment_growth_yoy": 2.4,  # pre-S3 flat field
+                "industry_wage_growth_yoy": 3.1,  # pre-S3 flat field
+            }
+        )
+        assert summary.industry_hiring_trend == "stable"
+        assert not hasattr(summary, "industry_employment_growth_yoy")
+
+
+class TestHoldersTemporalContext:
+    """S7 added ``report_quarter`` and ``filed_at`` to HolderListItem + FundHoldingListItem."""
+
+    def test_holder_list_item_has_temporal_fields(self) -> None:
+        from thesma._generated.models import HolderListItem
+
+        fields = HolderListItem.model_fields
+        assert "report_quarter" in fields
+        assert "filed_at" in fields
+        assert fields["report_quarter"].is_required()
+        assert fields["filed_at"].is_required()
+
+    def test_fund_holding_list_item_has_temporal_fields(self) -> None:
+        from thesma._generated.models import FundHoldingListItem
+
+        fields = FundHoldingListItem.model_fields
+        assert "report_quarter" in fields
+        assert "filed_at" in fields
+        # Distinct required fields on this class:
+        for name in ("held_company_name", "cusip", "shares", "market_value", "position_type", "filing_accession"):
+            assert name in fields
+
+    def test_holder_filed_at_is_datetime(self) -> None:
+        from datetime import datetime
+
+        from thesma._generated.models import HolderListItem
+
+        holder = HolderListItem.model_validate(
+            {
+                "fund_cik": "0001632972",
+                "shares": 5621716.0,
+                "market_value": 1320613436.0,
+                "filing_accession": "0001214659-26-004436",
+                "report_quarter": "2026-Q1",
+                "filed_at": "2026-04-15T14:22:00Z",
+            }
+        )
+        assert isinstance(holder.filed_at, datetime)
+        assert holder.report_quarter == "2026-Q1"
+
+    def test_holder_roundtrip_preserves_temporal_fields(self) -> None:
+        from thesma._generated.models import HolderListItem
+
+        original = {
+            "fund_cik": "0001632972",
+            "fund_name": "WEALTH ENHANCEMENT",
+            "shares": 5621716.0,
+            "market_value": 1320613436.0,
+            "filing_accession": "0001214659-26-004436",
+            "report_quarter": "2025-Q3",
+            "filed_at": "2025-11-14T16:30:00Z",
+        }
+        holder = HolderListItem.model_validate(original)
+        dumped = holder.model_dump(mode="json")
+        assert dumped["report_quarter"] == "2025-Q3"
+        assert dumped["filed_at"].startswith("2025-11-14T")
+
+    def test_fund_holding_roundtrip_preserves_temporal_fields(self) -> None:
+        from thesma._generated.models import FundHoldingListItem
+
+        original = {
+            "held_company_name": "Apple Inc.",
+            "cusip": "037833100",
+            "held_company_cik": "0000320193",
+            "shares": 1000000.0,
+            "market_value": 200000000.0,
+            "position_type": "equity",
+            "filing_accession": "0001632972-25-000042",
+            "report_quarter": "2025-Q3",
+            "filed_at": "2025-11-14T16:30:00Z",
+        }
+        fh = FundHoldingListItem.model_validate(original)
+        dumped = fh.model_dump(mode="json")
+        assert dumped["report_quarter"] == "2025-Q3"
+        assert dumped["filed_at"].startswith("2025-11-14T")
+        assert dumped["position_type"] == "equity"
+
+
+class TestInsiderTradesAggregation:
+    """T5 introduced ``InsiderTradeAggregateListItem`` + ``PriceRange`` for the aggregated shape."""
+
+    def test_insider_trade_aggregate_list_item_carries_aggregate_fields(self) -> None:
+        from thesma._generated.models import InsiderTradeAggregateListItem
+
+        fields = set(InsiderTradeAggregateListItem.model_fields.keys())
+        assert "price_range" in fields
+        assert "slice_count" in fields
+        assert "shares" in fields
+        assert "total_value" in fields
+
+    def test_price_range_has_low_and_high(self) -> None:
+        from thesma._generated.models import PriceRange
+
+        pr = PriceRange(low=171.97, high=177.51)
+        assert pr.low == 171.97
+        assert pr.high == 177.51
+
+    def test_insider_trade_list_item_flat_shape_preserved(self) -> None:
+        """Pre-T5 per-slice shape is still a distinct class used on ``flat=True`` responses."""
+        from thesma._generated.models import InsiderTradeListItem
+
+        flat_fields = set(InsiderTradeListItem.model_fields.keys())
+        for field in (
+            "person",
+            "cik",
+            "transaction_date",
+            "shares",
+            "price_per_share",
+            "ownership",
+            "filing_accession",
+        ):
+            assert field in flat_fields
+        # New aggregate-only fields must NOT be on the flat class:
+        assert "price_range" not in flat_fields
+        assert "slice_count" not in flat_fields
+
+
+class TestEnrichmentWarning:
+    """T4 added a typed ``EnrichmentWarning`` class plus envelope ``_enrichment_warnings`` field."""
+
+    def test_enrichment_warning_class_shape(self) -> None:
+        from thesma._generated.models import EnrichmentWarning
+
+        w = EnrichmentWarning.model_validate(
+            {
+                "field": "labor_context",
+                "reason": "timeout",
+                "message": "labor_context did not complete within 2.0s",
+            }
+        )
+        assert w.field == "labor_context"
+        assert w.reason == "timeout"
+        assert w.message is not None and w.message.startswith("labor_context did not complete")
+
+    def test_enrichment_warning_message_optional(self) -> None:
+        from thesma._generated.models import EnrichmentWarning
+
+        w = EnrichmentWarning.model_validate({"field": "lending_context", "reason": "build_failed"})
+        assert w.message is None
+
+    def test_enrichment_warning_reason_is_permissive_str(self) -> None:
+        """Per SDK-24 precedent: ``reason`` is ``str``, not ``Literal``. Unknown values must parse
+        so older SDKs don't ``ValidationError`` when the API adds new reason codes.
+        """
+        from thesma._generated.models import EnrichmentWarning
+
+        w = EnrichmentWarning.model_validate({"field": "labor_context", "reason": "future_unknown_reason"})
+        assert w.reason == "future_unknown_reason"
+
+    def test_enrichment_warnings_write_path_round_trip(self) -> None:
+        """Write path: ``model_dump(by_alias=True)`` of a passthrough envelope preserves
+        the ``_enrichment_warnings`` wire key (the underscore-prefixed key sits in
+        ``model_extra`` verbatim; Pydantic emits it back as-is).
+        """
+        from thesma._generated.models import EnrichedFinancialDataResponse
+
+        resp = EnrichedFinancialDataResponse.model_validate(
+            {
+                "data": {"cik": "0000320193", "fiscal_year": 2024},
+                "labor_context": None,
+                "_enrichment_warnings": [
+                    {"field": "labor_context", "reason": "timeout", "message": "..."},
+                ],
+            }
+        )
+        dumped = resp.model_dump(by_alias=True)
+        assert "_enrichment_warnings" in dumped
+        assert dumped["_enrichment_warnings"][0]["field"] == "labor_context"
+        assert dumped["_enrichment_warnings"][0]["reason"] == "timeout"
+
+    def test_envelope_passthrough_for_enrichment_warnings(self) -> None:
+        """The 5 ``Enriched*Response`` envelopes are ``extra="allow"`` passthroughs (codegen
+        drops typed fields when the OpenAPI schema uses additionalProperties-like patterns).
+        Consumers access ``_enrichment_warnings`` via ``model_extra``.
+        """
+        from thesma._generated.models import (
+            EnrichedCompanyDataResponse,
+            EnrichedCompensationDataResponse,
+            EnrichedFinancialDataResponse,
+            EnrichedMultiStatementPaginatedResponse,
+            EnrichedMultiStatementResponse,
+        )
+
+        payload_envelope = {
+            "data": {"cik": "0000320193", "name": "Apple Inc."},
+            "labor_context": None,
+            "_enrichment_warnings": [
+                {"field": "labor_context", "reason": "timeout", "message": "..."},
+            ],
+        }
+        for cls in (
+            EnrichedCompanyDataResponse,
+            EnrichedCompensationDataResponse,
+            EnrichedFinancialDataResponse,
+            EnrichedMultiStatementResponse,
+            EnrichedMultiStatementPaginatedResponse,
+        ):
+            envelope = cls.model_validate(payload_envelope)
+            extra = envelope.model_extra or {}
+            warnings = extra.get("_enrichment_warnings")
+            assert warnings is not None, f"{cls.__name__}: _enrichment_warnings missing from model_extra"
+            assert warnings[0]["field"] == "labor_context"
+            assert warnings[0]["reason"] == "timeout"
 
 
 class TestIfrsReportingNotesModels:
