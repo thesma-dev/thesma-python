@@ -18,6 +18,8 @@ PAGINATED_HOLDERS_JSON = {
             "shares": 1200000000.0,
             "market_value": 180000000000.0,
             "filing_accession": "0001234567-24-000001",
+            "report_quarter": "2025-Q3",
+            "filed_at": "2025-11-14T16:30:00Z",
         },
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
@@ -62,6 +64,8 @@ PAGINATED_FUND_HOLDINGS_JSON = {
             "market_value": 180000000000.0,
             "position_type": "equity",
             "filing_accession": "0001234567-24-000001",
+            "report_quarter": "2025-Q3",
+            "filed_at": "2025-11-14T16:30:00Z",
         },
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
@@ -89,7 +93,9 @@ PAGINATED_FUND_CHANGES_JSON = {
 class TestHolders:
     @respx.mock
     def test_holders_default_params(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/institutional-holders").mock(
+        from datetime import datetime
+
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/holders").mock(
             return_value=httpx.Response(200, json=PAGINATED_HOLDERS_JSON),
         )
         client = ThesmaClient(api_key=api_key)
@@ -100,11 +106,14 @@ class TestHolders:
         assert "page=1" in str(request.url)
         assert isinstance(result, PaginatedResponse)
         assert len(result.data) == 1
+        # SDK-29 temporal round-trip through the resource layer:
+        assert result.data[0].report_quarter == "2025-Q3"
+        assert isinstance(result.data[0].filed_at, datetime)
         client.close()
 
     @respx.mock
     def test_holders_with_quarter(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/institutional-holders").mock(
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/holders").mock(
             return_value=httpx.Response(200, json=PAGINATED_HOLDERS_JSON),
         )
         client = ThesmaClient(api_key=api_key)
@@ -116,7 +125,7 @@ class TestHolders:
 
     @respx.mock
     def test_holders_none_quarter_omitted(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/institutional-holders").mock(
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/holders").mock(
             return_value=httpx.Response(200, json=PAGINATED_HOLDERS_JSON),
         )
         client = ThesmaClient(api_key=api_key)
@@ -183,6 +192,8 @@ class TestFunds:
 class TestFundHoldings:
     @respx.mock
     def test_fund_holdings(self, api_key: str) -> None:
+        from datetime import datetime
+
         route = respx.get(f"{BASE}/v1/us/sec/funds/0001234567/holdings").mock(
             return_value=httpx.Response(200, json=PAGINATED_FUND_HOLDINGS_JSON),
         )
@@ -192,6 +203,9 @@ class TestFundHoldings:
         assert route.called
         assert isinstance(result, PaginatedResponse)
         assert result.data[0].held_company_name == "Apple Inc."
+        # SDK-29 temporal round-trip through the resource layer:
+        assert result.data[0].report_quarter == "2025-Q3"
+        assert isinstance(result.data[0].filed_at, datetime)
         client.close()
 
     @respx.mock
