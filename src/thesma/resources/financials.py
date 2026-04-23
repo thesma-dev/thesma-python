@@ -4,8 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from thesma._generated.models import FieldsResponse, FinancialStatementResponse, TimeSeriesResponse
-from thesma._types import DataResponse
+from thesma._generated.models import (
+    EnrichedMultiStatementPaginatedResponse,
+    EnrichedMultiStatementResponse,
+    FieldsResponse,
+    FinancialStatementListItem,
+    FinancialStatementResponse,
+    TimeSeriesResponse,
+)
+from thesma._types import DataResponse, PaginatedResponse
 
 
 class Financials:
@@ -22,8 +29,15 @@ class Financials:
         period: str | None = None,
         year: int | None = None,
         quarter: int | None = None,
+        per_page: int | None = None,
+        page: int | None = None,
         include: str | None = None,
-    ) -> DataResponse[FinancialStatementResponse]:
+    ) -> (
+        DataResponse[FinancialStatementResponse]
+        | PaginatedResponse[FinancialStatementListItem]
+        | EnrichedMultiStatementResponse
+        | EnrichedMultiStatementPaginatedResponse
+    ):
         """Get a financial statement for a company.
 
         ``GET /v1/us/sec/companies/{cik}/financials``
@@ -54,19 +68,58 @@ class Financials:
         attribute name by default (Pydantic v2 ``by_alias=False``); pass
         ``by_alias=True`` to round-trip the wire-level ``_reporting_notes``
         key back to the API.
+
+        Response-shape discriminator on ``(statement, per_page)``:
+
+        * ``statement`` is ``None`` / ``"income"`` / ``"balance-sheet"`` /
+          ``"cash-flow"`` and ``per_page`` absent → single-statement
+          ``DataResponse[FinancialStatementResponse]`` (pre-IFRS-09 shape).
+        * Same ``statement`` values with ``per_page=N`` → paginated
+          ``PaginatedResponse[FinancialStatementListItem]`` (IFRS-09),
+          where ``labor_context`` / ``lending_context`` land per-element.
+        * ``statement="all"`` with ``per_page`` absent →
+          ``EnrichedMultiStatementResponse`` (S2 single-period).
+        * ``statement="all"`` with ``per_page=N`` →
+          ``EnrichedMultiStatementPaginatedResponse`` (S2 multi-period),
+          where ``labor_context`` / ``lending_context`` sit at envelope
+          root, NOT per-element — one snapshot for the whole response.
+
+        ``per_page`` is mutually exclusive with ``year`` / ``quarter``;
+        passing both combinations returns HTTP 400 as ``BadRequestError``.
+
+        Post-S3, requested ``labor_context`` / ``lending_context`` surfaces
+        use the unified nested ``LaborContext`` / ``LendingContext`` shapes
+        (same across ``/companies``, ``/financials``, ``/screener``).
+        When an enrichment builder times out (2s cap) or errors, the
+        envelope's ``_enrichment_warnings`` list carries a typed
+        ``EnrichmentWarning`` (``field``, ``reason``, ``message``) and the
+        context field itself is ``None``. A ``None`` without a matching
+        warning means the builder had no data (e.g., company has no NAICS
+        mapping) — not an error.
         """
         params: dict[str, Any] = {
             "statement": statement,
             "period": period,
             "year": year,
             "quarter": quarter,
+            "per_page": per_page,
+            "page": page,
             "include": include,
         }
+        response_model: type[Any]
+        if statement == "all" and per_page is not None:
+            response_model = EnrichedMultiStatementPaginatedResponse
+        elif statement == "all":
+            response_model = EnrichedMultiStatementResponse
+        elif per_page is not None:
+            response_model = PaginatedResponse[FinancialStatementListItem]
+        else:
+            response_model = DataResponse[FinancialStatementResponse]
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
             f"/v1/us/sec/companies/{cik}/financials",
             params=params,
-            response_model=DataResponse[FinancialStatementResponse],
+            response_model=response_model,
         )
 
     def time_series(
