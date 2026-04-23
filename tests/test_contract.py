@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from thesma._generated.models import CompanyListItem
 from thesma.client import ThesmaClient
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "openapi.json"
@@ -155,3 +156,96 @@ class TestEndpointResponseModel:
         # Verify the schema exists in components
         schemas = openapi_spec.get("components", {}).get("schemas", {})
         assert schema_name in schemas, f"Schema '{schema_name}' referenced by {path} not found in components/schemas"
+
+
+# --- SDK-25: URL renames + HATEOAS ------------------------------------------
+
+_RESOURCES_DIR = Path(__file__).resolve().parent.parent / "src" / "thesma" / "resources"
+
+
+def test_no_pre_s4_url_literals_in_resources() -> None:
+    """Regression: no resource module contains the pre-S4 URL paths.
+
+    S4 renamed ``/executive-compensation`` → ``/compensation`` and
+    ``/institutional-holders`` → ``/holders``. Any copy-paste of an older
+    snippet into a new resource method would silently 404 at runtime.
+    """
+    for py_file in _RESOURCES_DIR.glob("*.py"):
+        text = py_file.read_text()
+        assert "executive-compensation" not in text, f"{py_file.name}: pre-S4 URL"
+        assert "institutional-holders" not in text, f"{py_file.name}: pre-S4 URL"
+
+
+@pytest.mark.contract
+def test_s4_new_paths_present_in_spec(openapi_spec: dict[str, Any]) -> None:
+    """Post-S4 paths exist in the OpenAPI spec."""
+    paths = openapi_spec.get("paths", {})
+    assert "/v1/us/sec/companies/{cik}/compensation" in paths
+    assert "/v1/us/sec/companies/{cik}/holders" in paths
+
+
+@pytest.mark.contract
+def test_s4_old_paths_absent_from_spec(openapi_spec: dict[str, Any]) -> None:
+    """Pre-S4 paths are gone from the OpenAPI spec."""
+    paths = openapi_spec.get("paths", {})
+    assert "/v1/us/sec/companies/{cik}/executive-compensation" not in paths
+    assert "/v1/us/sec/companies/{cik}/institutional-holders" not in paths
+
+
+def test_company_list_item_has_detail_url() -> None:
+    """``CompanyListItem.detail_url`` is a required ``str`` field post-S4."""
+    assert "detail_url" in CompanyListItem.model_fields
+    assert CompanyListItem.model_fields["detail_url"].is_required()
+
+
+# Minimal realistic EnrichedCompanyData payload with 11 absolute ``*_url`` fields
+# plus the base-company fields the envelope passes through via ``extra="allow"``.
+_ENRICHED_COMPANY_FIXTURE: dict[str, Any] = {
+    "cik": "0000320193",
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "filings_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/filings",
+    "financials_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/financials",
+    "ratios_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/ratios",
+    "events_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/events",
+    "insider_trades_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/insider-trades",
+    "insider_holdings_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/insider-holdings",
+    "holders_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/holders",
+    "compensation_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/compensation",
+    "board_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/board",
+    "proxy_votes_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/proxy-votes",
+    "beneficial_ownership_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/beneficial-ownership",
+}
+
+
+def test_enriched_company_data_carries_11_hateoas_urls() -> None:
+    """``EnrichedCompanyData`` surfaces all 11 ``*_url`` fields as absolute URLs.
+
+    Generated ``EnrichedCompanyData`` uses ``extra="allow"`` passthrough rather
+    than declaring the URL fields as typed attributes, so HATEOAS links are
+    accessed via ``model_extra``. The test works whether codegen produces
+    explicit fields OR passthrough — ``getattr`` with ``model_extra`` fallback
+    covers both cases.
+    """
+    from thesma._generated.models import EnrichedCompanyData
+
+    data = EnrichedCompanyData.model_validate(_ENRICHED_COMPANY_FIXTURE)
+    expected_url_fields = {
+        "filings_url",
+        "financials_url",
+        "ratios_url",
+        "events_url",
+        "insider_trades_url",
+        "insider_holdings_url",
+        "holders_url",
+        "compensation_url",
+        "board_url",
+        "proxy_votes_url",
+        "beneficial_ownership_url",
+    }
+    for name in expected_url_fields:
+        value = getattr(data, name, None)
+        if value is None and data.model_extra:
+            value = data.model_extra.get(name)
+        assert value is not None, f"{name} missing from EnrichedCompanyData"
+        assert isinstance(value, str) and value.startswith("https://"), f"{name} not absolute: {value}"

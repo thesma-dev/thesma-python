@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0.0] - 2026-04-23
+
+Release bundle for the govdata-api Wave 1 + S1 shape landing (API `0.10.0`, merged as `f80b6c6`). Eight SDK prompts propagate together: SDK-25 (URL renames + HATEOAS), SDK-26 (`per_page` on financials), SDK-27 (`statement=all`), SDK-28 (unified LaborContext), SDK-29 (holders temporal fields), SDK-30 (insider-trades aggregation), SDK-31 (enrichment warnings), SDK-32 (`include=` composition).
+
+### Breaking
+- URL path renames on two SDK methods (same Python interface, different underlying HTTP path): `client.compensation.get()` now targets `/compensation` (was `/executive-compensation`); `client.holdings.holders()` now targets `/holders` (was `/institutional-holders`). SDK consumers using the typed methods see no change; consumers hitting URLs manually must update.
+- `LaborContextSummary` reshaped: the pre-S3 flat 12-field shape is replaced with a 4-field derived-summary shape (`industry_hiring_trend`, `local_unemployment_trend`, `comp_to_market_ratio`, `labour_market_tightness`). Consumers who accessed fields via `row.labor_context.industry_hiring_trend` on screener rows must switch to `row.labor_context.summary.industry_hiring_trend`. Fields formerly under `LaborContextSummary` that mapped to raw sub-objects (industry employment/wage, local unemployment/labor force) are accessible via the existing `LaborContext` sub-objects (`labor_context.industry.*`, `labor_context.local_market.*`).
+- `client.insider_trades.list()` and `.list_all()` default behaviour changed: rows are now aggregated transaction events (one row per person/date/type/security/ownership 5-part key) instead of per-slice Form 4 rows. New fields `price_range` (min/max across slices), `slice_count`, and weighted-average `price_per_share` appear on each aggregate row. Consumers relying on per-slice rows must pass `flat=True` to preserve pre-T5 behaviour.
+
+### Added
+- `CompanyListItem.detail_url` — typed `str` field pointing at `/companies/{cik}` (from the post-S4 HATEOAS additions).
+- `EnrichedCompanyData` response now carries 11 absolute `*_url` HATEOAS fields (`filings_url`, `financials_url`, `ratios_url`, `events_url`, `insider_trades_url`, `insider_holdings_url`, `holders_url`, `compensation_url`, `board_url`, `proxy_votes_url`, `beneficial_ownership_url`). Accessed via typed attributes where codegen emitted them, or via `.model_extra` for the envelope passthrough path.
+- `client.financials.get(cik, per_page=N)` returns up to N most-recent financial statements in one call (e.g. `per_page=5` for a 5-year trend). Response is `PaginatedResponse[FinancialStatementListItem]`; omit `per_page` to keep the pre-IFRS-09 single-statement shape. Mutually exclusive with `year` and `quarter`.
+- `client.financials.get(cik, statement="all")` returns all three statements (income, balance_sheet, cash_flow) in one call under a `MultiStatementResponse` shape. Combined with `per_page=N`, returns N periods each with all three statements. Enrichment (`labor_context` / `lending_context`) sits at envelope root on the paginated shape, NOT per-element — reflecting the current-snapshot semantics of the enrichment builders.
+- `LaborContext.summary` — typed sub-object with 4 derived classification fields (`industry_hiring_trend`, `local_unemployment_trend`, `comp_to_market_ratio`, `labour_market_tightness`).
+- `LaborContext.data_freshness` — typed sub-object with 6 period anchors (`ces_period`, `qcew_period`, `jolts_period`, `laus_period`, `oews_period`, `sec_exec_comp_snapshot_date`).
+- `/companies/{cik}?include=labor_context` now returns a populated `compensation_benchmark` sub-object (API-side bug fix where this was previously omitted).
+- `HolderListItem` and `FundHoldingListItem` now include `report_quarter` (e.g. `"2025-Q3"`) and `filed_at` (UTC `datetime`) fields on every row. Consumers rendering 13F data now have the temporal anchors needed to display "as-of" dates without an extra lookup.
+- `flat: bool = False` kwarg on `InsiderTrades.list()` and `.list_all()`. `flat=True` returns per-slice Form 4 rows; default returns aggregated transaction events.
+- `min_value: int | None` kwarg on both insider-trades methods (aggregate-mode filter on the post-SUM total; flat-mode filter per-slice — matches API semantics).
+- `person: str | None` and `trade_type: str | None` kwargs on `InsiderTrades.list_all()` for signature parity with `list()`.
+- New typed models: `InsiderTradeAggregateListItem`, `PriceRange`, `EnrichmentWarning`, `MultiStatementResponse`, `FinancialStatementBody`, `MultiStatementListItem`, `EnrichedMultiStatementResponse`, `EnrichedMultiStatementPaginatedResponse`, `FinancialStatementListItem`.
+- `_enrichment_warnings` envelope field (typed via `EnrichmentWarning`: `field`, `reason`, `message`) on 5 response envelopes (companies detail, financials single-statement, financials `statement=all`, financials `statement=all` paginated, compensation). Accessible via `response.model_extra.get("_enrichment_warnings")` on the passthrough-typed envelopes. A 2-second hard timeout protects financials + companies endpoints from slow BLS / SBA queries; customers see `labor_context: null` + a typed warning instead of a 500.
+- `client.companies.get(cik, include="...")` accepts 9 values (up from 2): `labor_context`, `lending_context`, `financials`, `ratios`, `events`, `insider_trades`, `holders`, `compensation`, `board`. Composing a company-detail page now takes one API call instead of eight — concurrent fan-out, 2-3s per-expander timeout, partial-failure typed error slots. `events` ships disabled in this release pending API-side performance work; `include="events"` (alone or in combination) returns `BadRequestError`. A follow-up SDK release will enable the expander.
+
+### Changed
+- All URL-carrying response fields are now returned as absolute URLs (`https://api.thesma.dev/...` in prod) driven by the `API_PUBLIC_BASE_URL` env var on the API side. Consumers can follow HATEOAS links directly with `httpx.get(resp.data.financials_url)` without manual base-URL joining.
+- `EnrichedCompanyData` envelope carries inline sub-resource payloads (not just URL links) when expanders are requested via `include=...`. Non-requested slots continue to carry `*_url` HATEOAS links per the S4 convention.
+
 ## [0.9.0.15] - 2026-04-21
 
 ### Added

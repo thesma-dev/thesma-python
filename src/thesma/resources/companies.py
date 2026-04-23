@@ -27,6 +27,7 @@ class Companies:
         currency: str | None = None,
         state_fips: str | None = None,
         county_fips: str | None = None,
+        include: str | None = None,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[CompanyListItem]:
@@ -72,6 +73,7 @@ class Companies:
             "currency": currency,
             "state_fips": state_fips,
             "county_fips": county_fips,
+            "include": include,
             "page": page,
             "per_page": per_page,
         }
@@ -87,11 +89,51 @@ class Companies:
 
         ``GET /v1/us/sec/companies/{cik}``
 
-        ``include`` is a comma-separated list of enrichment surfaces. The
-        supported values are ``"labor_context"`` and ``"lending_context"``
-        (e.g. ``include="lending_context"`` or
-        ``include="labor_context,lending_context"``). Unknown values
-        return 400 as ``BadRequestError``.
+        ``include`` is a comma-separated list of enrichment / expansion
+        surfaces. Post-S1 the accepted set is 9 values (up from 2):
+        ``"labor_context"``, ``"lending_context"``, ``"financials"``,
+        ``"ratios"``, ``"events"``, ``"insider_trades"``, ``"holders"``,
+        ``"compensation"``, ``"board"``. Unknown values return 400 as
+        ``BadRequestError``; there is no ``"all"`` shortcut — compose the
+        explicit list the caller wants.
+
+        .. note::
+
+           ``include="events"`` is disabled in this SDK release (the API
+           returns 400 at dispatch pending the B5 latency fix). Both
+           ``include="events"`` and combinations that include ``events``
+           (e.g. ``include="financials,events"``) surface as
+           ``BadRequestError``. A follow-up SDK release will enable the
+           expander once the API flips its ``enabled`` flag.
+
+        Each requested expander returns one of three shapes in its
+        response slot (accessed via ``model_extra`` because the regenerated
+        ``EnrichedCompanyData`` is an ``extra="allow"`` passthrough):
+
+        * **Inline payload** (dict / list) on success — e.g.
+          ``result.data.model_extra["financials"]["line_items"]["revenue"]``.
+        * **Partial-failure error slot** on expander timeout / upstream
+          error — the slot is a dict ``{"error": {"code", "message"}}``
+          while the top-level response remains 200. Check for the
+          ``"error"`` key to distinguish from success.
+        * **HATEOAS link string** on slots NOT requested — e.g.
+          ``result.data.events_url`` carries an absolute URL for the
+          caller to follow instead (from the S4 HATEOAS fields).
+
+        Expanders run concurrently with a 2-3s per-expander timeout; total
+        response latency approximates ``max(expander)``. Partial failures
+        do NOT fail the whole request.
+
+        When ``include="labor_context"`` is requested, the response's
+        ``data.labor_context`` is the unified nested ``LaborContext``
+        object with the ``industry`` / ``local_market`` / ``turnover`` /
+        ``compensation_benchmark`` sub-objects plus new ``summary``
+        (4-field derived classification — ``industry_hiring_trend``,
+        ``local_unemployment_trend``, ``comp_to_market_ratio``,
+        ``labour_market_tightness``) and ``data_freshness`` (6 period
+        anchors including ``oews_period`` and
+        ``sec_exec_comp_snapshot_date``). Post-S3 the endpoint populates
+        ``compensation_benchmark`` — pre-S3 it was always ``None``.
 
         When ``include="lending_context"`` is requested, the response's
         ``data.lending_context`` field carries a ``LendingContext`` object
@@ -101,6 +143,12 @@ class Companies:
         FIPS exists but no SBA data is available, or one or both are
         populated. Consumers can distinguish omitted vs null-children via
         ``result.data.model_dump(exclude_unset=True)``.
+
+        When an enrichment builder (``labor_context`` / ``lending_context``)
+        times out or errors, the envelope's ``_enrichment_warnings`` list
+        carries a typed ``EnrichmentWarning`` (``field``, ``reason``,
+        ``message``) and the context field is ``None``. Access via
+        ``result.model_extra.get("_enrichment_warnings")``.
         """
         params: dict[str, Any] = {"include": include}
         return self._client.request(  # type: ignore[no-any-return]

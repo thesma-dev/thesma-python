@@ -96,22 +96,37 @@ SCREENER_LAUS_JSON = {
                 "debt_to_equity": 1.87,
             },
             "labor_context": {
-                "industry_hiring_trend": "stable",
-                "industry_employment_growth_yoy": 1.2,
-                "industry_wage_growth_yoy": 3.5,
-                "hq_county_wage_growth_yoy": 4.1,
-                "comp_to_market_ratio": None,
-                "industry_quits_rate": None,
-                "industry_openings_rate": None,
-                "labour_market_tightness": None,
-                "local_unemployment_rate": 2.8,
-                "local_unemployment_trend": "improving",
-                "local_labor_force": 1050450,
+                # Post-S3 unified nested shape — same LaborContext used on /companies,
+                # /financials, and /screener. Derived classification fields now live
+                # under .summary; raw sub-objects under .industry / .local_market /
+                # .turnover. data_freshness gained oews_period + sec_exec_comp_snapshot_date.
+                "industry": {
+                    "naics_code": "334111",
+                    "employment_yoy_pct": 1.2,
+                    "avg_weekly_wage_yoy_pct": 3.5,
+                },
+                "local_market": {
+                    "county_fips": "06085",
+                    "county_name": "Santa Clara County, CA",
+                    "wage_yoy_pct": 4.1,
+                    "unemployment_rate": 2.8,
+                    "labor_force": 1050450,
+                },
+                "turnover": None,
+                "compensation_benchmark": None,
+                "summary": {
+                    "industry_hiring_trend": "stable",
+                    "local_unemployment_trend": "improving",
+                    "comp_to_market_ratio": None,
+                    "labour_market_tightness": None,
+                },
                 "data_freshness": {
                     "ces_period": "2025-11",
                     "qcew_period": "2025-Q2",
                     "jolts_period": "2025-10",
                     "laus_period": "2025-11",
+                    "oews_period": "2024",
+                    "sec_exec_comp_snapshot_date": "2025-03-15",
                 },
             },
         }
@@ -602,9 +617,10 @@ class TestScreenerLausFilters:
         result = client.screener.screen(min_local_unemployment_rate=2.0)
 
         labor_context = result.data[0].labor_context  # type: ignore[attr-defined]
-        assert labor_context["local_unemployment_rate"] == 2.8
-        assert labor_context["local_unemployment_trend"] == "improving"
-        assert labor_context["local_labor_force"] == 1050450
+        # Post-S3 nested shape: raw fields under .local_market, derived labels under .summary.
+        assert labor_context["local_market"]["unemployment_rate"] == 2.8
+        assert labor_context["summary"]["local_unemployment_trend"] == "improving"
+        assert labor_context["local_market"]["labor_force"] == 1050450
         client.close()
 
     @respx.mock
@@ -616,7 +632,11 @@ class TestScreenerLausFilters:
         result = client.screener.screen()
 
         labor_context = result.data[0].labor_context  # type: ignore[attr-defined]
+        # data_freshness remains nested under labor_context; gained oews_period +
+        # sec_exec_comp_snapshot_date post-S3.
         assert labor_context["data_freshness"]["laus_period"] == "2025-11"
+        assert labor_context["data_freshness"]["oews_period"] == "2024"
+        assert labor_context["data_freshness"]["sec_exec_comp_snapshot_date"] == "2025-03-15"
         client.close()
 
     @respx.mock
@@ -650,6 +670,27 @@ class TestScreenerLausFilters:
         assert labor_context["data_freshness"]["ces_period"] == "2025-11"
         assert labor_context["data_freshness"]["qcew_period"] == "2025-Q2"
         assert labor_context["data_freshness"]["jolts_period"] == "2025-10"
+        client.close()
+
+    @respx.mock
+    def test_screener_labor_context_summary_nested_access(self, api_key: str) -> None:
+        """Post-S3 lock: derived classification fields live under `labor_context.summary`,
+        NOT at the flat `labor_context.industry_hiring_trend` root.
+        """
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_LAUS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen()
+
+        labor_context = result.data[0].labor_context  # type: ignore[attr-defined]
+        # New nested access:
+        assert labor_context["summary"]["industry_hiring_trend"] == "stable"
+        assert labor_context["summary"]["local_unemployment_trend"] == "improving"
+        # Pre-S3 flat access is GONE — the derived fields are no longer at the
+        # root of labor_context.
+        assert "industry_hiring_trend" not in labor_context
+        assert "local_unemployment_trend" not in labor_context
         client.close()
 
 

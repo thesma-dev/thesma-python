@@ -24,6 +24,52 @@ PAGINATED_TRADES_JSON = {
             "ownership": "direct",
             "filing_accession": "0001234567-24-000001",
             "filing_url": "/v1/us/sec/filings/0001234567-24-000001",
+            "slice_count": 1,
+            "price_range": {"low": 150.0, "high": 150.0},
+        },
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+PAGINATED_TRADES_FLAT_JSON = {
+    "data": [
+        {
+            "person": {"name": "John Doe", "title": "CFO", "relationship": "cfo"},
+            "cik": "0000320193",
+            "transaction_date": "2024-06-15",
+            "type": "purchase",
+            "security": "Common Stock",
+            "shares": 1000.0,
+            "price_per_share": 150.0,
+            "total_value": 150000.0,
+            "ownership": "direct",
+            "filing_accession": "0001234567-24-000001",
+            "filing_url": "/v1/us/sec/filings/0001234567-24-000001",
+        },
+    ],
+    "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+}
+
+NVDA_KRESS_AGGREGATE_JSON = {
+    "data": [
+        {
+            "person": {"name": "Kress Colette", "title": "EVP & CFO", "relationship": "cfo"},
+            "cik": "0001045810",
+            "company_name": "NVIDIA Corporation",
+            "company_ticker": "NVDA",
+            "transaction_date": "2026-03-20",
+            "type": "sale",
+            "security": "Common Stock",
+            "shares": 74500.0,
+            "price_per_share": 176.11,
+            "price_range": {"low": 171.97, "high": 177.51},
+            "total_value": 13_120_000.00,
+            "shares_after": 637_900.0,
+            "ownership": "direct",
+            "is_planned_trade": True,
+            "filing_accession": "0001588670-26-000010",
+            "filing_url": "https://api.thesma.dev/v1/us/sec/filings/0001588670-26-000010",
+            "slice_count": 44,
         },
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
@@ -242,4 +288,98 @@ class TestInsiderTradesListAll:
 
         request = route.calls.last.request
         assert "to=" not in str(request.url)
+        client.close()
+
+
+# --- SDK-30: aggregation default + flat=true + min_value + person/trade_type on list_all ---
+
+
+class TestInsiderTradesAggregation:
+    @respx.mock
+    def test_list_default_returns_aggregate_shape(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0001045810/insider-trades").mock(
+            return_value=httpx.Response(200, json=NVDA_KRESS_AGGREGATE_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        resp = client.insider_trades.list("0001045810")
+        assert resp.data[0].slice_count == 44
+        assert resp.data[0].price_range is not None
+        assert resp.data[0].price_range.low == 171.97
+        assert resp.data[0].price_range.high == 177.51
+        client.close()
+
+    @respx.mock
+    def test_list_flat_true_returns_per_slice_shape(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0001045810/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_FLAT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        resp = client.insider_trades.list("0001045810", flat=True)
+        # Flat mode: row is the pre-T5 InsiderTradeListItem — no typed slice_count / price_range.
+        row = resp.data[0]
+        assert not hasattr(row, "slice_count") or getattr(row, "slice_count", None) is None
+        assert row.price_per_share == 150.0
+        assert "flat=true" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_flat_param_omitted_when_default(self, api_key: str) -> None:
+        """Default ``flat=False`` is NOT forwarded as a query parameter.
+
+        ``_strip_none`` in the base client drops ``None`` params; the resource
+        maps the default ``flat=False`` to ``None`` so the wire URL stays clean.
+        """
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0001045810/insider-trades").mock(
+            return_value=httpx.Response(200, json=NVDA_KRESS_AGGREGATE_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0001045810")
+        assert "flat=" not in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_min_value_forwarded(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0001045810/insider-trades").mock(
+            return_value=httpx.Response(200, json=NVDA_KRESS_AGGREGATE_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list("0001045810", min_value=1_000_000)
+        assert "min_value=1000000" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_min_value_forwarded(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=NVDA_KRESS_AGGREGATE_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list_all(min_value=1_000_000)
+        assert "min_value=1000000" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_list_all_person_and_trade_type_forwarded(self, api_key: str) -> None:
+        """SDK-30 adds ``person`` + ``trade_type`` to ``list_all()`` for parity with ``list()``."""
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=NVDA_KRESS_AGGREGATE_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list_all(person="Kress", trade_type="sale")
+        url_str = str(route.calls.last.request.url)
+        assert "person=Kress" in url_str
+        assert "type=sale" in url_str
+        client.close()
+
+    @respx.mock
+    def test_list_all_flat_true_returns_per_slice_shape(self, api_key: str) -> None:
+        """Cross-company route parity: ``list_all(flat=True)`` mirrors ``list(flat=True)``."""
+        route = respx.get(f"{BASE}/v1/us/sec/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_FLAT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        resp = client.insider_trades.list_all(flat=True)
+        row = resp.data[0]
+        assert not hasattr(row, "slice_count") or getattr(row, "slice_count", None) is None
+        assert row.price_per_share == 150.0
+        assert "flat=true" in str(route.calls.last.request.url)
         client.close()

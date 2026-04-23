@@ -119,6 +119,16 @@ class Screener:
         top-level ``data_freshness`` object on each result item, next to
         ``labor_context.data_freshness`` (which remains nested for BLS).
 
+        Post-S3, ``labor_context`` on each ``ScreenerResultItem`` is the
+        unified nested shape with sub-objects ``industry``, ``local_market``,
+        ``turnover``, ``compensation_benchmark``, ``summary``, and
+        ``data_freshness``. The derived classification fields (previously
+        flat on ``ScreenerResultItem.labor_context``) moved to
+        ``labor_context.summary.industry_hiring_trend`` /
+        ``.local_unemployment_trend`` / ``.comp_to_market_ratio`` /
+        ``.labour_market_tightness``. Consumers accessing the flat shape
+        before SDK 0.10 must migrate to the nested path.
+
         ``search`` filters by company name substring OR ticker prefix,
         case-insensitive. The value is passed through to the API verbatim
         — the server trims whitespace, escapes SQL LIKE wildcards, and

@@ -30,7 +30,11 @@ class Holdings:
     ) -> PaginatedResponse[HolderListItem]:
         """List institutional holders for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/institutional-holders``
+        ``GET /v1/us/sec/companies/{cik}/holders``
+
+        Each row carries ``report_quarter`` (``"YYYY-QN"`` format, e.g.
+        ``"2025-Q3"``) and ``filed_at`` (UTC ``datetime``) — the temporal
+        anchors needed to display "as-of" dates without an extra lookup.
         """
         params: dict[str, Any] = {
             "quarter": quarter,
@@ -39,7 +43,7 @@ class Holdings:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/institutional-holders",
+            f"/v1/us/sec/companies/{cik}/holders",
             params=params,
             response_model=PaginatedResponse[HolderListItem],
         )
@@ -100,6 +104,10 @@ class Holdings:
         """List holdings for a specific fund.
 
         ``GET /v1/us/sec/funds/{cik}/holdings``
+
+        Each row carries ``report_quarter`` (``"YYYY-QN"`` format) and
+        ``filed_at`` (UTC ``datetime``) — the same temporal anchors
+        present on ``holders()`` rows.
         """
         params: dict[str, Any] = {
             "quarter": quarter,

@@ -25,6 +25,7 @@ PAGINATED_COMPANIES_JSON = {
             "domicile": "us",
             "state_fips": "06",
             "county_fips": "06073",
+            "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193",
         },
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
@@ -42,6 +43,7 @@ PAGINATED_COMPANIES_JSON_NULL_EXCHANGE_DOMICILE = {
             "domicile": None,
             "state_fips": "06",
             "county_fips": "06073",
+            "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193",
         },
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
@@ -784,4 +786,216 @@ class TestCompaniesGetLendingContext:
 
         lending_context = result.data.lending_context  # type: ignore[attr-defined]
         assert lending_context["local_market"]["county_fips_confidence"] == "unknown"
+        client.close()
+
+
+# --- SDK-32: include= composition primitive (9-value expander set) ---------
+
+_HATEOAS_URL_FIELDS = {
+    "filings_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/filings",
+    "financials_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/financials",
+    "ratios_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/ratios",
+    "events_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/events",
+    "insider_trades_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/insider-trades",
+    "insider_holdings_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/insider-holdings",
+    "holders_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/holders",
+    "compensation_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/compensation",
+    "board_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/board",
+    "proxy_votes_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/proxy-votes",
+    "beneficial_ownership_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193/beneficial-ownership",
+}
+
+_COMPANY_BASE = {
+    "cik": "0000320193",
+    "name": "Apple Inc.",
+    "ticker": "AAPL",
+    "sic_code": "3571",
+    "company_tier": "sp500",
+    "state_fips": "06",
+    "county_fips": "06073",
+    **_HATEOAS_URL_FIELDS,
+}
+
+
+class TestCompaniesGetIncludeComposition:
+    @respx.mock
+    def test_get_with_include_financials_inline(self, api_key: str) -> None:
+        """Requested expander returns inline payload in its slot."""
+        payload = {
+            "data": {
+                **_COMPANY_BASE,
+                "financials": {"line_items": {"revenue": 391_035_000_000}, "fiscal_year": 2024},
+            }
+        }
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=payload),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="financials")
+        extra = result.data.model_extra or {}
+        assert extra.get("financials") is not None
+        assert extra["financials"]["line_items"]["revenue"] == 391_035_000_000
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_eight_expanders(self, api_key: str) -> None:
+        """Flagship: 8 expanders (events excluded) return all inline in one call."""
+        payload = {
+            "data": {
+                **_COMPANY_BASE,
+                "financials": {"line_items": {"revenue": 391_035_000_000}},
+                "ratios": {"return_on_equity": 1.65},
+                "insider_trades": [{"transaction_date": "2025-12-01"}],
+                "holders": [{"fund_cik": "0001234567", "shares": 1000000}],
+                "compensation": {"pay_ratio": 1447},
+                "board": {"members": []},
+                "labor_context": {"industry": {"naics_code": "334111"}},
+                "lending_context": {"local_market": None, "industry_lending": None},
+            }
+        }
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=payload),
+        )
+        include_value = "financials,ratios,insider_trades,holders,compensation,board,labor_context,lending_context"
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include=include_value)
+        extra = result.data.model_extra or {}
+        for slot in (
+            "financials",
+            "ratios",
+            "insider_trades",
+            "holders",
+            "compensation",
+            "board",
+            "labor_context",
+            "lending_context",
+        ):
+            assert extra.get(slot) is not None, f"slot '{slot}' missing from response"
+        # events was NOT requested — events_url HATEOAS link persists.
+        assert extra["events_url"].startswith("https://")
+        # Query param forwarded verbatim (comma URL-encoded by httpx).
+        assert "include=financials%2Cratios" in str(route.calls.last.request.url)
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_events_returns_400(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": "bad_request",
+                        "message": (
+                            "events expansion temporarily unavailable — use "
+                            "/companies/{cik}/events directly; gated on B5 latency fix."
+                        ),
+                        "status": 400,
+                    }
+                },
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError) as exc_info:
+            client.companies.get("0000320193", include="events")
+        assert "events" in str(exc_info.value).lower()
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_events_combination_returns_400(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(
+                400,
+                json={"error": {"code": "bad_request", "message": "events expansion temporarily unavailable"}},
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.companies.get("0000320193", include="financials,events")
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_partial_failure_error_slot(self, api_key: str) -> None:
+        """Upstream timeout on a single expander returns typed error slot; top-level 200."""
+        payload = {
+            "data": {
+                **_COMPANY_BASE,
+                "financials": {"line_items": {"revenue": 391_035_000_000}},
+                "holders": {"error": {"code": "upstream_timeout", "message": "holders did not complete within 3.0s"}},
+            }
+        }
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=payload),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="financials,holders")
+        extra = result.data.model_extra or {}
+        # financials succeeded — inline dict.
+        assert extra["financials"]["line_items"]["revenue"] == 391_035_000_000
+        # holders failed — error slot dict with typed "error" sub-object.
+        holders_slot = extra["holders"]
+        assert isinstance(holders_slot, dict) and "error" in holders_slot
+        assert holders_slot["error"]["code"] == "upstream_timeout"
+        client.close()
+
+    @respx.mock
+    def test_get_with_include_all_returns_400(self, api_key: str) -> None:
+        """No ``all`` shortcut — callers must enumerate the expanders."""
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": "validation_error",
+                        "message": "Unknown include values: all.",
+                        "status": 400,
+                    }
+                },
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.companies.get("0000320193", include="all")
+        client.close()
+
+    @respx.mock
+    def test_get_backwards_compat_labor_context_only(self, api_key: str) -> None:
+        """Pre-S1 2-value set still works — no regression."""
+        payload = {
+            "data": {
+                **_COMPANY_BASE,
+                "labor_context": {"industry": {"naics_code": "334111"}},
+            }
+        }
+        respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
+            return_value=httpx.Response(200, json=payload),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get("0000320193", include="labor_context")
+        extra = result.data.model_extra or {}
+        assert extra.get("labor_context") is not None
+        client.close()
+
+    @respx.mock
+    def test_companies_list_rejects_s1_expanders(self, api_key: str) -> None:
+        """Scope lock: ``companies.list()`` still accepts only ``labor_context`` /
+        ``lending_context``. The 7 new S1 expanders (``financials``, ``ratios``, etc.)
+        are single-resource-only; passing them to the list endpoint returns 400.
+        """
+        respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": "validation_error",
+                        "message": (
+                            "Unknown include values: financials. Supported values: labor_context, lending_context"
+                        ),
+                        "status": 400,
+                    }
+                },
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(BadRequestError):
+            client.companies.list(include="financials")
         client.close()
