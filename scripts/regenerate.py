@@ -104,6 +104,109 @@ def format_output() -> None:
     )
 
 
+# --- SDK-24 hand-corrections -----------------------------------------------
+#
+# Codegen emits several shapes that don't match the hand-tuned public API.
+# These post-process replacements re-apply the SDK-24 corrections so they
+# survive every regen. Adding a new hand-correction? Append a (old, new)
+# pair to ``_SDK24_PATCHES`` below and a matching regression test in
+# ``tests/test_contract.py``.
+
+_SDK24_PATCHES: list[tuple[str, str]] = [
+    # 1) ReportingNotes.presentation_format: Literal, not PresentationFormat enum.
+    (
+        "class ReportingNotes(BaseModel):\n"
+        '    presentation_format: Annotated[PresentationFormat, Field(title="Presentation Format")]',
+        "class ReportingNotes(BaseModel):\n"
+        "    # SDK-24 hand-correction: typed as Literal (not PresentationFormat enum)\n"
+        "    # per SDK-24 Section 1. Consumer code reads `.presentation_format` as a\n"
+        "    # string; enum access would require `.value` and change call sites.\n"
+        "    presentation_format: Annotated[\n"
+        '        Literal["by_function", "by_nature", "unknown"],\n'
+        '        Field(title="Presentation Format"),\n'
+        "    ]",
+    ),
+    # 2) FinancialStatementResponse.model_config = populate_by_name=True.
+    (
+        "class FinancialStatementResponse(BaseModel):\n    company: CompanySummary\n",
+        "class FinancialStatementResponse(BaseModel):\n"
+        "    # SDK-24 hand-correction: populate_by_name enables construction via either\n"
+        "    # the Python attribute (`reporting_notes`) or the wire alias\n"
+        "    # (`_reporting_notes`). Codegen does not emit this block.\n"
+        "    model_config = ConfigDict(populate_by_name=True)\n"
+        "\n"
+        "    company: CompanySummary\n",
+    ),
+    # 3) FinancialStatementResponse.taxonomy: str, not Taxonomy enum (forward-compat).
+    (
+        '    taxonomy: Annotated[Taxonomy, Field(title="Taxonomy")]\n'
+        '    """\n'
+        "    XBRL taxonomy used for the filing. Existing US-GAAP-only data always returns 'us-gaap'."
+        " IFRS-full parsing lands with IFRS-04.\n"
+        '    """\n',
+        "    # SDK-24 hand-correction: typed as `str` (not `Taxonomy` enum) per\n"
+        "    # SDK-24 Section 1 — the 3.3% empty-taxonomy cohort and any future\n"
+        "    # taxonomy-version strings must not raise ValidationError.\n"
+        '    taxonomy: Annotated[str, Field(title="Taxonomy")]\n'
+        '    """\n'
+        '    XBRL taxonomy used for the filing. Common values are ``"us-gaap"`` and\n'
+        '    ``"ifrs-full"``; consumer code should handle other strings (including\n'
+        "    the empty string for the small residual cohort that could not be\n"
+        "    classified, or future taxonomy-version identifiers) gracefully.\n"
+        '    """\n',
+    ),
+    # 4) FinancialStatementResponse.reporting_notes: Python-named + Optional.
+    (
+        '    field_reporting_notes: Annotated[ReportingNotes, Field(alias="_reporting_notes")]\n'
+        '    """\n'
+        "    Reporting metadata: presentation format, IFRS 18 applied, and any conditional"
+        " edge-case flags that fired during parse. The two primary keys (presentation_format,"
+        " ifrs_18_applied) are always present; conditional keys appear only when their"
+        ' condition fires.\n    """\n',
+        "    # SDK-24 hand-correction: Python attribute is `reporting_notes` (codegen\n"
+        "    # mangles the leading-underscore wire key to `field_reporting_notes`);\n"
+        "    # field is Optional with default None so pre-IFRS-07 payloads still parse.\n"
+        "    reporting_notes: Annotated[\n"
+        "        ReportingNotes | None,\n"
+        '        Field(alias="_reporting_notes", title="Reporting Notes"),\n'
+        "    ] = None\n"
+        '    """\n'
+        "    Reporting metadata: presentation format, IFRS 18 applied, and any\n"
+        "    conditional edge-case flags that fired during parse. The two primary\n"
+        "    keys (presentation_format, ifrs_18_applied) are always present;\n"
+        "    conditional keys appear only when their condition fires.\n"
+        '    """\n',
+    ),
+]
+
+
+def apply_hand_corrections() -> None:
+    """Re-apply SDK-24 hand-corrections that codegen overwrites.
+
+    See ``_SDK24_PATCHES`` for the list. Each patch is applied via exact
+    string replacement; if a patch no longer matches (codegen output
+    shifted), this function raises so the mismatch is visible, not silent —
+    the regen then fails loudly rather than shipping a file missing the
+    hand-correction.
+    """
+    content = OUTPUT.read_text()
+    unmatched: list[int] = []
+    for idx, (old, new) in enumerate(_SDK24_PATCHES, start=1):
+        if old not in content:
+            unmatched.append(idx)
+            continue
+        content = content.replace(old, new, 1)
+    if unmatched:
+        OUTPUT.write_text(content)  # flush partially-applied corrections so the diff is useful
+        raise RuntimeError(
+            f"SDK-24 hand-correction patch(es) {unmatched} did not match current codegen output. "
+            "Inspect scripts/regenerate.py::_SDK24_PATCHES and realign the `old` strings with the "
+            "post-regen output (usually a comment/whitespace shift in codegen is the culprit). "
+            "Partial corrections have been flushed to models.py — re-run after fixing the patch."
+        )
+    OUTPUT.write_text(content)
+
+
 def main() -> None:
     """Regenerate models from OpenAPI schema."""
     spec = fetch_spec()
@@ -112,6 +215,7 @@ def main() -> None:
     save_fixture(spec)
     generate_models(spec)
     prepend_header()
+    apply_hand_corrections()
     format_output()
 
     print(f"Models generated successfully from API v{version}")

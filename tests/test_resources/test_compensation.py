@@ -55,7 +55,7 @@ BOARD_JSON = {
 class TestCompensationGet:
     @respx.mock
     def test_get_default(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/executive-compensation").mock(
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/compensation").mock(
             return_value=httpx.Response(200, json=COMPENSATION_JSON),
         )
         client = ThesmaClient(api_key=api_key)
@@ -69,7 +69,7 @@ class TestCompensationGet:
 
     @respx.mock
     def test_get_with_year(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/executive-compensation").mock(
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/compensation").mock(
             return_value=httpx.Response(200, json=COMPENSATION_JSON),
         )
         client = ThesmaClient(api_key=api_key)
@@ -81,7 +81,7 @@ class TestCompensationGet:
 
     @respx.mock
     def test_get_none_year_omitted(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/executive-compensation").mock(
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/compensation").mock(
             return_value=httpx.Response(200, json=COMPENSATION_JSON),
         )
         client = ThesmaClient(api_key=api_key)
@@ -95,7 +95,7 @@ class TestCompensationGet:
 class TestCompensationGetInclude:
     @respx.mock
     def test_get_with_include(self, api_key: str) -> None:
-        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/executive-compensation").mock(
+        route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193/compensation").mock(
             return_value=httpx.Response(200, json=COMPENSATION_JSON),
         )
         client = ThesmaClient(api_key=api_key)

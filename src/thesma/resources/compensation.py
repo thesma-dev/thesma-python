@@ -23,7 +23,18 @@ class Compensation:
     ) -> DataResponse[CompensationResponse]:
         """Get executive compensation for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/executive-compensation``
+        ``GET /v1/us/sec/companies/{cik}/compensation``
+
+        ``include`` accepts ``"labor_context"`` and/or ``"lending_context"``
+        (comma-separated). Post-S3 the ``labor_context`` field is the unified
+        nested ``LaborContext`` with typed ``summary`` and ``data_freshness``
+        sub-objects; see ``LaborContext.summary.industry_hiring_trend`` for
+        the derived-trend access pattern. If the labour / lending enrichment
+        builder times out or errors, the response stays 200 with the field
+        set to ``None`` and the envelope-level ``_enrichment_warnings`` list
+        carries a typed ``EnrichmentWarning`` (``field``, ``reason``,
+        ``message``). A silent ``None`` without a matching warning means
+        the builder legitimately had no data.
         """
         params: dict[str, Any] = {
             "year": year,
@@ -31,7 +42,7 @@ class Compensation:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/executive-compensation",
+            f"/v1/us/sec/companies/{cik}/compensation",
             params=params,
             response_model=DataResponse[CompensationResponse],
         )

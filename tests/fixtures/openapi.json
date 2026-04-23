@@ -3058,6 +3058,24 @@
             "description": "Filter by the presentation currency of the company's most-recent filing. Case-insensitive 3-letter ISO-4217 code (e.g. 'USD', 'EUR', 'JPY'). Only active ISO-4217 codes are accepted; others return 400. Companies with no parsed financials are excluded from filtered results."
           },
           {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated enrichment options. List-endpoint scope is narrower than the single-resource endpoint: only ``labor_context`` and ``lending_context`` are accepted. Single-resource expanders (financials, ratios, etc.) must be requested on ``/companies/{cik}`` directly.",
+              "title": "Include"
+            },
+            "description": "Comma-separated enrichment options. List-endpoint scope is narrower than the single-resource endpoint: only ``labor_context`` and ``lending_context`` are accepted. Single-resource expanders (financials, ratios, etc.) must be requested on ``/companies/{cik}`` directly."
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -3115,7 +3133,7 @@
           "Companies"
         ],
         "summary": "Get Company",
-        "description": "Return detailed information for a single company by CIK.",
+        "description": "Return detailed information for a single company by CIK.\n\nWhen ``?include=<comma,list>`` is set, each listed expander runs\nconcurrently via :func:`safe_expand` + ``asyncio.gather``. Successful\nexpanders' payloads replace their HATEOAS ``*_url`` link fields\ninside ``data``; failures emit a typed ``{\"error\": {...}}`` slot.\n``labor_context`` / ``lending_context`` continue to ride the\npre-S1 inline ``safe_enrich`` path so their byte-level response\nshape is preserved.",
         "operationId": "get_company_v1_us_sec_companies__cik__get",
         "parameters": [
           {
@@ -3140,10 +3158,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Comma-separated enrichment options (e.g. labor_context)",
+              "description": "Comma-separated list of expander values to inline into the response. Accepted values: labor_context, lending_context, financials, ratios, events, insider_trades, holders, compensation, board. Requesting ``events`` currently returns 400 (disabled in v1). ``all`` / ``*`` are not accepted \u2014 always list expander values explicitly.",
               "title": "Include"
             },
-            "description": "Comma-separated enrichment options (e.g. labor_context)"
+            "description": "Comma-separated list of expander values to inline into the response. Accepted values: labor_context, lending_context, financials, ratios, events, insider_trades, holders, compensation, board. Requesting ``events`` currently returns 400 (disabled in v1). ``all`` / ``*`` are not accepted \u2014 always list expander values explicitly."
           }
         ],
         "responses": {
@@ -3211,14 +3229,14 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/executive-compensation": {
+    "/v1/us/sec/companies/{cik}/compensation": {
       "get": {
         "tags": [
           "Compensation"
         ],
-        "summary": "Get Executive Compensation",
+        "summary": "Get Compensation",
         "description": "Get executive compensation data from DEF 14A proxy statements.",
-        "operationId": "get_executive_compensation_v1_us_sec_companies__cik__executive_compensation_get",
+        "operationId": "get_compensation_v1_us_sec_companies__cik__compensation_get",
         "parameters": [
           {
             "name": "cik",
@@ -4426,6 +4444,45 @@
               "title": "Include"
             },
             "description": "Comma-separated enrichment options (e.g. labor_context)"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 20,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return the N most-recent statements (ordered by period_end DESC, filed_at DESC) as a paginated list instead of a single statement. **Presence of per_page flips the response shape** \u2014 when set, the response is ``PaginatedResponse[FinancialStatementListItem]`` with ``data`` (list) + ``pagination`` keys; when absent, the response is the single ``EnrichedFinancialDataResponse`` shape. Mutually exclusive with ``year`` and ``quarter``. Accepted range: 1..20.",
+              "title": "Per Page"
+            },
+            "description": "Return the N most-recent statements (ordered by period_end DESC, filed_at DESC) as a paginated list instead of a single statement. **Presence of per_page flips the response shape** \u2014 when set, the response is ``PaginatedResponse[FinancialStatementListItem]`` with ``data`` (list) + ``pagination`` keys; when absent, the response is the single ``EnrichedFinancialDataResponse`` shape. Mutually exclusive with ``year`` and ``quarter``. Accepted range: 1..20."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page number for the paginated list path. MUST be accompanied by ``per_page``; supplying ``page`` without ``per_page`` is a malformed request and returns 400.",
+              "title": "Page"
+            },
+            "description": "Page number for the paginated list path. MUST be accompanied by ``per_page``; supplying ``page`` without ``per_page`` is a malformed request and returns 400."
           }
         ],
         "responses": {
@@ -4434,7 +4491,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EnrichedFinancialDataResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/EnrichedFinancialDataResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponse_FinancialStatementListItem_"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EnrichedMultiStatementResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EnrichedMultiStatementPaginatedResponse"
+                    }
+                  ],
+                  "title": "Response Get Financials V1 Us Sec Companies  Cik  Financials Get"
                 }
               }
             }
@@ -4764,14 +4835,14 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/institutional-holders": {
+    "/v1/us/sec/companies/{cik}/holders": {
       "get": {
         "tags": [
           "Holdings"
         ],
-        "summary": "List Institutional Holders",
+        "summary": "List Holders",
         "description": "List institutional holders of a company from 13F filings.\n\nReturns one row per (filing, CUSIP, position_type). Sub-manager attribution\nwithin a filing is not exposed; see SEC EDGAR directly for regulatory\nattribution analysis.",
-        "operationId": "list_institutional_holders_v1_us_sec_companies__cik__institutional_holders_get",
+        "operationId": "list_holders_v1_us_sec_companies__cik__holders_get",
         "parameters": [
           {
             "name": "cik",
@@ -5143,7 +5214,7 @@
           "Insider Trades"
         ],
         "summary": "List Company Insider Trades",
-        "description": "List insider trades for a company from Form 4 filings.",
+        "description": "List insider trades for a company from Form 4 filings.\n\nDefault mode collapses same-day 10b5-1 slices into distinct transaction events, keyed on\n``(person, date, type, security, ownership)``. Use ``?flat=true`` for raw per-slice rows.",
         "operationId": "list_company_insider_trades_v1_us_sec_companies__cik__insider_trades_get",
         "parameters": [
           {
@@ -5192,6 +5263,24 @@
             "description": "Filter by person name (case-insensitive, partial match)"
           },
           {
+            "name": "min_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum transaction total value. In default aggregate mode this filters against the aggregate event total_value; in ?flat=true mode it filters per-slice total_value.",
+              "title": "Min Value"
+            },
+            "description": "Minimum transaction total value. In default aggregate mode this filters against the aggregate event total_value; in ?flat=true mode it filters per-slice total_value."
+          },
+          {
             "name": "from",
             "in": "query",
             "required": false,
@@ -5228,6 +5317,18 @@
             "description": "End date (YYYY-MM-DD)"
           },
           {
+            "name": "flat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Return raw per-slice Form 4 rows instead of aggregated transaction events.",
+              "default": false,
+              "title": "Flat"
+            },
+            "description": "Return raw per-slice Form 4 rows instead of aggregated transaction events."
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -5261,7 +5362,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeListItem_"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeAggregateListItem_"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeListItem_"
+                    }
+                  ],
+                  "title": "Response List Company Insider Trades V1 Us Sec Companies  Cik  Insider Trades Get"
                 }
               }
             }
@@ -5285,7 +5394,7 @@
           "Insider Trades"
         ],
         "summary": "List Insider Trades",
-        "description": "List insider trades across all companies with optional filtering.",
+        "description": "List insider trades across all companies with optional filtering.\n\nDefault mode collapses same-day 10b5-1 slices into distinct transaction events; use\n``?flat=true`` for raw per-slice rows.",
         "operationId": "list_insider_trades_v1_us_sec_insider_trades_get",
         "parameters": [
           {
@@ -5319,10 +5428,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum transaction total value",
+              "description": "Minimum transaction total value. In default aggregate mode this filters against the aggregate event total_value; in ?flat=true mode it filters per-slice total_value.",
               "title": "Min Value"
             },
-            "description": "Minimum transaction total value"
+            "description": "Minimum transaction total value. In default aggregate mode this filters against the aggregate event total_value; in ?flat=true mode it filters per-slice total_value."
           },
           {
             "name": "from",
@@ -5361,6 +5470,18 @@
             "description": "End date (YYYY-MM-DD)"
           },
           {
+            "name": "flat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Return raw per-slice Form 4 rows instead of aggregated transaction events.",
+              "default": false,
+              "title": "Flat"
+            },
+            "description": "Return raw per-slice Form 4 rows instead of aggregated transaction events."
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -5394,7 +5515,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeListItem_"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeAggregateListItem_"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeListItem_"
+                    }
+                  ],
+                  "title": "Response List Insider Trades V1 Us Sec Insider Trades Get"
                 }
               }
             }
@@ -11036,13 +11165,19 @@
             ],
             "title": "County Fips",
             "description": "5-digit county FIPS code."
+          },
+          "detail_url": {
+            "type": "string",
+            "title": "Detail Url",
+            "description": "URL to retrieve this company's detail response."
           }
         },
         "type": "object",
         "required": [
           "cik",
           "name",
-          "company_tier"
+          "company_tier",
+          "detail_url"
         ],
         "title": "CompanyListItem",
         "description": "Company in a list response (subset of fields)."
@@ -11847,7 +11982,7 @@
             "title": "Laus Period",
             "description": "LAUS data period (e.g. '2025-11')."
           },
-          "sba_period": {
+          "oews_period": {
             "anyOf": [
               {
                 "type": "string"
@@ -11856,13 +11991,25 @@
                 "type": "null"
               }
             ],
-            "title": "Sba Period",
-            "description": "SBA aggregation period (e.g. '2025-Q3')."
+            "title": "Oews Period",
+            "description": "OEWS reference year (e.g. '2024')."
+          },
+          "sec_exec_comp_snapshot_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sec Exec Comp Snapshot Date",
+            "description": "ISO-8601 date of the DEF 14A snapshot used for the SEC\u00d7OEWS comp_to_market_ratio cross-join. Null when no DEF 14A lookup was performed."
           }
         },
         "type": "object",
         "title": "DataFreshness",
-        "description": "Data freshness periods for BLS screener data."
+        "description": "Freshness metadata for the underlying sources feeding ``labor_context``."
       },
       "DataQualityReportCreate": {
         "properties": {
@@ -12506,6 +12653,47 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "EnrichedMultiStatementPaginatedResponse": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "EnrichedMultiStatementResponse": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "EnrichmentWarning": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Enrichment field name, e.g. 'labor_context' or 'lending_context'."
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Failure reason: 'build_failed', 'timeout', or 'data_unavailable'."
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Optional human-readable context for the failure."
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "reason"
+        ],
+        "title": "EnrichmentWarning",
+        "description": "Structured entry in the envelope-level ``_enrichment_warnings`` list.\n\nEmitted when :func:`src.api.services.enrichment_wrapper.safe_enrich`\nreturns an error result for an enrichment field. The field shape is\nstable across routers \u2014 customers handling it once get consistent\ncoverage for every endpoint that uses ``safe_enrich``."
+      },
       "EntityResponse": {
         "properties": {
           "accession_number": {
@@ -12998,6 +13186,55 @@
         "title": "FilingListItem",
         "description": "Filing in a list response."
       },
+      "FinancialStatementBody": {
+        "properties": {
+          "line_items": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Line Items",
+            "description": "Canonical field name to value mapping for this statement only. Same keys as the single-statement ``FinancialStatementResponse.line_items`` for the matching ``statement_type`` \u2014 null in place for missing fields."
+          },
+          "field_confidence": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Confidence",
+            "description": "Mapping of canonical field names to mapping confidence where confidence is not 'high'. Omitted/null when every field is high-confidence."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/StatementMetadata",
+            "description": "Data quality and source metadata for this statement."
+          }
+        },
+        "type": "object",
+        "required": [
+          "line_items",
+          "metadata"
+        ],
+        "title": "FinancialStatementBody",
+        "description": "Per-statement slimmed body used inside :class:`MultiStatementResponse`.\n\nCarries only the fields that are specific to one statement\n(``line_items``, ``field_confidence``, ``metadata``). Top-level\nmetadata that describes the *filing* as a whole \u2014 ``taxonomy``,\n``currency``, ``fiscal_year``, ``reporting_notes`` \u2014 is deliberately\nexcluded here and surfaced once on the parent ``MultiStatementResponse``\ninstead. Per S2 Section 1: \"the three statements share one filing,\nthey share one metadata context\" \u2014 so the slim shape avoids\n3\u00d7 duplication of the same metadata.\n\nDistinct from ``FinancialStatementResponse`` (kept intact for the\nunchanged single-statement path). Line-item construction is shared\nvia the ``_build_line_items`` helper in ``src.api.routers.financials``."
+      },
+      "FinancialStatementListItem": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "FinancialStatementResponse": {
         "properties": {
           "company": {
@@ -13205,6 +13442,17 @@
             "type": "string",
             "title": "Filing Accession",
             "description": "Accession number of the source 13F filing."
+          },
+          "report_quarter": {
+            "type": "string",
+            "title": "Report Quarter",
+            "description": "Period of report for the 13F filing, formatted 'YYYY-QN' (e.g. '2025-Q3')."
+          },
+          "filed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Filed At",
+            "description": "UTC timestamp when the 13F filing was submitted to the SEC."
           }
         },
         "type": "object",
@@ -13214,7 +13462,9 @@
           "shares",
           "market_value",
           "position_type",
-          "filing_accession"
+          "filing_accession",
+          "report_quarter",
+          "filed_at"
         ],
         "title": "FundHoldingListItem",
         "description": "A holding in a fund's portfolio."
@@ -13509,6 +13759,17 @@
             "type": "string",
             "title": "Filing Accession",
             "description": "Accession number of the source 13F filing."
+          },
+          "report_quarter": {
+            "type": "string",
+            "title": "Report Quarter",
+            "description": "Period of report for the 13F filing, formatted 'YYYY-QN' (e.g. '2025-Q3')."
+          },
+          "filed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Filed At",
+            "description": "UTC timestamp when the 13F filing was submitted to the SEC."
           }
         },
         "type": "object",
@@ -13516,7 +13777,9 @@
           "fund_cik",
           "shares",
           "market_value",
-          "filing_accession"
+          "filing_accession",
+          "report_quarter",
+          "filed_at"
         ],
         "title": "HolderListItem",
         "description": "A fund that holds shares in a company."
@@ -14049,6 +14312,163 @@
         "title": "InsiderPerson",
         "description": "The insider who made the transaction."
       },
+      "InsiderTradeAggregateListItem": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/InsiderPerson",
+            "description": "Insider who executed the transaction event."
+          },
+          "cik": {
+            "type": "string",
+            "title": "Cik",
+            "description": "SEC Central Index Key of the issuing company."
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name",
+            "description": "Company name as registered with the SEC."
+          },
+          "company_ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Ticker",
+            "description": "Trading ticker symbol, if available."
+          },
+          "transaction_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Transaction Date",
+            "description": "Date the transaction event was executed (shared by all slices)."
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Transaction type shared by all underlying slices."
+          },
+          "security": {
+            "type": "string",
+            "title": "Security",
+            "description": "Security description shared by all underlying slices."
+          },
+          "shares": {
+            "type": "number",
+            "title": "Shares",
+            "description": "Sum of shares across all collapsed slices."
+          },
+          "price_per_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Share",
+            "description": "Weighted-average price per share (``total_value / shares``) across the slices. Null when all underlying slices have null price_per_share (e.g., stock grants without cash value)."
+          },
+          "price_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Min/max price-per-share across the collapsed slices. Single-slice aggregates: low == high. Null when no slice in the aggregate has price data."
+          },
+          "total_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Value",
+            "description": "Sum of total transaction value in USD across all collapsed slices. Null when no slice has total_value (e.g., grant aggregates)."
+          },
+          "shares_after": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares After",
+            "description": "Insider's share count after the transaction event. Derived from the slice-level running balance: MAX for increasing-balance types, MIN for decreasing-balance types, null for ambiguous types."
+          },
+          "ownership": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect"
+            ],
+            "title": "Ownership",
+            "description": "Direct or indirect ownership \u2014 shared by all slices in the event."
+          },
+          "is_planned_trade": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Planned Trade",
+            "description": "True if ANY underlying slice was marked as a Rule 10b5-1 planned trade (OR aggregation)."
+          },
+          "filing_accession": {
+            "type": "string",
+            "title": "Filing Accession",
+            "description": "Authoritative accession number for the event. When multiple Form 4 amendments contributed, this is the most-recently-filed accession."
+          },
+          "filing_url": {
+            "type": "string",
+            "title": "Filing Url",
+            "description": "URL to retrieve the authoritative source filing detail."
+          },
+          "slice_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Slice Count",
+            "description": "Number of underlying Form 4 slice rows collapsed into this aggregate event."
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "cik",
+          "transaction_date",
+          "type",
+          "security",
+          "shares",
+          "ownership",
+          "filing_accession",
+          "filing_url",
+          "slice_count"
+        ],
+        "title": "InsiderTradeAggregateListItem",
+        "description": "Aggregated insider transaction event \u2014 one row per ``(person, date, type, security, ownership)``.\n\nCollapses same-day 10b5-1 tranches (and similar slice-fan-outs) into a single row representing the\nlegally-distinct transaction event. Same-shape as :class:`InsiderTradeListItem` but with two additional\nfields \u2014 ``price_range`` and ``slice_count`` \u2014 and ``price_per_share`` is non-optional (always computed\nas the weighted average ``total_value / shares``)."
+      },
       "InsiderTradeListItem": {
         "properties": {
           "person": {
@@ -14186,7 +14606,7 @@
           "filing_url"
         ],
         "title": "InsiderTradeListItem",
-        "description": "Insider trade in a list response."
+        "description": "Insider trade in a list response (raw per-slice row \u2014 ``?flat=true`` response shape)."
       },
       "JoltsMeasureValue": {
         "properties": {
@@ -14945,6 +15365,28 @@
               }
             ],
             "description": "OEWS compensation benchmark."
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LaborContextSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Derived summary metrics (hiring trend, unemployment trend, comp ratio, market tightness)."
+          },
+          "data_freshness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataFreshness"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Freshness metadata for the underlying CES/QCEW/JOLTS/LAUS/OEWS + SEC sources."
           }
         },
         "type": "object",
@@ -14963,103 +15405,7 @@
               }
             ],
             "title": "Industry Hiring Trend",
-            "description": "Hiring trend classification."
-          },
-          "industry_employment_growth_yoy": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Industry Employment Growth Yoy",
-            "description": "YoY % change in national industry employment."
-          },
-          "industry_wage_growth_yoy": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Industry Wage Growth Yoy",
-            "description": "YoY % change in national industry avg weekly wage."
-          },
-          "hq_county_wage_growth_yoy": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hq County Wage Growth Yoy",
-            "description": "YoY % change in HQ county all-industries avg weekly wage."
-          },
-          "comp_to_market_ratio": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comp To Market Ratio",
-            "description": "CEO comp / OEWS median ratio."
-          },
-          "industry_quits_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Industry Quits Rate",
-            "description": "JOLTS quits rate for company's industry."
-          },
-          "industry_openings_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Industry Openings Rate",
-            "description": "JOLTS job openings rate for company's industry."
-          },
-          "labour_market_tightness": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Labour Market Tightness",
-            "description": "openings_rate / (quits_rate + layoffs_rate)."
-          },
-          "local_unemployment_rate": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Local Unemployment Rate",
-            "description": "LAUS: HQ county unemployment rate (%)."
+            "description": "Classification label derived from industry.employment_yoy_pct. One of 'accelerating', 'stable', 'declining', or null."
           },
           "local_unemployment_trend": {
             "anyOf": [
@@ -15071,35 +15417,36 @@
               }
             ],
             "title": "Local Unemployment Trend",
-            "description": "LAUS: improving | stable | worsening."
+            "description": "Classification label derived from local_market.unemployment_rate_yoy_change. One of 'improving', 'stable', 'worsening', or null."
           },
-          "local_labor_force": {
+          "comp_to_market_ratio": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Local Labor Force",
-            "description": "LAUS: HQ county labour force count (persons)."
+            "title": "Comp To Market Ratio",
+            "description": "Cross-dataset SEC exec-comp / OEWS market-median ratio. Pre-computed; cannot be reconstructed client-side from the sibling sub-objects alone."
           },
-          "data_freshness": {
+          "labour_market_tightness": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DataFreshness"
+                "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "BLS data period information."
+            "title": "Labour Market Tightness",
+            "description": "Mirrored from turnover.labour_market_tightness for screener ergonomics. openings_rate / (quits_rate + layoffs_rate). >1 = tight, <1 = loose."
           }
         },
         "type": "object",
         "title": "LaborContextSummary",
-        "description": "Flat labor context summary for screener results, read from pre-computed company columns."
+        "description": "Derived summary metrics for the unified ``labor_context`` enrichment.\n\nS3 recycles the ``LaborContextSummary`` symbol: pre-S3 this was a 12-field\nflat shape in ``src/api/schemas/ratio.py``; post-S3 it carries only the 4\nnon-derivable-client-side fields, nested inside ``LaborContext.summary``.\nThe 8 dropped fields are present verbatim in the sibling sub-objects\n(e.g. ``industry.employment_yoy_pct`` replaces the flat\n``industry_employment_growth_yoy``)."
       },
       "LatestYear": {
         "properties": {
@@ -16018,6 +16365,25 @@
         "title": "LendingContextSummary",
         "description": "Flat SBA lending context summary for screener results, read from pre-computed company columns."
       },
+      "LendingDataFreshness": {
+        "properties": {
+          "sba_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sba Period",
+            "description": "SBA aggregation period (e.g. '2025-Q3')."
+          }
+        },
+        "type": "object",
+        "title": "LendingDataFreshness",
+        "description": "Minimal freshness envelope retained for ``lending_context`` row-level emission.\n\nOnly ``sba_period`` is used today \u2014 lending_context carries its SBA\naggregation period here. S3 (labor) dropped the row-level ``data_freshness``\ntop-level field for labor use-cases; lending_context still emits this\nstructure until S3b unifies the lending shape."
+      },
       "LocalLendingMarket": {
         "properties": {
           "county_fips": {
@@ -16615,6 +16981,107 @@
         ],
         "title": "MetricYearRange"
       },
+      "MultiStatementListItem": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "MultiStatementResponse": {
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanySummary",
+            "description": "Company identification details."
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ],
+            "title": "Period",
+            "description": "Reporting period type."
+          },
+          "fiscal_year": {
+            "type": "integer",
+            "title": "Fiscal Year",
+            "description": "Fiscal year of the reported statements."
+          },
+          "fiscal_quarter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Quarter",
+            "description": "Fiscal quarter (1-4) for quarterly statements, null for annual."
+          },
+          "fiscal_year_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiscal Year End",
+            "description": "Period end date in YYYY-MM-DD format."
+          },
+          "filing_accession": {
+            "type": "string",
+            "title": "Filing Accession",
+            "description": "Accession number of the source filing."
+          },
+          "taxonomy": {
+            "type": "string",
+            "enum": [
+              "us-gaap",
+              "ifrs-full"
+            ],
+            "title": "Taxonomy",
+            "description": "XBRL taxonomy used for the filing."
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "ISO 4217 currency code for monetary values (e.g. 'USD')."
+          },
+          "statements": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FinancialStatementBody"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Statements",
+            "description": "Per-statement bodies keyed by statement_type: ``income``, ``balance_sheet``, ``cash_flow``. A value of ``null`` in any slot indicates the statement was absent for this filing (parse error wiped the rows, or filing is partial). Keys use the DB-side snake_case to avoid a third naming convention."
+          },
+          "_reporting_notes": {
+            "$ref": "#/components/schemas/ReportingNotes",
+            "description": "Reporting metadata describing the filing as a whole (presentation format, IFRS 18 applied, conditional edge-case flags). NOT duplicated inside each statement body \u2014 one filing, one set of reporting notes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "company",
+          "period",
+          "fiscal_year",
+          "filing_accession",
+          "taxonomy",
+          "currency",
+          "statements",
+          "_reporting_notes"
+        ],
+        "title": "MultiStatementResponse",
+        "description": "Composed response for ``?statement=all`` \u2014 three statements for one filing.\n\nTop-level metadata (``taxonomy``, ``currency``, ``fiscal_year``,\n``reporting_notes``, ...) describes the filing as a whole; the three\nstatements inside ``statements`` carry only their own ``line_items`` +\n``metadata``. Missing statement types resolve to ``None`` in the\ncorresponding slot (partial-data rule from S2 Section 1)."
+      },
       "OccupationDetail": {
         "properties": {
           "soc_code": {
@@ -17159,6 +17626,26 @@
         ],
         "title": "PaginatedResponse[FilingListItem]"
       },
+      "PaginatedResponse_FinancialStatementListItem_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialStatementListItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[FinancialStatementListItem]"
+      },
       "PaginatedResponse_FundHoldingListItem_": {
         "properties": {
           "data": {
@@ -17278,6 +17765,26 @@
           "pagination"
         ],
         "title": "PaginatedResponse[InsiderHoldingListItem]"
+      },
+      "PaginatedResponse_InsiderTradeAggregateListItem_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/InsiderTradeAggregateListItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "title": "PaginatedResponse[InsiderTradeAggregateListItem]"
       },
       "PaginatedResponse_InsiderTradeListItem_": {
         "properties": {
@@ -17966,6 +18473,27 @@
         ],
         "title": "PlaceSummary",
         "description": "Place summary in a list response."
+      },
+      "PriceRange": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "Lowest price-per-share across the slices in the aggregate event."
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "Highest price-per-share across the slices in the aggregate event."
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "PriceRange",
+        "description": "Min and max price-per-share across the slices collapsed into an aggregate event."
       },
       "ProxyVoteItem": {
         "properties": {
@@ -19437,6 +19965,11 @@
             "title": "Lm Constraining",
             "description": "Loughran-McDonald constraining word count."
           },
+          "content_url": {
+            "type": "string",
+            "title": "Content Url",
+            "description": "API URL to retrieve the full section text."
+          },
           "content": {
             "type": "string",
             "title": "Content",
@@ -19471,11 +20004,6 @@
             ],
             "title": "Company Ticker",
             "description": "Ticker symbol of the filing company."
-          },
-          "content_url": {
-            "type": "string",
-            "title": "Content Url",
-            "readOnly": true
           }
         },
         "type": "object",
@@ -19485,8 +20013,8 @@
           "filing_type",
           "section_type",
           "word_count",
-          "content",
-          "content_url"
+          "content_url",
+          "content"
         ],
         "title": "SectionDetail",
         "description": "Single section with full text and company info."
@@ -19905,7 +20433,7 @@
           "content_url": {
             "type": "string",
             "title": "Content Url",
-            "readOnly": true
+            "description": "API URL to retrieve the full section text."
           }
         },
         "type": "object",
