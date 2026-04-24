@@ -2,10 +2,84 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from thesma._generated.models import ScreenerResultItem
 from thesma._types import PaginatedResponse
+
+# Source-of-truth list: T-216-screener-scale-mismatch-reject.md:48-75.
+# When the server-side list changes, update this frozenset in the same
+# release (grep the T-216 archive file at implementation time).
+_PERCENTAGE_SCALE_PARAMS: frozenset[str] = frozenset(
+    {
+        # Financial ratios (8 entries)
+        "min_gross_margin",
+        "max_gross_margin",
+        "min_operating_margin",
+        "min_net_margin",
+        "min_return_on_equity",
+        "min_return_on_assets",
+        "min_revenue_growth",  # maps to revenue_growth_yoy server-side
+        "min_eps_growth",  # maps to eps_growth_yoy server-side
+        # Institutional ownership (1 entry)
+        "min_institutional_ownership_pct",
+        # BLS / labor-market percentage fields (10 entries)
+        "min_industry_employment_growth",
+        "max_industry_employment_growth",
+        "min_industry_wage_growth",
+        "min_hq_county_wage_growth",
+        "min_industry_quits_rate",
+        "max_industry_quits_rate",
+        "min_industry_openings_rate",
+        "max_industry_openings_rate",
+        "min_local_unemployment_rate",
+        "max_local_unemployment_rate",
+        # SBA lending percentage fields (4 entries)
+        "min_local_sba_lending_growth",
+        "max_local_sba_lending_growth",
+        "min_industry_sba_lending_growth",
+        "max_industry_sba_charge_off_rate",
+    }
+)
+# Total: 8 + 1 + 10 + 4 = 23 entries.
+
+
+def _validate_percentage_scale(name: str, value: float) -> None:
+    """Mirror T-216's server-side rejection client-side.
+
+    Raises ValueError on:
+    - non-numeric types (guards TypeError from math.isfinite on strings);
+    - non-finite values (NaN, +inf, -inf);
+    - values in the ambiguous 0 < x < 1.0 band.
+
+    Accepts 0 (documented "no minimum" sentinel), negative values,
+    and all values >= 1.0.
+    """
+    # Guard: non-numeric inputs would raise TypeError from math.isfinite.
+    # The SDK method signatures are type-hinted `float | None` but Python
+    # does not enforce at runtime; a caller passing "0.2" (string from
+    # a config file, env var, or DataFrame cell) otherwise hits a
+    # TypeError with the unhelpful "must be real number, not str".
+    # `bool` is a subclass of `int`, so exclude it explicitly — booleans
+    # as percentage values are always caller bugs.
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise ValueError(
+            f"{name}={value!r} is not numeric. Pass an int or float (use percentage scale: 20 for 20%, not 0.20)."
+        )
+    # Non-finite: keep the scale hint OUT of this branch — infinity is
+    # not a decimal-fraction problem, it's a range problem. Conflating
+    # the two confuses debugging.
+    if not math.isfinite(value):
+        raise ValueError(f"{name}={value} is not a finite number.")
+    # The actual scale-ambiguity gate that T-216 mirrors.
+    if 0 < value < 1.0:
+        raise ValueError(
+            f"{name}={value} is in the ambiguous 0-1 range. Use "
+            f"percentage scale (e.g. 20 for 20%), not decimal "
+            f"fractions (0.20). Pass 0 for 'no minimum', or a "
+            f"value >= 1.0."
+        )
 
 
 class Screener:
@@ -71,6 +145,21 @@ class Screener:
         """Screen companies by financial ratio thresholds.
 
         ``GET /v1/us/sec/screener``
+
+        **Scale conventions.** Percentage-scale filter params (e.g.
+        ``min_operating_margin``, ``min_return_on_equity``, the ``*_growth``
+        and ``*_rate`` fields) use the integer-percent convention: pass
+        ``20`` for "20%", not ``0.20``. Values in the ambiguous
+        ``0 < x < 1.0`` range raise ``ValueError`` client-side before the
+        HTTP request (mirrors the T-216 server-side 400). Pass ``0`` as the
+        "no minimum" sentinel; negative values and ``>= 1.0`` pass through.
+        True-ratio filters (``min_current_ratio``, ``max_debt_to_equity``,
+        ``min_interest_coverage``, ``min_comp_to_market_ratio``) are NOT
+        validated — ``0.5`` is a legitimate value there. When multiple
+        percentage-scale params violate in the same call, the first
+        violating param is reported alphabetically; ``max_*`` params sort
+        before ``min_*`` (``a < i``), so ``max_gross_margin=0.3,
+        min_operating_margin=0.2`` surfaces the ``max_gross_margin`` error.
 
         The four LAUS filters ``min_local_unemployment_rate``,
         ``max_local_unemployment_rate``, ``local_unemployment_trend``, and
@@ -145,6 +234,44 @@ class Screener:
         """
         if isinstance(exchange, list) and not exchange:
             exchange = None
+        # Client-side mirror of T-216 server-side scale-ambiguity rejection.
+        # Build the validation dict from explicit kwarg references — NOT via
+        # `locals()`. locals() returns `self` plus all other local variables,
+        # typed as `dict[str, Any]` (mypy strict flags every lookup as Any).
+        # Explicit construction is typed, cheap, and doesn't leak scope.
+        _scale_values: dict[str, float | None] = {
+            "min_gross_margin": min_gross_margin,
+            "max_gross_margin": max_gross_margin,
+            "min_operating_margin": min_operating_margin,
+            "min_net_margin": min_net_margin,
+            "min_return_on_equity": min_return_on_equity,
+            "min_return_on_assets": min_return_on_assets,
+            "min_revenue_growth": min_revenue_growth,
+            "min_eps_growth": min_eps_growth,
+            "min_institutional_ownership_pct": min_institutional_ownership_pct,
+            "min_industry_employment_growth": min_industry_employment_growth,
+            "max_industry_employment_growth": max_industry_employment_growth,
+            "min_industry_wage_growth": min_industry_wage_growth,
+            "min_hq_county_wage_growth": min_hq_county_wage_growth,
+            "min_industry_quits_rate": min_industry_quits_rate,
+            "max_industry_quits_rate": max_industry_quits_rate,
+            "min_industry_openings_rate": min_industry_openings_rate,
+            "max_industry_openings_rate": max_industry_openings_rate,
+            "min_local_unemployment_rate": min_local_unemployment_rate,
+            "max_local_unemployment_rate": max_local_unemployment_rate,
+            "min_local_sba_lending_growth": min_local_sba_lending_growth,
+            "max_local_sba_lending_growth": max_local_sba_lending_growth,
+            "min_industry_sba_lending_growth": min_industry_sba_lending_growth,
+            "max_industry_sba_charge_off_rate": max_industry_sba_charge_off_rate,
+        }
+        # Sort deterministically so multi-violation inputs produce reproducible
+        # error messages. Alphabetical sort puts `max_*` params before `min_*`
+        # (a < i), so `max_gross_margin=0.3` reports before any concurrently-
+        # passed `min_*` decimal-fraction violation.
+        for _name in sorted(_scale_values):
+            _value = _scale_values[_name]
+            if _value is not None:
+                _validate_percentage_scale(_name, _value)
         params: dict[str, Any] = {
             "min_revenue": min_revenue,
             "min_net_income": min_net_income,
