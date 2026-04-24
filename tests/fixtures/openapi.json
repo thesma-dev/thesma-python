@@ -3,7 +3,7 @@
   "info": {
     "title": "Thesma API",
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
-    "version": "0.0.0-dev"
+    "version": "0.10.0"
   },
   "servers": [
     {

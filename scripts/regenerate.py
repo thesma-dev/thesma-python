@@ -114,9 +114,14 @@ def format_output() -> None:
 
 _SDK24_PATCHES: list[tuple[str, str]] = [
     # 1) ReportingNotes.presentation_format: Literal, not PresentationFormat enum.
+    #    Codegen (datamodel-code-generator 0.55) emits single quotes and wraps
+    #    the Annotated across three lines; ruff format (run AFTER patches apply)
+    #    is what normalises quotes to double in the rest of the file.
     (
         "class ReportingNotes(BaseModel):\n"
-        '    presentation_format: Annotated[PresentationFormat, Field(title="Presentation Format")]',
+        "    presentation_format: Annotated[\n"
+        "        PresentationFormat, Field(title='Presentation Format')\n"
+        "    ]",
         "class ReportingNotes(BaseModel):\n"
         "    # SDK-24 hand-correction: typed as Literal (not PresentationFormat enum)\n"
         "    # per SDK-24 Section 1. Consumer code reads `.presentation_format` as a\n"
@@ -138,8 +143,11 @@ _SDK24_PATCHES: list[tuple[str, str]] = [
         "    company: CompanySummary\n",
     ),
     # 3) FinancialStatementResponse.taxonomy: str, not Taxonomy enum (forward-compat).
+    #    Single quotes in the `old` match pre-ruff codegen. The docstring
+    #    content disambiguates from the same-shaped field on TimeSeriesPoint
+    #    and MultiStatementResponse (which keep the Taxonomy enum).
     (
-        '    taxonomy: Annotated[Taxonomy, Field(title="Taxonomy")]\n'
+        "    taxonomy: Annotated[Taxonomy, Field(title='Taxonomy')]\n"
         '    """\n'
         "    XBRL taxonomy used for the filing. Existing US-GAAP-only data always returns 'us-gaap'."
         " IFRS-full parsing lands with IFRS-04.\n"
@@ -156,8 +164,11 @@ _SDK24_PATCHES: list[tuple[str, str]] = [
         '    """\n',
     ),
     # 4) FinancialStatementResponse.reporting_notes: Python-named + Optional.
+    #    Single quotes in the `old` match pre-ruff codegen. Docstring content
+    #    disambiguates from MultiStatementResponse's `field_reporting_notes`
+    #    (which keeps the codegen-mangled name and remains required).
     (
-        '    field_reporting_notes: Annotated[ReportingNotes, Field(alias="_reporting_notes")]\n'
+        "    field_reporting_notes: Annotated[ReportingNotes, Field(alias='_reporting_notes')]\n"
         '    """\n'
         "    Reporting metadata: presentation format, IFRS 18 applied, and any conditional"
         " edge-case flags that fired during parse. The two primary keys (presentation_format,"
