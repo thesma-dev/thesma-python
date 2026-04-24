@@ -868,7 +868,11 @@ class TestCompaniesGetIncludeComposition:
 
     @respx.mock
     def test_get_with_include_eight_expanders(self, api_key: str) -> None:
-        """Flagship: 8 expanders (events excluded) return all inline in one call."""
+        """8-expander combination — no events requested.
+
+        Separate coverage for include=events lives in
+        test_get_with_include_events_returns_populated_slot.
+        """
         payload = {
             "data": {
                 **_COMPANY_BASE,
@@ -915,39 +919,73 @@ class TestCompaniesGetIncludeComposition:
         client.close()
 
     @respx.mock
-    def test_get_with_include_events_returns_400(self, api_key: str) -> None:
+    def test_get_with_include_events_returns_populated_slot(self, api_key: str) -> None:
         respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
             return_value=httpx.Response(
-                400,
+                200,
                 json={
-                    "error": {
-                        "code": "bad_request",
-                        "message": (
-                            "events expansion temporarily unavailable — use "
-                            "/companies/{cik}/events directly; gated on B5 latency fix."
-                        ),
-                        "status": 400,
+                    "data": {
+                        **_COMPANY_BASE,
+                        "events": [
+                            {
+                                "filing_accession": "0000320193-25-000012",
+                                "filed_at": "2025-12-01T16:00:00+00:00",
+                                "category": "earnings",
+                                "items": [
+                                    {"code": "2.02", "description": "Results of Operations and Financial Condition"},
+                                ],
+                            },
+                            {
+                                "filing_accession": "0000320193-25-000010",
+                                "filed_at": "2025-11-15T14:00:00+00:00",
+                                "category": "leadership",
+                                "items": [
+                                    {"code": "5.02", "description": "Departure of Directors or Certain Officers"}
+                                ],
+                            },
+                        ],
                     }
                 },
             ),
         )
         client = ThesmaClient(api_key=api_key)
-        with pytest.raises(BadRequestError) as exc_info:
-            client.companies.get("0000320193", include="events")
-        assert "events" in str(exc_info.value).lower()
+        result = client.companies.get("0000320193", include="events")
+        assert result.data.events is not None
+        assert len(result.data.events) == 2
+        assert result.data.events[0]["filing_accession"] == "0000320193-25-000012"
+        assert result.data.events[0]["category"] == "earnings"
         client.close()
 
     @respx.mock
-    def test_get_with_include_events_combination_returns_400(self, api_key: str) -> None:
+    def test_get_with_include_events_combination_returns_all_slots(self, api_key: str) -> None:
         respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
             return_value=httpx.Response(
-                400,
-                json={"error": {"code": "bad_request", "message": "events expansion temporarily unavailable"}},
+                200,
+                json={
+                    "data": {
+                        **_COMPANY_BASE,
+                        "financials": {"line_items": {"revenue": 391_035_000_000}},
+                        "events": [
+                            {
+                                "filing_accession": "0000320193-25-000012",
+                                "filed_at": "2025-12-01T16:00:00+00:00",
+                                "category": "earnings",
+                                "items": [
+                                    {"code": "2.02", "description": "Results of Operations and Financial Condition"},
+                                ],
+                            },
+                        ],
+                    }
+                },
             ),
         )
         client = ThesmaClient(api_key=api_key)
-        with pytest.raises(BadRequestError):
-            client.companies.get("0000320193", include="financials,events")
+        result = client.companies.get("0000320193", include="financials,events")
+        assert result.data.financials is not None
+        assert result.data.financials["line_items"]["revenue"] == 391_035_000_000
+        assert result.data.events is not None
+        assert len(result.data.events) == 1
+        assert result.data.events[0]["filing_accession"] == "0000320193-25-000012"
         client.close()
 
     @respx.mock

@@ -100,15 +100,6 @@ class Companies:
         ``BadRequestError``; there is no ``"all"`` shortcut — compose the
         explicit list the caller wants.
 
-        .. note::
-
-           ``include="events"`` is disabled in this SDK release (the API
-           returns 400 at dispatch pending the B5 latency fix). Both
-           ``include="events"`` and combinations that include ``events``
-           (e.g. ``include="financials,events"``) surface as
-           ``BadRequestError``. A follow-up SDK release will enable the
-           expander once the API flips its ``enabled`` flag.
-
         Each requested expander returns one of three shapes in its
         response slot. The slot fields (``financials``, ``ratios``, …)
         are declared on ``EnrichedCompanyData`` as ``Any | None``;

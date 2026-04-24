@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1.1] - 2026-04-24
+
+### Changed
+- `client.companies.get(cik, include="events")` now returns a populated `events` slot on `result.data.events` (list of ≤10 recent 8-K filings). Pre-SDK-34 the API returned 400 with a "events expansion temporarily unavailable" message, which the SDK's docstring documented. govdata-api T-215 shipped the expander on 2026-04-24; this SDK release removes the stale caveat from the `Companies.get()` docstring.
+- Internal: two unit tests that mocked the 400-dispatch response are replaced with 200-path assertions on the new populated slot. No public-API signature change.
+
 ## [0.10.1.0] - 2026-04-24
 
 SDK-33: enrichment-envelope typed hoist. Spec-regen picks up API `0.10.1` (`LocalMarketContext` county fields went nullable — forward-compatible). Eight new hand-correction patches replace the opaque `Enriched*` stubs with declared typed fields so consumers get `result.labor_context`, `result.lending_context`, `result.enrichment_warnings`, and the 7 S1 expander slots as typed attributes instead of `model_extra` dict lookups.
