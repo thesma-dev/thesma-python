@@ -9,6 +9,10 @@ import respx
 from thesma._types import PaginatedResponse
 from thesma.client import AsyncThesmaClient, ThesmaClient
 from thesma.errors import BadRequestError, ThesmaError
+from thesma.resources.screener import (
+    _PERCENTAGE_SCALE_PARAMS,
+    _validate_percentage_scale,
+)
 
 BASE = "https://api.thesma.dev"
 
@@ -1045,4 +1049,183 @@ class TestScreenerSbaFilters:
         item = result.data[0]
         assert item.labor_context["data_freshness"]["ces_period"] == "2025-11"  # type: ignore[attr-defined]
         assert item.data_freshness["sba_period"] == "2025-Q4"  # type: ignore[attr-defined]
+        client.close()
+
+
+SCREENER_EMPTY_JSON = {
+    "data": [],
+    "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 0},
+}
+
+
+class TestScreenerScaleValidation:
+    """SDK-35: client-side mirror of T-216's percentage-scale validation.
+
+    Rejects values in the ambiguous ``0 < x < 1.0`` band on the 23
+    percentage-scale filter params before any HTTP request is built.
+    """
+
+    # --- Helper-function tests (call `_validate_percentage_scale` directly) ---
+
+    def test_helper_rejects_zero_point_two(self) -> None:
+        with pytest.raises(ValueError) as exc:
+            _validate_percentage_scale("min_operating_margin", 0.2)
+        message = str(exc.value)
+        assert "0-1 range" in message
+        assert "20 for 20%" in message
+
+    def test_helper_rejects_point_nine_nine_nine(self) -> None:
+        with pytest.raises(ValueError):
+            _validate_percentage_scale("min_gross_margin", 0.999)
+
+    def test_helper_accepts_one_point_zero(self) -> None:
+        assert _validate_percentage_scale("min_gross_margin", 1.0) is None
+
+    def test_helper_accepts_zero(self) -> None:
+        assert _validate_percentage_scale("min_operating_margin", 0) is None
+        assert _validate_percentage_scale("min_operating_margin", 0.0) is None
+
+    def test_helper_accepts_integer_percents(self) -> None:
+        assert _validate_percentage_scale("min_operating_margin", 20) is None
+        assert _validate_percentage_scale("max_industry_quits_rate", 5) is None
+
+    def test_helper_accepts_negative_values(self) -> None:
+        assert _validate_percentage_scale("min_industry_employment_growth", -2.5) is None
+
+    def test_helper_rejects_nan(self) -> None:
+        with pytest.raises(ValueError, match="not a finite number"):
+            _validate_percentage_scale("min_operating_margin", float("nan"))
+
+    def test_helper_rejects_positive_infinity(self) -> None:
+        with pytest.raises(ValueError, match="not a finite number"):
+            _validate_percentage_scale("min_operating_margin", float("inf"))
+
+    def test_helper_rejects_negative_infinity(self) -> None:
+        with pytest.raises(ValueError, match="not a finite number"):
+            _validate_percentage_scale("min_operating_margin", float("-inf"))
+
+    def test_helper_rejects_non_numeric_input(self) -> None:
+        with pytest.raises(ValueError, match="not numeric"):
+            _validate_percentage_scale("min_operating_margin", "0.2")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="not numeric"):
+            _validate_percentage_scale("min_operating_margin", True)  # type: ignore[arg-type]
+
+    def test_scale_dict_keys_match_frozenset(self) -> None:
+        """Drift guard: the `_scale_values` dict inside `screen()` must
+        carry the same 23 keys as `_PERCENTAGE_SCALE_PARAMS`. Reconstruct
+        the dict here and compare.
+        """
+        _scale_values: dict[str, float | None] = {
+            "min_gross_margin": None,
+            "max_gross_margin": None,
+            "min_operating_margin": None,
+            "min_net_margin": None,
+            "min_return_on_equity": None,
+            "min_return_on_assets": None,
+            "min_revenue_growth": None,
+            "min_eps_growth": None,
+            "min_institutional_ownership_pct": None,
+            "min_industry_employment_growth": None,
+            "max_industry_employment_growth": None,
+            "min_industry_wage_growth": None,
+            "min_hq_county_wage_growth": None,
+            "min_industry_quits_rate": None,
+            "max_industry_quits_rate": None,
+            "min_industry_openings_rate": None,
+            "max_industry_openings_rate": None,
+            "min_local_unemployment_rate": None,
+            "max_local_unemployment_rate": None,
+            "min_local_sba_lending_growth": None,
+            "max_local_sba_lending_growth": None,
+            "min_industry_sba_lending_growth": None,
+            "max_industry_sba_charge_off_rate": None,
+        }
+        assert set(_scale_values.keys()) == _PERCENTAGE_SCALE_PARAMS
+
+    def test_frozenset_size_matches_t216(self) -> None:
+        assert len(_PERCENTAGE_SCALE_PARAMS) == 23
+
+    # --- End-to-end method tests (via `client.screener.screen(...)`) ---
+
+    def test_screen_rejects_decimal_fraction_operating_margin(self, api_key: str) -> None:
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ValueError, match="0-1 range"):
+            client.screener.screen(min_operating_margin=0.2)
+        client.close()
+
+    @pytest.mark.parametrize("param_name", sorted(_PERCENTAGE_SCALE_PARAMS))
+    def test_screen_rejects_decimal_fraction_on_each_percentage_param(self, api_key: str, param_name: str) -> None:
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ValueError):
+            client.screener.screen(**{param_name: 0.5})
+        client.close()
+
+    @respx.mock
+    @pytest.mark.parametrize("param_name", sorted(_PERCENTAGE_SCALE_PARAMS))
+    def test_screen_accepts_integer_percent_on_each_percentage_param(self, api_key: str, param_name: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_EMPTY_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(**{param_name: 20})
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_screen_accepts_zero_as_no_minimum_sentinel(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_EMPTY_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_operating_margin=0)
+        assert route.called
+        client.close()
+
+    def test_screen_multi_param_violation_surfaces_first(self, api_key: str) -> None:
+        """Alphabetical sort: `min_gross_margin` < `min_operating_margin`
+        (g < o). The first violator surfaces; the second does not appear
+        in the error message.
+        """
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ValueError) as exc:
+            client.screener.screen(min_operating_margin=0.2, min_gross_margin=0.3)
+        message = str(exc.value)
+        assert "min_gross_margin" in message
+        assert "min_operating_margin" not in message
+        client.close()
+
+    def test_screen_multi_param_max_sorts_before_min(self, api_key: str) -> None:
+        """`max_*` sorts before `min_*` alphabetically (a < i)."""
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(ValueError) as exc:
+            client.screener.screen(max_gross_margin=0.3, min_operating_margin=0.2)
+        assert "max_gross_margin" in str(exc.value)
+        client.close()
+
+    @respx.mock
+    def test_screen_true_decimal_ratio_params_unaffected(self, api_key: str) -> None:
+        """Regression guard: true-ratio params MUST NOT be in the
+        validation list. 0.5 / 0.8 / 0.3 / 0.7 are legitimate values.
+        """
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_EMPTY_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(
+            min_current_ratio=0.5,
+            max_debt_to_equity=0.8,
+            min_interest_coverage=0.3,
+            min_comp_to_market_ratio=0.7,
+        )
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_screen_absolute_dollar_params_unaffected(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_EMPTY_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(min_revenue=500_000_000)
+        assert route.called
         client.close()

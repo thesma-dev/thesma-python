@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1.2] - 2026-04-24
+
+### Changed
+- `client.screener.screen()` now validates percentage-scale filter params
+  client-side before constructing the HTTP request. Values in the ambiguous
+  `0 < x < 1.0` range raise `ValueError` with a clear "use integer percent"
+  message, matching the server-side validation shipped in govdata-api T-216
+  on 2026-04-25. Non-finite values (NaN, ±inf) also raise `ValueError`.
+  Behavioural note: customers passing decimal fractions (`0.2` for "20%")
+  previously received an `ApiError` from a server 400; they now receive a
+  `ValueError` synchronously before the HTTP round-trip. Exception-type
+  change only — the fix itself is a developer-experience improvement.
+- Screener method docstring gains a "Scale conventions" paragraph
+  documenting the integer-percent convention + the `0 = no minimum` sentinel.
+
 ## [0.10.1.1] - 2026-04-24
 
 ### Changed
