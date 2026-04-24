@@ -9,6 +9,7 @@ import pytest
 import respx
 
 from thesma._generated.models import (
+    EnrichedFinancialDataResponse,
     EnrichedMultiStatementPaginatedResponse,
     EnrichedMultiStatementResponse,
     FieldsResponse,
@@ -89,33 +90,40 @@ FINANCIALS_WITH_LAUS_LOCAL_MARKET_JSON = {
             "expected_fields": 16,
             "source_tags": {"revenue": "us-gaap:Revenues"},
         },
-        "labor_context": {
-            "industry": {"naics_code": "334111"},
-            "local_market": {
-                "county_fips": "06085",
-                "county_name": "Santa Clara County, CA",
-                "county_fips_confidence": "high",
-                "industry_employment": 142000,
-                "industry_employment_yoy_pct": 3.8,
-                "industry_avg_weekly_wage": 3200,
-                "industry_wage_yoy_pct": 4.2,
-                "total_employment": 1050000,
-                "total_avg_weekly_wage": 2800,
-                "data_period": "2025-Q2",
-                "data_lag_months": 6,
-                "match_precision": "6-digit",
-                "unemployment_rate": 2.8,
-                "unemployment_rate_yoy_change": -0.4,
-                "labor_force": 1050450,
-                "labor_force_yoy_change_pct": 1.2,
-                "laus_data_period": "2025-11",
-                "laus_data_lag_weeks": 7,
-                "match_level": "county",
-                "seasonal_adjustment": "not_seasonally_adjusted",
-                "source": "LAUS+QCEW",
-            },
-            "compensation_benchmark": None,
+    },
+    # Post-SDK-33: labor_context sits at envelope root, not inside ``data``,
+    # matching what the server's EnrichedFinancialDataResponse serializer emits.
+    "labor_context": {
+        "industry": {
+            "naics_code": "334111",
+            "naics_description": "Electronic Computer Manufacturing",
+            "naics_match_level": "6-digit",
+            "data_period": "2025-Q2",
         },
+        "local_market": {
+            "county_fips": "06085",
+            "county_name": "Santa Clara County, CA",
+            "county_fips_confidence": "high",
+            "industry_employment": 142000,
+            "industry_employment_yoy_pct": 3.8,
+            "industry_avg_weekly_wage": 3200,
+            "industry_wage_yoy_pct": 4.2,
+            "total_employment": 1050000,
+            "total_avg_weekly_wage": 2800,
+            "data_period": "2025-Q2",
+            "data_lag_months": 6,
+            "match_precision": "6-digit",
+            "unemployment_rate": 2.8,
+            "unemployment_rate_yoy_change": -0.4,
+            "labor_force": 1050450,
+            "labor_force_yoy_change_pct": 1.2,
+            "laus_data_period": "2025-11",
+            "laus_data_lag_weeks": 7,
+            "match_level": "county",
+            "seasonal_adjustment": "not_seasonally_adjusted",
+            "source": "LAUS+QCEW",
+        },
+        "compensation_benchmark": None,
     },
 }
 
@@ -208,7 +216,7 @@ class TestFinancialsGet:
         request = route.calls.last.request
         assert "statement=income" in str(request.url)
         assert "period=annual" in str(request.url)
-        assert isinstance(result, DataResponse)
+        assert isinstance(result, EnrichedFinancialDataResponse)
         assert isinstance(result.data, FinancialStatementResponse)
         client.close()
 
@@ -277,7 +285,7 @@ class TestFinancialsLaborContextInclude:
 
         request = route.calls.last.request
         assert "include=labor_context" in str(request.url)
-        assert isinstance(result, DataResponse)
+        assert isinstance(result, EnrichedFinancialDataResponse)
         assert isinstance(result.data, FinancialStatementResponse)
         # Confirm the well-known financials fields still round-trip cleanly.
         assert result.data.fiscal_year == 2024
@@ -378,8 +386,11 @@ class TestFinancialsIfrsTypedFields:
         client.close()
 
     @respx.mock
-    def test_get_with_include_labor_context_still_drops_envelope_key(self, api_key: str) -> None:
-        """Regression guard: new typed fields ride with the envelope, ``labor_context`` still drops."""
+    def test_get_with_include_labor_context_surfaces_typed_envelope(self, api_key: str) -> None:
+        """SDK-33: ``labor_context`` now surfaces as a typed envelope-root
+        attribute (``result.labor_context``). Pre-SDK-33 it was silently
+        dropped by ``DataResponse[FinancialStatementResponse]``.
+        """
         respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
             return_value=httpx.Response(200, json=FINANCIALS_WITH_LAUS_LOCAL_MARKET_JSON),
         )
@@ -387,10 +398,12 @@ class TestFinancialsIfrsTypedFields:
         result = client.financials.get("0000320193", statement="income", include="labor_context")
 
         assert result is not None
+        assert isinstance(result, EnrichedFinancialDataResponse)
         assert result.data.taxonomy == "us-gaap"
         assert result.data.reporting_notes is not None
-        # Envelope-sibling enrichment still drops per ``extra="ignore"`` — SDK-24 does NOT change this.
-        assert getattr(result.data, "labor_context", None) is None
+        # Envelope-root typed labor_context is now populated.
+        assert result.labor_context is not None
+        assert result.labor_context.local_market is not None
         client.close()
 
     @respx.mock
@@ -556,7 +569,7 @@ class TestFinancialsPerPage:
         )
         client = ThesmaClient(api_key=api_key)
         resp = client.financials.get("0000320193", statement="income")
-        assert isinstance(resp, DataResponse)
+        assert isinstance(resp, EnrichedFinancialDataResponse)
         assert isinstance(resp.data, FinancialStatementResponse)
         assert resp.data.fiscal_year == 2024
         client.close()
@@ -606,7 +619,12 @@ class TestFinancialsPerPage:
         """SDK-26 contract: list-mode enrichment lands per-element (IFRS-09 lock)."""
         item_0 = _list_item(2024, taxonomy="us-gaap")
         item_0["labor_context"] = {
-            "industry": {"naics_code": "334111"},
+            "industry": {
+                "naics_code": "334111",
+                "naics_description": "Electronic Computer Manufacturing",
+                "naics_match_level": "6-digit",
+                "data_period": "2025-Q2",
+            },
             "summary": {
                 "industry_hiring_trend": "stable",
                 "local_unemployment_trend": "improving",
@@ -650,12 +668,11 @@ class TestFinancialsStatementAll:
         client = ThesmaClient(api_key=api_key)
         resp = client.financials.get("0000320193", statement="all", year=2024)
         assert isinstance(resp, EnrichedMultiStatementResponse)
-        # EnrichedMultiStatementResponse is extra="allow" passthrough — access via model_extra["data"].
-        data = (resp.model_extra or {}).get("data")
-        assert data is not None
-        assert data["statements"]["income"] is not None
-        assert data["statements"]["balance_sheet"] is not None
-        assert data["statements"]["cash_flow"] is not None
+        # SDK-33: typed access on ``resp.data`` — the inner statements dict
+        # now parses into ``MultiStatementResponse.statements``.
+        assert resp.data.statements["income"] is not None
+        assert resp.data.statements["balance_sheet"] is not None
+        assert resp.data.statements["cash_flow"] is not None
         client.close()
 
     @respx.mock
@@ -667,10 +684,9 @@ class TestFinancialsStatementAll:
         )
         client = ThesmaClient(api_key=api_key)
         resp = client.financials.get("0000320193", statement="all", year=2024)
-        data = (resp.model_extra or {}).get("data")
-        assert data is not None
-        assert data["statements"]["cash_flow"] is None
-        assert data["statements"]["income"] is not None
+        assert isinstance(resp, EnrichedMultiStatementResponse)
+        assert resp.data.statements["cash_flow"] is None
+        assert resp.data.statements["income"] is not None
         client.close()
 
     @respx.mock
@@ -685,10 +701,13 @@ class TestFinancialsStatementAll:
         client = ThesmaClient(api_key=api_key)
         resp = client.financials.get("0000320193", statement="all", per_page=3)
         assert isinstance(resp, EnrichedMultiStatementPaginatedResponse)
-        data_list = (resp.model_extra or {}).get("data", [])
-        assert len(data_list) == 3
-        for period in data_list:
-            assert period["statements"]["income"] is not None
+        assert len(resp.data) == 3
+        for period in resp.data:
+            # Per-element list items keep ``extra="allow"`` passthrough
+            # for ``statements`` (they don't subclass MultiStatementResponse
+            # because of codegen emission order).
+            period_extra = period.model_extra or {}
+            assert period_extra.get("statements", {}).get("income") is not None
         client.close()
 
     @respx.mock
@@ -700,7 +719,15 @@ class TestFinancialsStatementAll:
         payload = {
             "data": [_multi_statement_period(2024), _multi_statement_period(2023)],
             "pagination": {"page": 1, "per_page": 2, "total": 2, "total_pages": 1},
-            "labor_context": {"industry": {"naics_code": "334111"}, "summary": {"industry_hiring_trend": "stable"}},
+            "labor_context": {
+                "industry": {
+                    "naics_code": "334111",
+                    "naics_description": "Electronic Computer Manufacturing",
+                    "naics_match_level": "6-digit",
+                    "data_period": "2025-Q2",
+                },
+                "summary": {"industry_hiring_trend": "stable"},
+            },
             "lending_context": {"local_market": None, "industry_lending": None},
         }
         respx.get(f"{BASE}/v1/us/sec/companies/0000320193/financials").mock(
@@ -713,14 +740,15 @@ class TestFinancialsStatementAll:
             per_page=2,
             include="labor_context,lending_context",
         )
-        extra = resp.model_extra or {}
-        # Envelope-root enrichment present.
-        assert extra.get("labor_context") is not None
-        assert extra.get("lending_context") is not None
-        # Per-element enrichment is NULL — no time-alignment claim per S2 lock.
-        for period in extra.get("data", []):
-            assert period.get("labor_context") is None
-            assert period.get("lending_context") is None
+        assert isinstance(resp, EnrichedMultiStatementPaginatedResponse)
+        # SDK-33: envelope-root enrichment is now typed (labor_context /
+        # lending_context are declared attributes on the response class).
+        assert resp.labor_context is not None
+        assert resp.lending_context is not None
+        # Per-element enrichment stays None — the S2 lock still holds.
+        for period in resp.data:
+            assert period.labor_context is None
+            assert period.lending_context is None
         client.close()
 
     @respx.mock
@@ -731,6 +759,6 @@ class TestFinancialsStatementAll:
         )
         client = ThesmaClient(api_key=api_key)
         resp = client.financials.get("0000320193", statement="income", year=2024)
-        assert isinstance(resp, DataResponse)
+        assert isinstance(resp, EnrichedFinancialDataResponse)
         assert isinstance(resp.data, FinancialStatementResponse)
         client.close()

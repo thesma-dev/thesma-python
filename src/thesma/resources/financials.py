@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from thesma._generated.models import (
+    EnrichedFinancialDataResponse,
     EnrichedMultiStatementPaginatedResponse,
     EnrichedMultiStatementResponse,
     FieldsResponse,
     FinancialStatementListItem,
-    FinancialStatementResponse,
     TimeSeriesResponse,
 )
 from thesma._types import DataResponse, PaginatedResponse
@@ -33,7 +33,7 @@ class Financials:
         page: int | None = None,
         include: str | None = None,
     ) -> (
-        DataResponse[FinancialStatementResponse]
+        EnrichedFinancialDataResponse
         | PaginatedResponse[FinancialStatementListItem]
         | EnrichedMultiStatementResponse
         | EnrichedMultiStatementPaginatedResponse
@@ -45,13 +45,11 @@ class Financials:
         ``include`` is a comma-separated list of enrichment surfaces —
         ``"labor_context"`` and/or ``"lending_context"`` (e.g.
         ``include="lending_context"`` or
-        ``include="labor_context,lending_context"``). The API returns the
-        enrichment fields at the envelope root, but
-        ``FinancialStatementResponse`` uses Pydantic ``extra="ignore"`` so
-        the values are silently dropped from the parsed result today;
-        hoisting them to consumer-visible attributes is tracked as
-        follow-up work. The query parameter is still forwarded to the
-        API.
+        ``include="labor_context,lending_context"``). The enrichment
+        fields land on the returned envelope as typed attributes
+        (``result.labor_context``, ``result.lending_context``) on all
+        four response shapes; pre-SDK-33 they were silently dropped on
+        the single-statement path.
 
         The returned ``data`` model also exposes typed ``taxonomy``,
         ``currency``, and ``reporting_notes`` attributes —
@@ -73,7 +71,9 @@ class Financials:
 
         * ``statement`` is ``None`` / ``"income"`` / ``"balance-sheet"`` /
           ``"cash-flow"`` and ``per_page`` absent → single-statement
-          ``DataResponse[FinancialStatementResponse]`` (pre-IFRS-09 shape).
+          ``EnrichedFinancialDataResponse`` (the statement itself is in
+          ``result.data``; ``labor_context`` / ``lending_context`` sit
+          as envelope-root siblings).
         * Same ``statement`` values with ``per_page=N`` → paginated
           ``PaginatedResponse[FinancialStatementListItem]`` (IFRS-09),
           where ``labor_context`` / ``lending_context`` land per-element.
@@ -91,11 +91,20 @@ class Financials:
         use the unified nested ``LaborContext`` / ``LendingContext`` shapes
         (same across ``/companies``, ``/financials``, ``/screener``).
         When an enrichment builder times out (2s cap) or errors, the
-        envelope's ``_enrichment_warnings`` list carries a typed
-        ``EnrichmentWarning`` (``field``, ``reason``, ``message``) and the
-        context field itself is ``None``. A ``None`` without a matching
-        warning means the builder had no data (e.g., company has no NAICS
-        mapping) — not an error.
+        envelope's ``enrichment_warnings`` list carries typed
+        ``EnrichmentWarning`` entries (``field``, ``reason``, ``message``)
+        and the context field itself is ``None``. A ``None`` without a
+        matching warning means the builder had no data (e.g., company has
+        no NAICS mapping) — not an error:
+
+        .. code-block:: python
+
+           resp = client.financials.get("0000320193", statement="income",
+                                        include="labor_context")
+           if resp.labor_context is not None:
+               print(resp.labor_context.local_market.county_fips)
+           for w in resp.enrichment_warnings or []:
+               print(f"{w.field}: {w.reason}")
         """
         params: dict[str, Any] = {
             "statement": statement,
@@ -114,7 +123,7 @@ class Financials:
         elif per_page is not None:
             response_model = PaginatedResponse[FinancialStatementListItem]
         else:
-            response_model = DataResponse[FinancialStatementResponse]
+            response_model = EnrichedFinancialDataResponse
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
             f"/v1/us/sec/companies/{cik}/financials",

@@ -6,8 +6,8 @@ import httpx
 import pytest
 import respx
 
-from thesma._generated.models import EnrichedCompanyData
-from thesma._types import DataResponse, PaginatedResponse
+from thesma._generated.models import EnrichedCompanyData, EnrichedCompanyDataResponse
+from thesma._types import PaginatedResponse
 from thesma.client import ThesmaClient
 from thesma.errors import BadRequestError
 
@@ -83,6 +83,9 @@ def _build_company_with_local_market(local_market: dict | None) -> dict:
             "labor_context": {
                 "industry": {
                     "naics_code": "334111",
+                    "naics_description": "Electronic Computer Manufacturing",
+                    "naics_match_level": "6-digit",
+                    "data_period": "2025-Q2",
                     "employment": 142000,
                     "employment_yoy_pct": 3.8,
                 },
@@ -308,7 +311,7 @@ class TestCompaniesGet:
         result = client.companies.get("0000320193")
 
         assert route.called
-        assert isinstance(result, DataResponse)
+        assert isinstance(result, EnrichedCompanyDataResponse)
         assert result.data.cik == "0000320193"
         assert result.data.ticker == "AAPL"
         client.close()
@@ -360,11 +363,13 @@ class TestCompaniesGetLausLocalMarket:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
 
-        local_market = result.data.labor_context["local_market"]  # type: ignore[attr-defined]
-        assert local_market["unemployment_rate"] == 2.8
-        assert local_market["match_level"] == "county"
-        assert local_market["seasonal_adjustment"] == "not_seasonally_adjusted"
-        assert local_market["source"] == "LAUS+QCEW"
+        assert result.data.labor_context is not None
+        local_market = result.data.labor_context.local_market
+        assert local_market is not None
+        assert local_market.unemployment_rate == 2.8
+        assert local_market.match_level == "county"
+        assert local_market.seasonal_adjustment == "not_seasonally_adjusted"
+        assert local_market.source == "LAUS+QCEW"
         client.close()
 
     @respx.mock
@@ -375,10 +380,12 @@ class TestCompaniesGetLausLocalMarket:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
 
-        local_market = result.data.labor_context["local_market"]  # type: ignore[attr-defined]
-        assert local_market["source"] == "QCEW"
-        assert local_market["unemployment_rate"] is None
-        assert local_market["match_level"] is None
+        assert result.data.labor_context is not None
+        local_market = result.data.labor_context.local_market
+        assert local_market is not None
+        assert local_market.source == "QCEW"
+        assert local_market.unemployment_rate is None
+        assert local_market.match_level is None
         client.close()
 
     @respx.mock
@@ -389,13 +396,15 @@ class TestCompaniesGetLausLocalMarket:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
 
-        local_market = result.data.labor_context["local_market"]  # type: ignore[attr-defined]
-        assert local_market["source"] == "LAUS"
-        assert local_market["industry_employment"] is None
-        assert local_market["data_period"] is None
-        assert local_market["data_lag_months"] is None
-        assert local_market["match_precision"] is None
-        assert local_market["unemployment_rate"] == 2.8
+        assert result.data.labor_context is not None
+        local_market = result.data.labor_context.local_market
+        assert local_market is not None
+        assert local_market.source == "LAUS"
+        assert local_market.industry_employment is None
+        assert local_market.data_period is None
+        assert local_market.data_lag_months is None
+        assert local_market.match_precision is None
+        assert local_market.unemployment_rate == 2.8
         client.close()
 
     @respx.mock
@@ -406,10 +415,12 @@ class TestCompaniesGetLausLocalMarket:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
 
-        local_market = result.data.labor_context["local_market"]  # type: ignore[attr-defined]
-        assert local_market["match_level"] == "state"
-        assert local_market["seasonal_adjustment"] == "seasonally_adjusted"
-        assert local_market["county_fips"] is None
+        assert result.data.labor_context is not None
+        local_market = result.data.labor_context.local_market
+        assert local_market is not None
+        assert local_market.match_level == "state"
+        assert local_market.seasonal_adjustment == "seasonally_adjusted"
+        assert local_market.county_fips is None
         client.close()
 
     @respx.mock
@@ -420,7 +431,8 @@ class TestCompaniesGetLausLocalMarket:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
 
-        assert result.data.labor_context["local_market"] is None  # type: ignore[attr-defined]
+        assert result.data.labor_context is not None
+        assert result.data.labor_context.local_market is None
         client.close()
 
     @respx.mock
@@ -431,9 +443,11 @@ class TestCompaniesGetLausLocalMarket:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
 
-        local_market = result.data.labor_context["local_market"]  # type: ignore[attr-defined]
-        assert local_market["unemployment_rate_yoy_change"] is None
-        assert local_market["labor_force_yoy_change_pct"] is None
+        assert result.data.labor_context is not None
+        local_market = result.data.labor_context.local_market
+        assert local_market is not None
+        assert local_market.unemployment_rate_yoy_change is None
+        assert local_market.labor_force_yoy_change_pct is None
         client.close()
 
 
@@ -693,9 +707,12 @@ class TestCompaniesGetLendingContext:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="lending_context")
 
-        lending_context = result.data.lending_context  # type: ignore[attr-defined]
-        assert lending_context["local_market"]["county_fips"] == "06037"
-        assert lending_context["industry_lending"]["naics_code"] == "511210"
+        lending_context = result.data.lending_context
+        assert lending_context is not None
+        assert lending_context.local_market is not None
+        assert lending_context.local_market.county_fips == "06037"
+        assert lending_context.industry_lending is not None
+        assert lending_context.industry_lending.naics_code == "511210"
         client.close()
 
     @respx.mock
@@ -706,7 +723,7 @@ class TestCompaniesGetLendingContext:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="lending_context")
 
-        assert getattr(result.data, "lending_context", None) is None
+        assert result.data.lending_context is None
         client.close()
 
     @respx.mock
@@ -720,10 +737,10 @@ class TestCompaniesGetLendingContext:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="lending_context")
 
-        lending_context = result.data.lending_context  # type: ignore[attr-defined]
+        lending_context = result.data.lending_context
         assert lending_context is not None
-        assert lending_context["local_market"] is None
-        assert lending_context["industry_lending"] is None
+        assert lending_context.local_market is None
+        assert lending_context.industry_lending is None
         client.close()
 
     @respx.mock
@@ -735,15 +752,24 @@ class TestCompaniesGetLendingContext:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="lending_context")
 
-        lending_context = result.data.lending_context  # type: ignore[attr-defined]
-        assert lending_context["local_market"]["county_fips"] == "06037"
-        assert lending_context["industry_lending"] is None
+        lending_context = result.data.lending_context
+        assert lending_context is not None
+        assert lending_context.local_market is not None
+        assert lending_context.local_market.county_fips == "06037"
+        assert lending_context.industry_lending is None
         client.close()
 
     @respx.mock
     def test_get_with_include_labor_and_lending_combined(self, api_key: str) -> None:
         combined_data = _build_company_with_lending_context(_LENDING_CONTEXT_FULL)
-        combined_data["data"]["labor_context"] = {"industry": {"naics_code": "334111"}}
+        combined_data["data"]["labor_context"] = {
+            "industry": {
+                "naics_code": "334111",
+                "naics_description": "Electronic Computer Manufacturing",
+                "naics_match_level": "6-digit",
+                "data_period": "2025-Q2",
+            },
+        }
         route = respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
             return_value=httpx.Response(200, json=combined_data),
         )
@@ -751,8 +777,8 @@ class TestCompaniesGetLendingContext:
         result = client.companies.get("0000320193", include="labor_context,lending_context")
 
         assert "include=labor_context%2Clending_context" in str(route.calls.last.request.url)
-        assert result.data.labor_context is not None  # type: ignore[attr-defined]
-        assert result.data.lending_context is not None  # type: ignore[attr-defined]
+        assert result.data.labor_context is not None
+        assert result.data.lending_context is not None
         client.close()
 
     @respx.mock
@@ -784,8 +810,11 @@ class TestCompaniesGetLendingContext:
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="lending_context")
 
-        lending_context = result.data.lending_context  # type: ignore[attr-defined]
-        assert lending_context["local_market"]["county_fips_confidence"] == "unknown"
+        lending_context = result.data.lending_context
+        assert lending_context is not None
+        assert lending_context.local_market is not None
+        # county_fips_confidence is a codegen enum; value access works for equality.
+        assert lending_context.local_market.county_fips_confidence.value == "unknown"
         client.close()
 
 
@@ -832,9 +861,9 @@ class TestCompaniesGetIncludeComposition:
         )
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="financials")
-        extra = result.data.model_extra or {}
-        assert extra.get("financials") is not None
-        assert extra["financials"]["line_items"]["revenue"] == 391_035_000_000
+        # SDK-33: S1 expander slots land as typed attributes (Any | None).
+        assert result.data.financials is not None
+        assert result.data.financials["line_items"]["revenue"] == 391_035_000_000
         client.close()
 
     @respx.mock
@@ -849,7 +878,14 @@ class TestCompaniesGetIncludeComposition:
                 "holders": [{"fund_cik": "0001234567", "shares": 1000000}],
                 "compensation": {"pay_ratio": 1447},
                 "board": {"members": []},
-                "labor_context": {"industry": {"naics_code": "334111"}},
+                "labor_context": {
+                    "industry": {
+                        "naics_code": "334111",
+                        "naics_description": "Electronic Computer Manufacturing",
+                        "naics_match_level": "6-digit",
+                        "data_period": "2025-Q2",
+                    }
+                },
                 "lending_context": {"local_market": None, "industry_lending": None},
             }
         }
@@ -859,7 +895,7 @@ class TestCompaniesGetIncludeComposition:
         include_value = "financials,ratios,insider_trades,holders,compensation,board,labor_context,lending_context"
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include=include_value)
-        extra = result.data.model_extra or {}
+        # SDK-33: S1 expander slots + labor/lending land as typed attributes on EnrichedCompanyData.
         for slot in (
             "financials",
             "ratios",
@@ -870,8 +906,9 @@ class TestCompaniesGetIncludeComposition:
             "labor_context",
             "lending_context",
         ):
-            assert extra.get(slot) is not None, f"slot '{slot}' missing from response"
-        # events was NOT requested — events_url HATEOAS link persists.
+            assert getattr(result.data, slot) is not None, f"slot '{slot}' missing from response"
+        # events was NOT requested — events_url HATEOAS link still passes through via extra="allow".
+        extra = result.data.model_extra or {}
         assert extra["events_url"].startswith("https://")
         # Query param forwarded verbatim (comma URL-encoded by httpx).
         assert "include=financials%2Cratios" in str(route.calls.last.request.url)
@@ -928,13 +965,13 @@ class TestCompaniesGetIncludeComposition:
         )
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="financials,holders")
-        extra = result.data.model_extra or {}
-        # financials succeeded — inline dict.
-        assert extra["financials"]["line_items"]["revenue"] == 391_035_000_000
+        # financials succeeded — inline dict in the typed slot.
+        assert result.data.financials is not None
+        assert result.data.financials["line_items"]["revenue"] == 391_035_000_000
         # holders failed — error slot dict with typed "error" sub-object.
-        holders_slot = extra["holders"]
-        assert isinstance(holders_slot, dict) and "error" in holders_slot
-        assert holders_slot["error"]["code"] == "upstream_timeout"
+        assert result.data.holders is not None
+        assert isinstance(result.data.holders, dict) and "error" in result.data.holders
+        assert result.data.holders["error"]["code"] == "upstream_timeout"
         client.close()
 
     @respx.mock
@@ -963,7 +1000,14 @@ class TestCompaniesGetIncludeComposition:
         payload = {
             "data": {
                 **_COMPANY_BASE,
-                "labor_context": {"industry": {"naics_code": "334111"}},
+                "labor_context": {
+                    "industry": {
+                        "naics_code": "334111",
+                        "naics_description": "Electronic Computer Manufacturing",
+                        "naics_match_level": "6-digit",
+                        "data_period": "2025-Q2",
+                    }
+                },
             }
         }
         respx.get(f"{BASE}/v1/us/sec/companies/0000320193").mock(
@@ -971,8 +1015,8 @@ class TestCompaniesGetIncludeComposition:
         )
         client = ThesmaClient(api_key=api_key)
         result = client.companies.get("0000320193", include="labor_context")
-        extra = result.data.model_extra or {}
-        assert extra.get("labor_context") is not None
+        # SDK-33: labor_context is typed on EnrichedCompanyData.
+        assert result.data.labor_context is not None
         client.close()
 
     @respx.mock

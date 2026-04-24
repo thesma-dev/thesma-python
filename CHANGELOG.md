@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1.0] - 2026-04-24
+
+SDK-33: enrichment-envelope typed hoist. Spec-regen picks up API `0.10.1` (`LocalMarketContext` county fields went nullable — forward-compatible). Eight new hand-correction patches replace the opaque `Enriched*` stubs with declared typed fields so consumers get `result.labor_context`, `result.lending_context`, `result.enrichment_warnings`, and the 7 S1 expander slots as typed attributes instead of `model_extra` dict lookups.
+
+### Changed
+- `client.financials.get()` now returns `EnrichedFinancialDataResponse` (was `DataResponse[FinancialStatementResponse]`) on the single-statement non-paginated path. `client.companies.get()` now returns `EnrichedCompanyDataResponse` (was `DataResponse[EnrichedCompanyData]`). `client.compensation.get()` now returns `EnrichedCompensationDataResponse` (was `DataResponse[CompensationResponse]`). Source-compatible for untyped consumers that reach for `.data.<field>`; mypy-strict consumers who narrowed on the old return types need to update annotations.
+- Generic `DataResponse[T]` now declares `warnings_` (alias `_warnings`) and `enrichment_warnings` (alias `_enrichment_warnings`) as optional typed fields, plus `model_config=ConfigDict(populate_by_name=True, extra="allow")`. Any endpoint still routing through `DataResponse[T]` gains typed access to those envelope-metadata siblings.
+
+### Fixed
+- `client.financials.get(..., include="labor_context")` / `include="lending_context"` now populate the enrichment payload on `result.labor_context` / `result.lending_context`. Pre-SDK-33, the URL parameter was forwarded correctly but the enrichment payload was silently dropped by `DataResponse[FinancialStatementResponse]` (open since SDK-19 / SDK-22). Customers using BLS labor enrichment on single-statement financials calls should see non-`None` values where they previously saw `None`.
+- `_enrichment_warnings` now surfaces as typed `list[EnrichmentWarning]` on all 5 enriched envelopes (companies detail, financials single-statement, financials `statement=all`, financials `statement=all` paginated, compensation). Pre-SDK-33 it was only accessible via `.model_extra.get("_enrichment_warnings")`.
+- `EnrichedCompanyData` S1 expander slots (`financials`, `ratios`, `events`, `insider_trades`, `holders`, `compensation`, `board`) now land as typed `Any | None` attributes; pre-SDK-33 they sat in `.model_extra`. Base company fields (`cik`, `name`, `ticker`, etc.) continue to pass through via `extra="allow"` because the SDK has no `CompanyResponse` codegen class.
+
+### Internal
+- Renamed `scripts/regenerate.py::_SDK24_PATCHES` → `_SDK_PATCHES` to reflect the broader scope (SDK-24 and SDK-33 patches both live here now). Added 8 new hand-correction patches for the 6 `Enriched*` envelope stubs plus `FinancialStatementListItem` and `MultiStatementListItem`.
+
 ## [0.10.0.0] - 2026-04-23
 
 Release bundle for the govdata-api Wave 1 + S1 shape landing (API `0.10.0`, merged as `f80b6c6`). Eight SDK prompts propagate together: SDK-25 (URL renames + HATEOAS), SDK-26 (`per_page` on financials), SDK-27 (`statement=all`), SDK-28 (unified LaborContext), SDK-29 (holders temporal fields), SDK-30 (insider-trades aggregation), SDK-31 (enrichment warnings), SDK-32 (`include=` composition).

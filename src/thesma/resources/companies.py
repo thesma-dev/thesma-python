@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from thesma._generated.models import CompanyListItem, EnrichedCompanyData
-from thesma._types import DataResponse, PaginatedResponse
+from thesma._generated.models import (
+    CompanyListItem,
+    EnrichedCompanyDataResponse,
+)
+from thesma._types import PaginatedResponse
 
 
 class Companies:
@@ -84,7 +87,7 @@ class Companies:
             response_model=PaginatedResponse[CompanyListItem],
         )
 
-    def get(self, cik: str, *, include: str | None = None) -> DataResponse[EnrichedCompanyData]:
+    def get(self, cik: str, *, include: str | None = None) -> EnrichedCompanyDataResponse:
         """Get a single company by CIK.
 
         ``GET /v1/us/sec/companies/{cik}``
@@ -107,11 +110,14 @@ class Companies:
            expander once the API flips its ``enabled`` flag.
 
         Each requested expander returns one of three shapes in its
-        response slot (accessed via ``model_extra`` because the regenerated
-        ``EnrichedCompanyData`` is an ``extra="allow"`` passthrough):
+        response slot. The slot fields (``financials``, ``ratios``, …)
+        are declared on ``EnrichedCompanyData`` as ``Any | None``;
+        statement fields (``cik``, ``name``, …) continue to pass through
+        via ``extra="allow"`` because the SDK has no ``CompanyResponse``
+        codegen class:
 
         * **Inline payload** (dict / list) on success — e.g.
-          ``result.data.model_extra["financials"]["line_items"]["revenue"]``.
+          ``result.data.financials["line_items"]["revenue"]``.
         * **Partial-failure error slot** on expander timeout / upstream
           error — the slot is a dict ``{"error": {"code", "message"}}``
           while the top-level response remains 200. Check for the
@@ -145,15 +151,21 @@ class Companies:
         ``result.data.model_dump(exclude_unset=True)``.
 
         When an enrichment builder (``labor_context`` / ``lending_context``)
-        times out or errors, the envelope's ``_enrichment_warnings`` list
-        carries a typed ``EnrichmentWarning`` (``field``, ``reason``,
-        ``message``) and the context field is ``None``. Access via
-        ``result.model_extra.get("_enrichment_warnings")``.
+        times out or errors, the envelope's ``enrichment_warnings`` list
+        carries typed ``EnrichmentWarning`` entries (``field``, ``reason``,
+        ``message``) and the context field is ``None``:
+
+        .. code-block:: python
+
+           resp = client.companies.get("0000320193", include="labor_context")
+           if resp.enrichment_warnings:
+               for w in resp.enrichment_warnings:
+                   print(f"{w.field} failed: {w.reason} — {w.message or ''}")
         """
         params: dict[str, Any] = {"include": include}
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
             f"/v1/us/sec/companies/{cik}",
             params=params,
-            response_model=DataResponse[EnrichedCompanyData],
+            response_model=EnrichedCompanyDataResponse,
         )

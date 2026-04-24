@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any, Generic, TypeVar
 
-from pydantic import BaseModel, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+
+from thesma._generated.models import EnrichmentWarning
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -35,9 +37,27 @@ class PaginationMeta(BaseModel):
 
 
 class DataResponse(BaseModel, Generic[T]):
-    """Wrapper for single-object API responses: ``{"data": {...}}``."""
+    """Wrapper for single-object API responses: ``{"data": {...}}``.
+
+    Surfaces two envelope-metadata siblings that any endpoint may emit:
+    ``_warnings`` (generic) and ``_enrichment_warnings`` (T4 enrichment
+    failure isolation). Endpoint-specific siblings such as
+    ``labor_context`` / ``lending_context`` live on the hand-corrected
+    ``Enriched*`` envelope classes instead (see
+    :mod:`thesma._generated.models`).
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     data: T
+    warnings_: Annotated[
+        list[str] | None,
+        Field(alias="_warnings", default=None),
+    ] = None
+    enrichment_warnings: Annotated[
+        list[EnrichmentWarning] | None,
+        Field(alias="_enrichment_warnings", default=None),
+    ] = None
 
 
 class PaginatedResponse(BaseModel, Generic[T]):

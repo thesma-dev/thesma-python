@@ -520,60 +520,227 @@ class TestEnrichmentWarning:
         w = EnrichmentWarning.model_validate({"field": "labor_context", "reason": "future_unknown_reason"})
         assert w.reason == "future_unknown_reason"
 
-    def test_enrichment_warnings_write_path_round_trip(self) -> None:
-        """Write path: ``model_dump(by_alias=True)`` of a passthrough envelope preserves
-        the ``_enrichment_warnings`` wire key (the underscore-prefixed key sits in
-        ``model_extra`` verbatim; Pydantic emits it back as-is).
+    def test_enrichment_warnings_typed_round_trip(self) -> None:
+        """SDK-33: ``_enrichment_warnings`` parses into a typed
+        ``list[EnrichmentWarning]`` on the declared ``enrichment_warnings``
+        attribute. Round-tripping via ``model_dump(by_alias=True)``
+        emits the underscore-prefixed wire key back out.
         """
-        from thesma._generated.models import EnrichedFinancialDataResponse
+        from thesma._generated.models import EnrichedCompanyDataResponse
 
-        resp = EnrichedFinancialDataResponse.model_validate(
+        resp = EnrichedCompanyDataResponse.model_validate(
             {
-                "data": {"cik": "0000320193", "fiscal_year": 2024},
-                "labor_context": None,
+                "data": {"cik": "0000320193", "name": "Apple Inc."},
                 "_enrichment_warnings": [
                     {"field": "labor_context", "reason": "timeout", "message": "..."},
                 ],
             }
         )
-        dumped = resp.model_dump(by_alias=True)
+        # Typed access — the key SDK-33 contract.
+        assert resp.enrichment_warnings is not None
+        assert len(resp.enrichment_warnings) == 1
+        assert resp.enrichment_warnings[0].field == "labor_context"
+        assert resp.enrichment_warnings[0].reason == "timeout"
+
+        # Wire-alias emission on serialize.
+        dumped = resp.model_dump(by_alias=True, exclude_none=True)
         assert "_enrichment_warnings" in dumped
+        assert "enrichment_warnings" not in dumped
         assert dumped["_enrichment_warnings"][0]["field"] == "labor_context"
-        assert dumped["_enrichment_warnings"][0]["reason"] == "timeout"
 
-    def test_envelope_passthrough_for_enrichment_warnings(self) -> None:
-        """The 5 ``Enriched*Response`` envelopes are ``extra="allow"`` passthroughs (codegen
-        drops typed fields when the OpenAPI schema uses additionalProperties-like patterns).
-        Consumers access ``_enrichment_warnings`` via ``model_extra``.
+    def test_enrichment_warnings_parses_from_raw_wire_keys(self) -> None:
+        """Regression: envelope siblings must parse from the underscore-
+        prefixed wire keys, not from the Python attribute names. Using
+        ``Field(serialization_alias=...)`` instead of ``Field(alias=...)``
+        on the hand-correction patches would silently re-introduce the
+        SDK-33 drop bug — this test catches that regression.
         """
-        from thesma._generated.models import (
-            EnrichedCompanyDataResponse,
-            EnrichedCompensationDataResponse,
-            EnrichedFinancialDataResponse,
-            EnrichedMultiStatementPaginatedResponse,
-            EnrichedMultiStatementResponse,
-        )
+        from thesma._generated.models import EnrichedCompanyDataResponse
 
-        payload_envelope = {
-            "data": {"cik": "0000320193", "name": "Apple Inc."},
-            "labor_context": None,
-            "_enrichment_warnings": [
-                {"field": "labor_context", "reason": "timeout", "message": "..."},
-            ],
-        }
-        for cls in (
-            EnrichedCompanyDataResponse,
-            EnrichedCompensationDataResponse,
-            EnrichedFinancialDataResponse,
-            EnrichedMultiStatementResponse,
-            EnrichedMultiStatementPaginatedResponse,
+        resp = EnrichedCompanyDataResponse.model_validate(
+            {
+                "data": {"cik": "0000320193"},
+                "_warnings": ["deprecated path"],
+                "_enrichment_warnings": [
+                    {"field": "labor_context", "reason": "build_failed"},
+                ],
+            }
+        )
+        assert resp.warnings_ == ["deprecated path"]
+        assert resp.enrichment_warnings is not None
+        assert resp.enrichment_warnings[0].field == "labor_context"
+
+    def test_enrichment_warnings_absent_when_not_emitted(self) -> None:
+        """Server's ``@model_serializer`` omits ``_enrichment_warnings``
+        entirely when no warnings fire — the declared field must default
+        to ``None`` (not ``[]``) so consumers can distinguish "no warnings
+        emitted" from "endpoint pre-dates T4".
+        """
+        from thesma._generated.models import EnrichedCompanyDataResponse
+
+        resp = EnrichedCompanyDataResponse.model_validate({"data": {"cik": "0000320193"}})
+        assert resp.enrichment_warnings is None
+        assert resp.warnings_ is None
+
+
+class TestEnrichedEnvelopeShapes:
+    """SDK-33: verify the 8 hand-corrected classes carry declared fields + aliases.
+
+    Every test calls ``cls.model_rebuild()`` first because codegen's
+    ``from __future__ import annotations`` leaves the full ``Annotated[...]``
+    stored as a forward-ref string; Pydantic only extracts the ``Field(alias=...)``
+    metadata once the annotation is resolved (via rebuild or first instantiation).
+    """
+
+    def test_enriched_company_data_has_typed_enrichment_and_slots(self) -> None:
+        from thesma._generated.models import EnrichedCompanyData
+
+        EnrichedCompanyData.model_rebuild()
+        fields = EnrichedCompanyData.model_fields
+        for name in (
+            "labor_context",
+            "lending_context",
+            "financials",
+            "ratios",
+            "events",
+            "insider_trades",
+            "holders",
+            "compensation",
+            "board",
         ):
-            envelope = cls.model_validate(payload_envelope)
-            extra = envelope.model_extra or {}
-            warnings = extra.get("_enrichment_warnings")
-            assert warnings is not None, f"{cls.__name__}: _enrichment_warnings missing from model_extra"
-            assert warnings[0]["field"] == "labor_context"
-            assert warnings[0]["reason"] == "timeout"
+            assert name in fields, f"EnrichedCompanyData: missing {name}"
+        # S1 expander slots are Any | None so payload/error/URL/None all parse.
+        # ``extra="allow"`` kept so cik/name/ticker/etc. still pass through.
+        assert EnrichedCompanyData.model_config.get("extra") == "allow"
+
+    def test_enriched_company_data_response_fields(self) -> None:
+        from thesma._generated.models import EnrichedCompanyDataResponse
+
+        EnrichedCompanyDataResponse.model_rebuild()
+        fields = EnrichedCompanyDataResponse.model_fields
+        for name in ("data", "warnings_", "enrichment_warnings"):
+            assert name in fields
+        assert fields["warnings_"].alias == "_warnings"
+        assert fields["enrichment_warnings"].alias == "_enrichment_warnings"
+
+    def test_enriched_compensation_data_response_fields(self) -> None:
+        from thesma._generated.models import EnrichedCompensationDataResponse
+
+        EnrichedCompensationDataResponse.model_rebuild()
+        fields = EnrichedCompensationDataResponse.model_fields
+        for name in ("data", "labor_context", "warnings_", "enrichment_warnings"):
+            assert name in fields
+        # Deliberately NO lending_context — compensation is labor-only.
+        assert "lending_context" not in fields
+        assert fields["enrichment_warnings"].alias == "_enrichment_warnings"
+
+    def test_enriched_financial_data_response_fields(self) -> None:
+        from thesma._generated.models import EnrichedFinancialDataResponse
+
+        EnrichedFinancialDataResponse.model_rebuild()
+        fields = EnrichedFinancialDataResponse.model_fields
+        for name in ("data", "labor_context", "lending_context", "warnings_", "enrichment_warnings"):
+            assert name in fields
+        assert fields["enrichment_warnings"].alias == "_enrichment_warnings"
+
+    def test_enriched_multi_statement_response_fields(self) -> None:
+        from thesma._generated.models import EnrichedMultiStatementResponse
+
+        EnrichedMultiStatementResponse.model_rebuild()
+        fields = EnrichedMultiStatementResponse.model_fields
+        for name in ("data", "labor_context", "lending_context", "warnings_", "enrichment_warnings"):
+            assert name in fields
+        assert fields["enrichment_warnings"].alias == "_enrichment_warnings"
+
+    def test_enriched_multi_statement_paginated_response_fields(self) -> None:
+        from thesma._generated.models import EnrichedMultiStatementPaginatedResponse
+
+        EnrichedMultiStatementPaginatedResponse.model_rebuild()
+        fields = EnrichedMultiStatementPaginatedResponse.model_fields
+        for name in (
+            "data",
+            "pagination",
+            "labor_context",
+            "lending_context",
+            "warnings_",
+            "enrichment_warnings",
+        ):
+            assert name in fields
+
+    def test_financial_statement_list_item_has_enrichment_fields(self) -> None:
+        from thesma._generated.models import FinancialStatementListItem
+
+        FinancialStatementListItem.model_rebuild()
+        fields = FinancialStatementListItem.model_fields
+        assert "labor_context" in fields
+        assert "lending_context" in fields
+        # Cannot subclass FinancialStatementResponse (codegen-order constraint);
+        # statement fields pass through via extra="allow".
+        assert FinancialStatementListItem.model_config.get("extra") == "allow"
+
+    def test_multi_statement_list_item_has_enrichment_fields(self) -> None:
+        from thesma._generated.models import MultiStatementListItem
+
+        MultiStatementListItem.model_rebuild()
+        fields = MultiStatementListItem.model_fields
+        assert "labor_context" in fields
+        assert "lending_context" in fields
+        assert MultiStatementListItem.model_config.get("extra") == "allow"
+
+
+class TestDataResponseSiblings:
+    """SDK-33: verify DataResponse[T] exposes envelope-metadata siblings."""
+
+    def test_data_response_parses_raw_wire_keys(self) -> None:
+        """Regression test for the alias-vs-serialization_alias trap —
+        the declared fields must parse from the underscore-prefixed wire
+        keys, not from the Python attribute names.
+        """
+        from thesma._generated.models import EnrichmentWarning
+        from thesma._types import DataResponse
+
+        resp = DataResponse[int].model_validate(
+            {
+                "data": 42,
+                "_warnings": ["deprecated endpoint"],
+                "_enrichment_warnings": [
+                    {"field": "labor_context", "reason": "timeout"},
+                ],
+            }
+        )
+        assert resp.data == 42
+        assert resp.warnings_ == ["deprecated endpoint"]
+        assert resp.enrichment_warnings is not None
+        assert len(resp.enrichment_warnings) == 1
+        assert isinstance(resp.enrichment_warnings[0], EnrichmentWarning)
+        assert resp.enrichment_warnings[0].field == "labor_context"
+
+    def test_data_response_no_siblings_defaults_to_none(self) -> None:
+        from thesma._types import DataResponse
+
+        resp = DataResponse[int].model_validate({"data": 42})
+        assert resp.warnings_ is None
+        assert resp.enrichment_warnings is None
+
+    def test_data_response_model_dump_emits_wire_aliases(self) -> None:
+        """Round-trip: ``model_dump(by_alias=True, exclude_none=True)``
+        emits the underscore-prefixed wire keys, not the Python attribute
+        names. ``exclude_none=True`` required because Pydantic v2's default
+        ``model_dump`` includes ``None``-valued fields verbatim.
+        """
+        from thesma._generated.models import EnrichmentWarning
+        from thesma._types import DataResponse
+
+        resp = DataResponse[int](
+            data=42,
+            enrichment_warnings=[EnrichmentWarning(field="labor_context", reason="timeout")],
+        )
+        dumped = resp.model_dump(by_alias=True, exclude_none=True)
+        assert dumped["data"] == 42
+        assert "_enrichment_warnings" in dumped
+        assert "enrichment_warnings" not in dumped  # Python name never on wire
+        assert "_warnings" not in dumped  # None-valued, excluded
+        assert dumped["_enrichment_warnings"][0]["field"] == "labor_context"
 
 
 class TestIfrsReportingNotesModels:

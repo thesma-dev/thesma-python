@@ -3,7 +3,7 @@
   "info": {
     "title": "Thesma API",
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
-    "version": "0.10.0"
+    "version": "0.10.1"
   },
   "servers": [
     {
@@ -16496,19 +16496,40 @@
       "LocalMarketContext": {
         "properties": {
           "county_fips": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "County Fips",
-            "description": "Company HQ county FIPS code."
+            "description": "Company HQ county FIPS code. Null when only state-level resolution was possible."
           },
           "county_name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "County Name",
-            "description": "County name + state abbreviation."
+            "description": "County name + state abbreviation. Null when only state-level resolution was possible."
           },
           "county_fips_confidence": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "County Fips Confidence",
-            "description": "Confidence of FIPS mapping: 'high', 'medium', 'low'."
+            "description": "Confidence of FIPS mapping: 'high', 'medium', 'low'. Null when only state-level resolution was possible."
           },
           "industry_employment": {
             "anyOf": [
@@ -16728,11 +16749,6 @@
           }
         },
         "type": "object",
-        "required": [
-          "county_fips",
-          "county_name",
-          "county_fips_confidence"
-        ],
         "title": "LocalMarketContext",
         "description": "Local labour market context for a company's HQ county.\n\nMerges QCEW (industry + county employment/wages) and LAUS\n(county/state unemployment rate and labour force) signals into a\nsingle object. Either source may be absent independently."
       },

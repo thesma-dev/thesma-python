@@ -104,15 +104,24 @@ def format_output() -> None:
     )
 
 
-# --- SDK-24 hand-corrections -----------------------------------------------
+# --- SDK hand-corrections --------------------------------------------------
 #
 # Codegen emits several shapes that don't match the hand-tuned public API.
-# These post-process replacements re-apply the SDK-24 corrections so they
-# survive every regen. Adding a new hand-correction? Append a (old, new)
-# pair to ``_SDK24_PATCHES`` below and a matching regression test in
-# ``tests/test_contract.py``.
+# These post-process replacements re-apply the hand-corrections so they
+# survive every regen. Two generations of patches currently live here:
+#
+# - SDK-24 (patches #1-#4): IFRS typed-field hoist on the financial
+#   statement response.
+# - SDK-33 (patches #5-#12): enrichment-envelope typed hoist — the 6
+#   ``Enriched*`` stubs plus the 2 list-element stubs that codegen leaves
+#   opaque because the server uses ``@model_serializer`` and the schema
+#   renders as ``additionalProperties: true``.
+#
+# Adding a new hand-correction? Append a (old, new) pair to ``_SDK_PATCHES``
+# below and a matching regression test in ``tests/test_contract.py`` or
+# ``tests/test_models.py``.
 
-_SDK24_PATCHES: list[tuple[str, str]] = [
+_SDK_PATCHES: list[tuple[str, str]] = [
     # 1) ReportingNotes.presentation_format: Literal, not PresentationFormat enum.
     #    Codegen (datamodel-code-generator 0.55) emits single quotes and wraps
     #    the Annotated across three lines; ruff format (run AFTER patches apply)
@@ -188,13 +197,194 @@ _SDK24_PATCHES: list[tuple[str, str]] = [
         "    conditional keys appear only when their condition fires.\n"
         '    """\n',
     ),
+    # ------------------------------------------------------------------
+    # SDK-33 patches (#5-#12): enrichment-envelope typed hoist
+    # ------------------------------------------------------------------
+    # Server-side @model_serializer in govdata-api/src/api/schemas/
+    # bls_enrichment_envelope.py hides field schemas from OpenAPI, so
+    # codegen emits every Enriched* class and the two list-element
+    # classes as opaque ``extra='allow'`` stubs. These patches replace
+    # those stubs with declared typed fields. All ``old`` strings are
+    # the uniform codegen shape captured 2026-04-24 from codegen 0.55
+    # (datamodel-code-generator). Note: forward-ref to classes defined
+    # later in the file works because ``from __future__ import
+    # annotations`` (line 9 of models.py) defers annotation evaluation
+    # — but subclass headers (``class X(Parent)``) ARE eagerly resolved,
+    # so patches #11/#12 keep ``(BaseModel)`` rather than subclassing
+    # their respective parents (which codegen emits later in the file).
+    # 5) EnrichedCompanyData: typed enrichment + 7 S1 expander slots.
+    #    Keeps ``extra='allow'`` so base company fields (cik, name,
+    #    ticker, sic_code, exchange, domicile, …) continue to pass
+    #    through; the SDK has no ``CompanyResponse`` codegen class to
+    #    subclass, and existing consumers rely on the passthrough.
+    (
+        "class EnrichedCompanyData(BaseModel):\n    model_config = ConfigDict(\n        extra='allow',\n    )",
+        "class EnrichedCompanyData(BaseModel):\n"
+        "    # SDK-33 hand-correction: declare typed enrichment siblings\n"
+        "    # (labor_context, lending_context) plus the 7 S1 expander\n"
+        "    # slots. Base identification fields (cik, name, ticker, …)\n"
+        "    # pass through via ``extra='allow'`` because the SDK has no\n"
+        "    # CompanyResponse codegen class — preserves pre-SDK-33\n"
+        "    # passthrough behaviour for those fields.\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    lending_context: LendingContext | None = None\n"
+        "    financials: Any | None = None\n"
+        "    ratios: Any | None = None\n"
+        "    events: Any | None = None\n"
+        "    insider_trades: Any | None = None\n"
+        "    holders: Any | None = None\n"
+        "    compensation: Any | None = None\n"
+        "    board: Any | None = None",
+    ),
+    # 6) EnrichedCompanyDataResponse: data + envelope-metadata siblings.
+    (
+        "class EnrichedCompanyDataResponse(BaseModel):\n    model_config = ConfigDict(\n        extra='allow',\n    )",
+        "class EnrichedCompanyDataResponse(BaseModel):\n"
+        "    # SDK-33 hand-correction: declare data + envelope-metadata\n"
+        "    # siblings (_warnings / _enrichment_warnings) the server\n"
+        "    # emits via @model_serializer. Inbound ``alias`` (not\n"
+        "    # ``serialization_alias``) so raw wire keys parse correctly.\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    data: EnrichedCompanyData\n"
+        "    warnings_: Annotated[\n"
+        '        list[str] | None, Field(alias="_warnings")\n'
+        "    ] = None\n"
+        "    enrichment_warnings: Annotated[\n"
+        '        list[EnrichmentWarning] | None, Field(alias="_enrichment_warnings")\n'
+        "    ] = None",
+    ),
+    # 7) EnrichedCompensationDataResponse: data + labor_context only.
+    #    Compensation is labor-only; no lending_context per
+    #    bls_enrichment_envelope.py:158-179.
+    (
+        "class EnrichedCompensationDataResponse(BaseModel):\n"
+        "    model_config = ConfigDict(\n"
+        "        extra='allow',\n"
+        "    )",
+        "class EnrichedCompensationDataResponse(BaseModel):\n"
+        "    # SDK-33 hand-correction: data + labor_context + envelope\n"
+        "    # metadata siblings. NO lending_context — compensation is\n"
+        "    # labor-only per the server envelope definition.\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    data: CompensationResponse\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    warnings_: Annotated[\n"
+        '        list[str] | None, Field(alias="_warnings")\n'
+        "    ] = None\n"
+        "    enrichment_warnings: Annotated[\n"
+        '        list[EnrichmentWarning] | None, Field(alias="_enrichment_warnings")\n'
+        "    ] = None",
+    ),
+    # 8) EnrichedFinancialDataResponse: data + labor + lending + siblings.
+    (
+        "class EnrichedFinancialDataResponse(BaseModel):\n"
+        "    model_config = ConfigDict(\n"
+        "        extra='allow',\n"
+        "    )",
+        "class EnrichedFinancialDataResponse(BaseModel):\n"
+        "    # SDK-33 hand-correction: data + labor_context +\n"
+        "    # lending_context + envelope-metadata siblings.\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    data: FinancialStatementResponse\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    lending_context: LendingContext | None = None\n"
+        "    warnings_: Annotated[\n"
+        '        list[str] | None, Field(alias="_warnings")\n'
+        "    ] = None\n"
+        "    enrichment_warnings: Annotated[\n"
+        '        list[EnrichmentWarning] | None, Field(alias="_enrichment_warnings")\n'
+        "    ] = None",
+    ),
+    # 9) EnrichedMultiStatementPaginatedResponse: list + pagination +
+    #    envelope-root labor/lending + siblings. Uses the codegen
+    #    PaginationMeta (same file, later in module); the hand-written
+    #    thesma._types.PaginationMeta adds a validator but would
+    #    introduce a circular import here — do NOT import it.
+    (
+        "class EnrichedMultiStatementPaginatedResponse(BaseModel):\n"
+        "    model_config = ConfigDict(\n"
+        "        extra='allow',\n"
+        "    )",
+        "class EnrichedMultiStatementPaginatedResponse(BaseModel):\n"
+        "    # SDK-33 hand-correction: list of MultiStatementListItem +\n"
+        "    # codegen PaginationMeta + envelope-root labor/lending +\n"
+        "    # envelope-metadata siblings. PaginationMeta is the codegen\n"
+        "    # class in THIS file (not thesma._types.PaginationMeta).\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    data: list[MultiStatementListItem]\n"
+        "    pagination: PaginationMeta\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    lending_context: LendingContext | None = None\n"
+        "    warnings_: Annotated[\n"
+        '        list[str] | None, Field(alias="_warnings")\n'
+        "    ] = None\n"
+        "    enrichment_warnings: Annotated[\n"
+        '        list[EnrichmentWarning] | None, Field(alias="_enrichment_warnings")\n'
+        "    ] = None",
+    ),
+    # 10) EnrichedMultiStatementResponse: data + labor + lending + siblings.
+    (
+        "class EnrichedMultiStatementResponse(BaseModel):\n"
+        "    model_config = ConfigDict(\n"
+        "        extra='allow',\n"
+        "    )",
+        "class EnrichedMultiStatementResponse(BaseModel):\n"
+        "    # SDK-33 hand-correction: data + labor_context +\n"
+        "    # lending_context + envelope-metadata siblings.\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    data: MultiStatementResponse\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    lending_context: LendingContext | None = None\n"
+        "    warnings_: Annotated[\n"
+        '        list[str] | None, Field(alias="_warnings")\n'
+        "    ] = None\n"
+        "    enrichment_warnings: Annotated[\n"
+        '        list[EnrichmentWarning] | None, Field(alias="_enrichment_warnings")\n'
+        "    ] = None",
+    ),
+    # 11) FinancialStatementListItem: keep (BaseModel) because codegen
+    #     emits this class BEFORE FinancialStatementResponse (opposite
+    #     order from server); subclassing the parent would NameError at
+    #     class-definition time. ``extra='allow'`` preserves passthrough
+    #     for the 20+ statement fields (revenue, net_income, …).
+    (
+        "class FinancialStatementListItem(BaseModel):\n    model_config = ConfigDict(\n        extra='allow',\n    )",
+        "class FinancialStatementListItem(BaseModel):\n"
+        "    # SDK-33 hand-correction: declare typed enrichment fields;\n"
+        "    # statement fields pass through via ``extra='allow'`` (cannot\n"
+        "    # subclass FinancialStatementResponse because codegen emits\n"
+        "    # this class earlier in the file than the parent).\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    lending_context: LendingContext | None = None",
+    ),
+    # 12) MultiStatementListItem: same rationale as #11.
+    (
+        "class MultiStatementListItem(BaseModel):\n    model_config = ConfigDict(\n        extra='allow',\n    )",
+        "class MultiStatementListItem(BaseModel):\n"
+        "    # SDK-33 hand-correction: declare typed enrichment fields;\n"
+        "    # statement fields pass through via ``extra='allow'`` (cannot\n"
+        "    # subclass MultiStatementResponse — codegen-order constraint).\n"
+        '    model_config = ConfigDict(populate_by_name=True, extra="allow")\n'
+        "\n"
+        "    labor_context: LaborContext | None = None\n"
+        "    lending_context: LendingContext | None = None",
+    ),
 ]
 
 
 def apply_hand_corrections() -> None:
-    """Re-apply SDK-24 hand-corrections that codegen overwrites.
+    """Re-apply SDK hand-corrections that codegen overwrites.
 
-    See ``_SDK24_PATCHES`` for the list. Each patch is applied via exact
+    See ``_SDK_PATCHES`` for the list. Each patch is applied via exact
     string replacement; if a patch no longer matches (codegen output
     shifted), this function raises so the mismatch is visible, not silent —
     the regen then fails loudly rather than shipping a file missing the
@@ -202,7 +392,7 @@ def apply_hand_corrections() -> None:
     """
     content = OUTPUT.read_text()
     unmatched: list[int] = []
-    for idx, (old, new) in enumerate(_SDK24_PATCHES, start=1):
+    for idx, (old, new) in enumerate(_SDK_PATCHES, start=1):
         if old not in content:
             unmatched.append(idx)
             continue
@@ -210,8 +400,8 @@ def apply_hand_corrections() -> None:
     if unmatched:
         OUTPUT.write_text(content)  # flush partially-applied corrections so the diff is useful
         raise RuntimeError(
-            f"SDK-24 hand-correction patch(es) {unmatched} did not match current codegen output. "
-            "Inspect scripts/regenerate.py::_SDK24_PATCHES and realign the `old` strings with the "
+            f"SDK hand-correction patch(es) {unmatched} did not match current codegen output. "
+            "Inspect scripts/regenerate.py::_SDK_PATCHES and realign the `old` strings with the "
             "post-regen output (usually a comment/whitespace shift in codegen is the culprit). "
             "Partial corrections have been flushed to models.py — re-run after fixing the patch."
         )

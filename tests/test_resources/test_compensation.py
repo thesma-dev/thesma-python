@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import respx
 
-from thesma._generated.models import BoardResponse, CompensationResponse
+from thesma._generated.models import BoardResponse, CompensationResponse, EnrichedCompensationDataResponse
 from thesma._types import DataResponse
 from thesma.client import ThesmaClient
 
@@ -62,7 +62,7 @@ class TestCompensationGet:
         result = client.compensation.get("0000320193")
 
         assert route.called
-        assert isinstance(result, DataResponse)
+        assert isinstance(result, EnrichedCompensationDataResponse)
         assert isinstance(result.data, CompensationResponse)
         assert result.data.fiscal_year == 2024
         client.close()
