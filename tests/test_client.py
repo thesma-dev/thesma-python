@@ -146,3 +146,18 @@ class TestHTTPRequests:
         assert result.name == "Test"
         assert result.value == 7
         client.close()
+
+
+# --- SDK-36 regression: webhooks resource removed ---
+
+
+class TestWebhooksRemoved:
+    def test_sync_client_has_no_webhooks_attribute(self) -> None:
+        client = ThesmaClient(api_key="test")
+        with pytest.raises(AttributeError):
+            _ = client.webhooks  # type: ignore[attr-defined]
+
+    def test_async_client_has_no_webhooks_attribute(self) -> None:
+        client = AsyncThesmaClient(api_key="test")
+        with pytest.raises(AttributeError):
+            _ = client.webhooks  # type: ignore[attr-defined]

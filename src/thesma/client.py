@@ -34,7 +34,6 @@ from thesma.resources.ratios import Ratios
 from thesma.resources.sba import Sba
 from thesma.resources.screener import Screener
 from thesma.resources.sections import Sections
-from thesma.resources.webhooks import Webhooks
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -96,7 +95,6 @@ class ThesmaClient:
         self.sba = Sba(self)
         self.screener = Screener(self)
         self.sections = Sections(self)
-        self.webhooks = Webhooks(self)
 
     # -- lazy httpx.Client init (thread-safe) --
 
@@ -260,7 +258,6 @@ class AsyncThesmaClient:
         self.sba = Sba(self)
         self.screener = Screener(self)
         self.sections = Sections(self)
-        self.webhooks = Webhooks(self)
 
     # -- lazy httpx.AsyncClient init --
 
