@@ -17,7 +17,6 @@ from thesma.resources.ratios import Ratios
 from thesma.resources.sba import Sba
 from thesma.resources.screener import Screener
 from thesma.resources.sections import Sections
-from thesma.resources.webhooks import Webhooks
 
 __all__ = [
     "AsyncExport",
@@ -38,5 +37,4 @@ __all__ = [
     "Sba",
     "Screener",
     "Sections",
-    "Webhooks",
 ]

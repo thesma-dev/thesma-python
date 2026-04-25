@@ -3,7 +3,7 @@
   "info": {
     "title": "Thesma API",
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
-    "version": "0.10.1"
+    "version": "0.11.0"
   },
   "servers": [
     {
@@ -3158,10 +3158,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Comma-separated list of expander values to inline into the response. Accepted values: labor_context, lending_context, financials, ratios, events, insider_trades, holders, compensation, board. Requesting ``events`` currently returns 400 (disabled in v1). ``all`` / ``*`` are not accepted \u2014 always list expander values explicitly.",
+              "description": "Comma-separated list of expander values to inline into the response. Accepted values: labor_context, lending_context, financials, ratios, events, insider_trades, holders, compensation, board. ``all`` / ``*`` are not accepted \u2014 always list expander values explicitly.",
               "title": "Include"
             },
-            "description": "Comma-separated list of expander values to inline into the response. Accepted values: labor_context, lending_context, financials, ratios, events, insider_trades, holders, compensation, board. Requesting ``events`` currently returns 400 (disabled in v1). ``all`` / ``*`` are not accepted \u2014 always list expander values explicitly."
+            "description": "Comma-separated list of expander values to inline into the response. Accepted values: labor_context, lending_context, financials, ratios, events, insider_trades, holders, compensation, board. ``all`` / ``*`` are not accepted \u2014 always list expander values explicitly."
           }
         ],
         "responses": {
@@ -4354,7 +4354,7 @@
           "Financials"
         ],
         "summary": "Get Financials",
-        "description": "Return a financial statement (income, balance sheet, or cash flow) for a company. Values are reported in the filer's presentation currency with no FX conversion. See [Reporting basis and comparability](./financials-reporting-basis.md) for details on taxonomy (us-gaap vs ifrs-full), currency, presentation format, and the six comparability caveats \u2014 including the bank-extension caveat that applies to Nu Holdings, HSBC, and Deutsche Bank.",
+        "description": "Return a financial statement (income, balance sheet, or cash flow) for a company. Values are reported in the filer's presentation currency with no FX conversion. See [Reporting basis and comparability](https://docs.thesma.dev/datasets/sec-edgar/xbrl-mapping#reporting-basis-and-comparability) for details on taxonomy (us-gaap vs ifrs-full), currency, presentation format, and the six comparability caveats \u2014 including the bank-extension caveat that applies to Nu Holdings and other IFRS-reporting banks.",
         "operationId": "get_financials_v1_us_sec_companies__cik__financials_get",
         "parameters": [
           {
@@ -6239,10 +6239,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum gross margin (%)",
+              "description": "Minimum gross margin (%). Use 20 for 20%, not 0.20.",
               "title": "Min Gross Margin"
             },
-            "description": "Minimum gross margin (%)"
+            "description": "Minimum gross margin (%). Use 20 for 20%, not 0.20."
           },
           {
             "name": "max_gross_margin",
@@ -6257,10 +6257,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum gross margin (%)",
+              "description": "Maximum gross margin (%). Use 20 for 20%, not 0.20.",
               "title": "Max Gross Margin"
             },
-            "description": "Maximum gross margin (%)"
+            "description": "Maximum gross margin (%). Use 20 for 20%, not 0.20."
           },
           {
             "name": "min_operating_margin",
@@ -6275,10 +6275,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum operating margin (%)",
+              "description": "Minimum operating margin (%). Use 20 for 20%, not 0.20.",
               "title": "Min Operating Margin"
             },
-            "description": "Minimum operating margin (%)"
+            "description": "Minimum operating margin (%). Use 20 for 20%, not 0.20."
           },
           {
             "name": "min_net_margin",
@@ -6293,10 +6293,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum net margin (%)",
+              "description": "Minimum net margin (%). Use 20 for 20%, not 0.20.",
               "title": "Min Net Margin"
             },
-            "description": "Minimum net margin (%)"
+            "description": "Minimum net margin (%). Use 20 for 20%, not 0.20."
           },
           {
             "name": "min_return_on_equity",
@@ -6311,10 +6311,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum ROE (%)",
+              "description": "Minimum ROE (%). Use 20 for 20%, not 0.20.",
               "title": "Min Return On Equity"
             },
-            "description": "Minimum ROE (%)"
+            "description": "Minimum ROE (%). Use 20 for 20%, not 0.20."
           },
           {
             "name": "min_return_on_assets",
@@ -6329,10 +6329,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum ROA (%)",
+              "description": "Minimum ROA (%). Use 20 for 20%, not 0.20.",
               "title": "Min Return On Assets"
             },
-            "description": "Minimum ROA (%)"
+            "description": "Minimum ROA (%). Use 20 for 20%, not 0.20."
           },
           {
             "name": "max_debt_to_equity",
@@ -6401,10 +6401,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum revenue growth YoY (%)",
+              "description": "Minimum revenue growth YoY (%). Use 10 for +10%, -5 for -5% (not 0.10 / -0.05).",
               "title": "Min Revenue Growth"
             },
-            "description": "Minimum revenue growth YoY (%)"
+            "description": "Minimum revenue growth YoY (%). Use 10 for +10%, -5 for -5% (not 0.10 / -0.05)."
           },
           {
             "name": "min_eps_growth",
@@ -6419,10 +6419,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum EPS growth YoY (%)",
+              "description": "Minimum EPS growth YoY (%). Use 10 for +10%, -5 for -5% (not 0.10 / -0.05).",
               "title": "Min Eps Growth"
             },
-            "description": "Minimum EPS growth YoY (%)"
+            "description": "Minimum EPS growth YoY (%). Use 10 for +10%, -5 for -5% (not 0.10 / -0.05)."
           },
           {
             "name": "tier",
@@ -6623,10 +6623,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum institutional ownership percentage (0-100+)",
+              "description": "Minimum institutional ownership percentage (0-100+). Use 20 for 20%, not 0.20.",
               "title": "Min Institutional Ownership Pct"
             },
-            "description": "Minimum institutional ownership percentage (0-100+)"
+            "description": "Minimum institutional ownership percentage (0-100+). Use 20 for 20%, not 0.20."
           },
           {
             "name": "industry_hiring_trend",
@@ -6659,10 +6659,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum YoY % change in national CES employment. Requires BLS dataset.",
+              "description": "Minimum YoY % change in national CES employment. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset.",
               "title": "Min Industry Employment Growth"
             },
-            "description": "Minimum YoY % change in national CES employment. Requires BLS dataset."
+            "description": "Minimum YoY % change in national CES employment. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset."
           },
           {
             "name": "max_industry_employment_growth",
@@ -6677,10 +6677,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum YoY % change in national CES employment. Requires BLS dataset.",
+              "description": "Maximum YoY % change in national CES employment. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset.",
               "title": "Max Industry Employment Growth"
             },
-            "description": "Maximum YoY % change in national CES employment. Requires BLS dataset."
+            "description": "Maximum YoY % change in national CES employment. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset."
           },
           {
             "name": "min_industry_wage_growth",
@@ -6695,10 +6695,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum YoY % change in national QCEW avg weekly wage. Requires BLS dataset.",
+              "description": "Minimum YoY % change in national QCEW avg weekly wage. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset.",
               "title": "Min Industry Wage Growth"
             },
-            "description": "Minimum YoY % change in national QCEW avg weekly wage. Requires BLS dataset."
+            "description": "Minimum YoY % change in national QCEW avg weekly wage. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset."
           },
           {
             "name": "min_hq_county_wage_growth",
@@ -6713,10 +6713,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum YoY % change in HQ county avg weekly wage. Requires BLS dataset.",
+              "description": "Minimum YoY % change in HQ county avg weekly wage. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset.",
               "title": "Min Hq County Wage Growth"
             },
-            "description": "Minimum YoY % change in HQ county avg weekly wage. Requires BLS dataset."
+            "description": "Minimum YoY % change in HQ county avg weekly wage. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05). Requires BLS dataset."
           },
           {
             "name": "min_comp_to_market_ratio",
@@ -6749,10 +6749,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum JOLTS quits rate (%) in company's industry. Requires BLS dataset.",
+              "description": "Minimum JOLTS quits rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset.",
               "title": "Min Industry Quits Rate"
             },
-            "description": "Minimum JOLTS quits rate (%) in company's industry. Requires BLS dataset."
+            "description": "Minimum JOLTS quits rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset."
           },
           {
             "name": "max_industry_quits_rate",
@@ -6767,10 +6767,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum JOLTS quits rate (%) in company's industry. Requires BLS dataset.",
+              "description": "Maximum JOLTS quits rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset.",
               "title": "Max Industry Quits Rate"
             },
-            "description": "Maximum JOLTS quits rate (%) in company's industry. Requires BLS dataset."
+            "description": "Maximum JOLTS quits rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset."
           },
           {
             "name": "min_industry_openings_rate",
@@ -6785,10 +6785,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum JOLTS job openings rate (%) in company's industry. Requires BLS dataset.",
+              "description": "Minimum JOLTS job openings rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset.",
               "title": "Min Industry Openings Rate"
             },
-            "description": "Minimum JOLTS job openings rate (%) in company's industry. Requires BLS dataset."
+            "description": "Minimum JOLTS job openings rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset."
           },
           {
             "name": "max_industry_openings_rate",
@@ -6803,10 +6803,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum JOLTS job openings rate (%) in company's industry. Requires BLS dataset.",
+              "description": "Maximum JOLTS job openings rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset.",
               "title": "Max Industry Openings Rate"
             },
-            "description": "Maximum JOLTS job openings rate (%) in company's industry. Requires BLS dataset."
+            "description": "Maximum JOLTS job openings rate (%) in company's industry. Use 20 for 20%, not 0.20. Requires BLS dataset."
           },
           {
             "name": "min_local_unemployment_rate",
@@ -6821,10 +6821,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum HQ county unemployment rate (%). Requires BLS dataset.",
+              "description": "Minimum HQ county unemployment rate (%). Use 20 for 20%, not 0.20. Requires BLS dataset.",
               "title": "Min Local Unemployment Rate"
             },
-            "description": "Minimum HQ county unemployment rate (%). Requires BLS dataset."
+            "description": "Minimum HQ county unemployment rate (%). Use 20 for 20%, not 0.20. Requires BLS dataset."
           },
           {
             "name": "max_local_unemployment_rate",
@@ -6839,10 +6839,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum HQ county unemployment rate (%). Requires BLS dataset.",
+              "description": "Maximum HQ county unemployment rate (%). Use 20 for 20%, not 0.20. Requires BLS dataset.",
               "title": "Max Local Unemployment Rate"
             },
-            "description": "Maximum HQ county unemployment rate (%). Requires BLS dataset."
+            "description": "Maximum HQ county unemployment rate (%). Use 20 for 20%, not 0.20. Requires BLS dataset."
           },
           {
             "name": "local_unemployment_trend",
@@ -6929,10 +6929,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum YoY % change in county SBA lending volume.",
+              "description": "Minimum YoY % change in county SBA lending volume. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05).",
               "title": "Min Local Sba Lending Growth"
             },
-            "description": "Minimum YoY % change in county SBA lending volume."
+            "description": "Minimum YoY % change in county SBA lending volume. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05)."
           },
           {
             "name": "max_local_sba_lending_growth",
@@ -6947,10 +6947,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum YoY % change in county SBA lending volume.",
+              "description": "Maximum YoY % change in county SBA lending volume. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05).",
               "title": "Max Local Sba Lending Growth"
             },
-            "description": "Maximum YoY % change in county SBA lending volume."
+            "description": "Maximum YoY % change in county SBA lending volume. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05)."
           },
           {
             "name": "min_industry_sba_lending_growth",
@@ -6965,10 +6965,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Minimum YoY % change in national NAICS SBA lending volume.",
+              "description": "Minimum YoY % change in national NAICS SBA lending volume. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05).",
               "title": "Min Industry Sba Lending Growth"
             },
-            "description": "Minimum YoY % change in national NAICS SBA lending volume."
+            "description": "Minimum YoY % change in national NAICS SBA lending volume. Use 10 for +10%, -5 for -5% (not 0.10 / -0.05)."
           },
           {
             "name": "max_industry_sba_charge_off_rate",
@@ -6983,10 +6983,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Maximum charge-off rate (%) in company's NAICS nationally (mature vintages).",
+              "description": "Maximum charge-off rate (%) in company's NAICS nationally (mature vintages). Use 20 for 20%, not 0.20.",
               "title": "Max Industry Sba Charge Off Rate"
             },
-            "description": "Maximum charge-off rate (%) in company's NAICS nationally (mature vintages)."
+            "description": "Maximum charge-off rate (%) in company's NAICS nationally (mature vintages). Use 20 for 20%, not 0.20."
           },
           {
             "name": "include",
@@ -9655,6 +9655,28 @@
         }
       }
     },
+    "/v1/webhooks/event-types": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List Event Types",
+        "description": "Return the catalog of subscribable webhook event types.",
+        "operationId": "list_event_types_v1_webhooks_event_types_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_WebhookEventTypeResponse__"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/webhooks": {
       "get": {
         "tags": [
@@ -9898,6 +9920,144 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_WebhookDeliveryResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{subscription_id}/rotate-secret": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Rotate Webhook Secret",
+        "description": "Generate a new HMAC signing secret. Shown once \u2014 store it immediately.\n\nOld secret is immediately invalidated. In-flight deliveries signed with the\nold secret will fail customer-side verification but still appear in the delivery log.",
+        "operationId": "rotate_webhook_secret_v1_webhooks__subscription_id__rotate_secret_post",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subscription Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_WebhookSecretRotateResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{subscription_id}/test": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Test Webhook",
+        "description": "Emit a synthetic webhook.test event to the registered URL.\n\nRate-limited to 5 per subscription per 60 seconds. The delivery is processed\nasynchronously by the standard delivery worker and appears in the delivery log.",
+        "operationId": "test_webhook_v1_webhooks__subscription_id__test_post",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subscription Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_WebhookTestResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{subscription_id}/deliveries/{delivery_id}/replay": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Replay Delivery",
+        "description": "Re-queue a delivery using the same event payload.\n\nCreates a new delivery row with triggered_by='replay'. The original delivery\nis unchanged. Returns 410 if the event is older than the 7-day retention window.",
+        "operationId": "replay_delivery_v1_webhooks__subscription_id__deliveries__delivery_id__replay_post",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delivery Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_WebhookReplayResponse_"
                 }
               }
             }
@@ -12561,6 +12721,18 @@
         ],
         "title": "DataResponse[WebhookCreateResponse]"
       },
+      "DataResponse_WebhookReplayResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WebhookReplayResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[WebhookReplayResponse]"
+      },
       "DataResponse_WebhookResponse_": {
         "properties": {
           "data": {
@@ -12572,6 +12744,30 @@
           "data"
         ],
         "title": "DataResponse[WebhookResponse]"
+      },
+      "DataResponse_WebhookSecretRotateResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WebhookSecretRotateResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[WebhookSecretRotateResponse]"
+      },
+      "DataResponse_WebhookTestResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WebhookTestResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[WebhookTestResponse]"
       },
       "DataResponse_list_EventCategory__": {
         "properties": {
@@ -12620,6 +12816,22 @@
           "data"
         ],
         "title": "DataResponse[list[MetricSummary]]"
+      },
+      "DataResponse_list_WebhookEventTypeResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventTypeResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[WebhookEventTypeResponse]]"
       },
       "DataResponse_list_WebhookResponse__": {
         "properties": {
@@ -21151,8 +21363,11 @@
             "items": {
               "type": "string",
               "enum": [
-                "filing.processed",
-                "filing.corrected"
+                "filing.created",
+                "corporate_event.created",
+                "compensation.filed",
+                "board.changed",
+                "amendment.filed"
               ]
             },
             "type": "array",
@@ -21207,6 +21422,31 @@
             "format": "date-time",
             "title": "Updated At",
             "description": "Timestamp when the subscription was last updated."
+          },
+          "last_delivery_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery At",
+            "description": "Timestamp of the most recent delivery attempt. Null if no deliveries yet."
+          },
+          "success_rate_last_100": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Rate Last 100",
+            "description": "Success rate across the last 100 deliveries (0.0\u20131.0). Null if no deliveries yet."
           },
           "secret": {
             "type": "string",
@@ -21310,6 +21550,29 @@
             ],
             "title": "Completed At",
             "description": "Timestamp when the delivery succeeded or was abandoned."
+          },
+          "response_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Body",
+            "description": "Up to 1024 bytes of the customer endpoint response body, captured at delivery time."
+          },
+          "triggered_by": {
+            "type": "string",
+            "enum": [
+              "original",
+              "replay",
+              "test"
+            ],
+            "title": "Triggered By",
+            "description": "Provenance of this delivery: 'original' (organic), 'replay', or 'test'.",
+            "default": "original"
           }
         },
         "type": "object",
@@ -21322,6 +21585,58 @@
           "created_at"
         ],
         "title": "WebhookDeliveryResponse"
+      },
+      "WebhookEventTypeResponse": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type",
+            "description": "Event type identifier."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Human-readable description of the event."
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Category grouping for the event type."
+          },
+          "payload_schema_url": {
+            "type": "string",
+            "title": "Payload Schema Url",
+            "description": "URL to the payload schema documentation."
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type",
+          "description",
+          "category",
+          "payload_schema_url"
+        ],
+        "title": "WebhookEventTypeResponse"
+      },
+      "WebhookReplayResponse": {
+        "properties": {
+          "replay_delivery_id": {
+            "type": "string",
+            "title": "Replay Delivery Id",
+            "description": "ID of the newly queued replay delivery."
+          },
+          "queued_at": {
+            "type": "string",
+            "title": "Queued At",
+            "description": "ISO 8601 timestamp when the replay was queued."
+          }
+        },
+        "type": "object",
+        "required": [
+          "replay_delivery_id",
+          "queued_at"
+        ],
+        "title": "WebhookReplayResponse"
       },
       "WebhookResponse": {
         "properties": {
@@ -21339,8 +21654,11 @@
             "items": {
               "type": "string",
               "enum": [
-                "filing.processed",
-                "filing.corrected"
+                "filing.created",
+                "corporate_event.created",
+                "compensation.filed",
+                "board.changed",
+                "amendment.filed"
               ]
             },
             "type": "array",
@@ -21395,6 +21713,31 @@
             "format": "date-time",
             "title": "Updated At",
             "description": "Timestamp when the subscription was last updated."
+          },
+          "last_delivery_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery At",
+            "description": "Timestamp of the most recent delivery attempt. Null if no deliveries yet."
+          },
+          "success_rate_last_100": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Rate Last 100",
+            "description": "Success rate across the last 100 deliveries (0.0\u20131.0). Null if no deliveries yet."
           }
         },
         "type": "object",
@@ -21408,6 +21751,46 @@
           "updated_at"
         ],
         "title": "WebhookResponse"
+      },
+      "WebhookSecretRotateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Webhook subscription ID."
+          },
+          "secret": {
+            "type": "string",
+            "title": "Secret",
+            "description": "New HMAC signing secret. Shown once \u2014 store it now."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "secret"
+        ],
+        "title": "WebhookSecretRotateResponse"
+      },
+      "WebhookTestResponse": {
+        "properties": {
+          "test_delivery_id": {
+            "type": "string",
+            "title": "Test Delivery Id",
+            "description": "ID of the newly queued test delivery."
+          },
+          "queued_at": {
+            "type": "string",
+            "title": "Queued At",
+            "description": "ISO 8601 timestamp when the test delivery was queued."
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_delivery_id",
+          "queued_at"
+        ],
+        "title": "WebhookTestResponse"
       },
       "WebhookUpdateRequest": {
         "properties": {

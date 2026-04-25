@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0.0] - 2026-04-25
+
+### Breaking
+- `client.webhooks` resource removed. Webhook management endpoints on the
+  api (`/v1/webhooks/*`) use JWT authentication; the SDK uses `X-API-Key`
+  exclusively. The previous `client.webhooks.list()`, `create()`, `get()`,
+  `update()`, `delete()`, and `deliveries()` methods returned `403
+  Forbidden` against the live api for every caller — the resource was
+  dead code that misrepresented the SDK's surface. Customers needing
+  programmatic webhook management should call the api endpoints directly
+  with a portal JWT; see https://docs.thesma.dev/webhooks for the
+  supported flow.
+
+### Changed
+- Generated models regenerated from api OpenAPI 0.11.0. The post-S-14
+  webhook schemas (`WebhookEventTypeResponse`, `WebhookSecretRotateResponse`,
+  `WebhookTestResponse`, `WebhookReplayResponse`, plus new fields on
+  `WebhookResponse` and `WebhookDeliveryResponse`) are still importable
+  from `thesma._generated.models` for consumers building their own
+  JWT-based integrations — but no SDK resource wraps them.
+
 ## [0.10.1.2] - 2026-04-24
 
 ### Changed
