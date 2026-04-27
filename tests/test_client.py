@@ -148,16 +148,27 @@ class TestHTTPRequests:
         client.close()
 
 
-# --- SDK-36 regression: webhooks resource removed ---
+# --- SDK-38: webhooks resource restored ---
 
 
-class TestWebhooksRemoved:
-    def test_sync_client_has_no_webhooks_attribute(self) -> None:
-        client = ThesmaClient(api_key="test")
-        with pytest.raises(AttributeError):
-            _ = client.webhooks  # type: ignore[attr-defined]
+def test_client_has_webhooks_resource(api_key: str) -> None:
+    """Pin AC #15: client.webhooks is bound to the Webhooks class."""
+    from thesma.resources.webhooks import Webhooks
 
-    def test_async_client_has_no_webhooks_attribute(self) -> None:
-        client = AsyncThesmaClient(api_key="test")
-        with pytest.raises(AttributeError):
-            _ = client.webhooks  # type: ignore[attr-defined]
+    client = ThesmaClient(api_key=api_key)
+    assert isinstance(client.webhooks, Webhooks)
+    client.close()
+
+
+def test_async_client_has_webhooks_resource(api_key: str) -> None:
+    """AC #15 parity for the async client."""
+    from thesma.resources.webhooks import Webhooks
+
+    client = AsyncThesmaClient(api_key=api_key)
+    assert isinstance(client.webhooks, Webhooks)
+    # No close needed — no httpx client opened until first request.
+
+
+def test_webhooks_reexported_from_resources() -> None:
+    """Pin __all__ re-export of Webhooks from thesma.resources."""
+    from thesma.resources import Webhooks  # noqa: F401
