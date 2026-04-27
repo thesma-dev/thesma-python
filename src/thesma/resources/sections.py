@@ -103,15 +103,45 @@ class Sections:
         self,
         *,
         query: str,
+        cik: str | None = None,
+        filing_type: str | None = None,
+        section_type: str | None = None,
+        year: int | None = None,
+        min_similarity: float | None = None,
         page: int = 1,
         per_page: int = 20,
     ) -> SearchPaginatedResponse:
         """Search section content using semantic similarity.
 
         ``GET /v1/us/sec/sections/search``
+
+        :param query: Search text. The api requires at least 3 characters
+            after whitespace stripping; shorter queries return ``400`` →
+            :class:`thesma.errors.BadRequestError`.
+        :param cik: Optional CIK to scope the search to one company. The
+            api zero-pads to 10 digits server-side, so ``"320193"`` and
+            ``"0000320193"`` are equivalent. Pass-through.
+        :param filing_type: Optional filing-type filter (e.g. ``"10-K"``,
+            ``"10-Q"``, ``"20-F"``). Case-sensitive — use the canonical
+            form. Pass-through.
+        :param section_type: Optional section-type filter (e.g.
+            ``"item_1a"``, ``"item_7"``). Case-sensitive. Pass-through.
+        :param year: Optional fiscal-year filter. Filters on the
+            section's ``fiscal_year`` field, not the calendar year of
+            the filing date.
+        :param min_similarity: Optional cosine-similarity floor in
+            ``[0.0, 1.0]``. Defaults to ``0.3`` server-side when omitted;
+            the SDK does not echo that default.
+        :param page: 1-indexed page number.
+        :param per_page: Page size. Capped at ``50`` server-side.
         """
         params: dict[str, Any] = {
             "q": query,
+            "cik": cik,
+            "filing_type": filing_type,
+            "section_type": section_type,
+            "year": year,
+            "min_similarity": min_similarity,
             "page": page,
             "per_page": per_page,
         }
