@@ -12,9 +12,11 @@ from thesma.errors import (
     ExportInProgressError,
     ForbiddenError,
     NotFoundError,
+    PaymentRequiredError,
     RateLimitError,
     ServerError,
     ThesmaError,
+    TierRequiredError,
     TimeoutError,
 )
 
@@ -29,10 +31,12 @@ __all__ = [
     "NotFoundError",
     "PaginatedResponse",
     "PaginationMeta",
+    "PaymentRequiredError",
     "RateLimitError",
     "ServerError",
     "ThesmaClient",
     "ThesmaError",
+    "TierRequiredError",
     "TimeoutError",
     "__version__",
 ]

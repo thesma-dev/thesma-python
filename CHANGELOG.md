@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1.1] - 2026-04-27
+
+### Added
+- New typed exception `TierRequiredError` (subclass of new `PaymentRequiredError`,
+  in turn a subclass of `ThesmaError`) for 402 responses with
+  `error.code == "tier_required"`. Carries typed `current_tier` and
+  `required_tier` attributes so callers can render upgrade CTAs without
+  parsing the message string. Triggered by govdata-api `0.11.1`'s S17 gate
+  on `/v1/us/sec/screener?include=...` for Free / Starter callers.
+- New typed exception `PaymentRequiredError` for 402 responses generally.
+  Catches both `tier_required` (subclassed) and `plan_cap_exceeded` (the
+  webhook plan-cap path on `POST /v1/webhooks` for free-tier callers, which
+  previously fell through to the generic `ThesmaError`). Existing
+  `except ThesmaError` clauses continue to catch both — `PaymentRequiredError`
+  is a subclass.
+
+### Fixed
+- `_parse_error_body` now correctly extracts `code` and `message` from the
+  api's nested-error response shape (`{"error": {"code": "...", ...}}`).
+  Previously the helper read top-level keys only and returned `error_code=None`
+  for every 4xx and 429 response in production. The class-level dispatch
+  (400 → `BadRequestError` etc.) was unaffected because that's keyed on
+  status code. **`ExportInProgressError` (the 429 + `error_code == "export_in_progress"`
+  discriminator) was effectively dead code in production** — it can now fire
+  correctly. The helper falls back to top-level keys for proxy errors and
+  forward-compat. SDK-38's flat-shape test mocks did not catch this; the
+  expanded test fixtures in `tests/test_errors.py` exercise both shapes.
+
 ## [0.11.1.0] - 2026-04-26
 
 ### Added

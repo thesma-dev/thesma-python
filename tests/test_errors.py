@@ -15,9 +15,11 @@ from thesma.errors import (
     ExportInProgressError,
     ForbiddenError,
     NotFoundError,
+    PaymentRequiredError,
     RateLimitError,
     ServerError,
     ThesmaError,
+    TierRequiredError,
     TimeoutError,
     raise_for_status,
 )
@@ -202,3 +204,185 @@ class TestNoContent:
         result = api.request("DELETE", "/v1/test", response_model=None)
         assert result is None
         client.close()
+
+
+# --- SDK-39: 402 dispatch + tier-error attrs ---
+
+
+def _make_402(code: str | None, current_tier: str | None = None, required_tier: str | None = None) -> httpx.Response:
+    """Build a 402 response matching the api's actual body shape."""
+    error: dict = {"code": code, "message": "test message", "status": 402}
+    if current_tier is not None:
+        error["current_tier"] = current_tier
+    if required_tier is not None:
+        error["required_tier"] = required_tier
+    return httpx.Response(402, json={"error": error})
+
+
+class TestTierRequiredErrorDispatch:
+    """tier_required → TierRequiredError with all 4 attrs."""
+
+    def test_tier_required_402_raises_typed(self):
+        resp = _make_402("tier_required", current_tier="free", required_tier="pro")
+        with pytest.raises(TierRequiredError) as exc_info:
+            raise_for_status(resp)
+        e = exc_info.value
+        assert e.status_code == 402
+        assert e.error_code == "tier_required"
+        assert e.current_tier == "free"
+        assert e.required_tier == "pro"
+        assert e.message == "test message"
+
+    def test_tier_required_inherits_payment_required(self):
+        """Class hierarchy — TierRequiredError IS-A PaymentRequiredError IS-A ThesmaError."""
+        assert issubclass(TierRequiredError, PaymentRequiredError)
+        assert issubclass(PaymentRequiredError, ThesmaError)
+
+    def test_tier_required_with_unknown_tier_value(self):
+        """API emits 'unknown' for corrupt-state plans — SDK passes it through."""
+        resp = _make_402("tier_required", current_tier="unknown", required_tier="pro")
+        with pytest.raises(TierRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert exc_info.value.current_tier == "unknown"
+
+
+class TestPaymentRequiredErrorDispatch:
+    """Non-tier 402s → generic PaymentRequiredError, NOT TierRequiredError."""
+
+    def test_plan_cap_exceeded_raises_payment_required_not_tier(self):
+        """Webhook plan-cap 402 → PaymentRequiredError. Don't accidentally upcast to TierRequiredError."""
+        resp = _make_402("plan_cap_exceeded")
+        with pytest.raises(PaymentRequiredError) as exc_info:
+            raise_for_status(resp)
+        e = exc_info.value
+        assert not isinstance(e, TierRequiredError)
+        assert e.status_code == 402
+        assert e.error_code == "plan_cap_exceeded"
+
+    def test_unknown_402_code_raises_payment_required(self):
+        """Future-proof: an unknown error_code on 402 falls back to PaymentRequiredError."""
+        resp = _make_402("future_unknown_code")
+        with pytest.raises(PaymentRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert not isinstance(exc_info.value, TierRequiredError)
+        assert exc_info.value.error_code == "future_unknown_code"
+
+    def test_402_with_no_error_code_raises_payment_required(self):
+        """Defensive: 402 with no `code` field (malformed/proxy) → PaymentRequiredError, code=None."""
+        resp = httpx.Response(402, json={"error": {"message": "no code here", "status": 402}})
+        with pytest.raises(PaymentRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert exc_info.value.error_code is None
+
+
+class TestExistingStatusCodesUnchanged:
+    """Regression — existing 400/401/403/404/429 paths must not be perturbed."""
+
+    @pytest.mark.parametrize(
+        "status,expected_msg_substring",
+        [(400, "bad"), (401, "auth"), (403, "forbid"), (404, "not found"), (429, "rate")],
+    )
+    def test_other_4xx_unchanged(self, status, expected_msg_substring):
+        # Just ensure the dispatcher still raises SOMETHING for these — exact class
+        # tested in existing tests.
+        resp = httpx.Response(status, json={"error": {"code": "x", "message": expected_msg_substring}})
+        with pytest.raises(ThesmaError):
+            raise_for_status(resp)
+
+
+class TestErrorBodyParsing:
+    """Confirms the body-shape extraction works against the api's actual nested-error response."""
+
+    def test_extracts_current_tier_from_nested_error_object(self):
+        resp = _make_402("tier_required", current_tier="starter", required_tier="pro")
+        with pytest.raises(TierRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert exc_info.value.current_tier == "starter"
+
+    def test_handles_missing_tier_fields_gracefully(self):
+        """tier_required code with no tier fields (defensive) → still raises Tier with None attrs."""
+        resp = httpx.Response(402, json={"error": {"code": "tier_required", "message": "x", "status": 402}})
+        with pytest.raises(TierRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert exc_info.value.current_tier is None
+        assert exc_info.value.required_tier is None
+
+    def test_non_json_402_body_falls_back_to_payment_required(self):
+        """A CDN/proxy returning 402 with HTML/text body must surface as PaymentRequiredError
+        (not crash inside _parse_error_body). error_code is None; message comes from
+        reason_phrase. Guards against future _parse_error_body refactors."""
+        resp = httpx.Response(402, content=b"<html>Pay here</html>", headers={"Content-Type": "text/html"})
+        with pytest.raises(PaymentRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert not isinstance(exc_info.value, TierRequiredError)
+        assert exc_info.value.error_code is None
+
+    def test_402_with_string_error_field_does_not_raise_attributeerror(self):
+        """Defensive: api hypothetically emits {"error": "tier_required"} (string, not dict).
+        The nested-error walk MUST guard isinstance(error_field, dict) — without the guard,
+        .get("code") on a string raises raw AttributeError that customer except ThesmaError
+        clauses don't catch."""
+        resp = httpx.Response(402, json={"error": "tier_required"})
+        with pytest.raises(PaymentRequiredError) as exc_info:
+            raise_for_status(resp)
+        # Should NOT discriminate to TierRequiredError because the string value isn't a dict
+        # to walk into for code extraction.
+        assert not isinstance(exc_info.value, TierRequiredError)
+
+    def test_402_with_null_error_field(self):
+        """Defensive: {"error": null} — same isinstance guard requirement as above."""
+        resp = httpx.Response(402, json={"error": None})
+        with pytest.raises(PaymentRequiredError):
+            raise_for_status(resp)
+
+    def test_402_with_top_level_code_key(self):
+        """Forward compat: if api ever emits {"code": "...", ...} at top level (older shape
+        that _parse_error_body still handles via line 106 today), it must continue to work."""
+        resp = httpx.Response(402, json={"code": "tier_required", "message": "x"})
+        # The top-level extraction path doesn't have current_tier/required_tier fields,
+        # so this should raise TierRequiredError with None tier attrs (same as the
+        # missing-tier-fields case but with a different body shape).
+        with pytest.raises(TierRequiredError) as exc_info:
+            raise_for_status(resp)
+        assert exc_info.value.current_tier is None
+
+
+class TestExportInProgressErrorRevival:
+    """SDK-39 side-effect regression: with the parser fix, the existing
+    `if error_code == "export_in_progress"` discriminator at errors.py:128 can
+    actually fire against api responses for the first time. Pre-SDK-39 this branch
+    was dead code in production because `_parse_error_body` extracted `error_code=None`
+    against the api's nested-error shape. The CHANGELOG `### Fixed` block calls
+    out the revival; this test pins it."""
+
+    def test_export_in_progress_429_under_nested_shape_dispatches_correctly(self):
+        """429 + nested error.code = 'export_in_progress' → ExportInProgressError
+        (NOT plain RateLimitError). Retry-After header survives the dispatch."""
+        resp = httpx.Response(
+            429,
+            json={"error": {"code": "export_in_progress", "message": "Export still running.", "status": 429}},
+            headers={"Retry-After": "30"},
+        )
+        with pytest.raises(ExportInProgressError) as exc_info:
+            raise_for_status(resp)
+        e = exc_info.value
+        assert e.retry_after == 30.0
+        assert e.error_code == "export_in_progress"
+        assert e.status_code == 429
+        # Subclass relationship: ExportInProgressError ⊂ RateLimitError ⊂ ThesmaError.
+        assert isinstance(e, RateLimitError)
+        assert isinstance(e, ThesmaError)
+
+    def test_plain_rate_limit_429_under_nested_shape_does_not_upcast(self):
+        """A 429 with a non-export error.code (or no code) must NOT dispatch to
+        ExportInProgressError — only the discriminator code triggers the subclass."""
+        resp = httpx.Response(
+            429,
+            json={"error": {"code": "rate_limit_exceeded", "message": "slow down", "status": 429}},
+            headers={"Retry-After": "5"},
+        )
+        with pytest.raises(RateLimitError) as exc_info:
+            raise_for_status(resp)
+        assert not isinstance(exc_info.value, ExportInProgressError)
+        assert exc_info.value.error_code == "rate_limit_exceeded"
+        assert exc_info.value.retry_after == 5.0
