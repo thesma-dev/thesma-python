@@ -8,7 +8,7 @@ import respx
 
 from thesma._types import PaginatedResponse
 from thesma.client import AsyncThesmaClient, ThesmaClient
-from thesma.errors import BadRequestError, ThesmaError
+from thesma.errors import BadRequestError, ThesmaError, TierRequiredError
 from thesma.resources.screener import (
     _PERCENTAGE_SCALE_PARAMS,
     _validate_percentage_scale,
@@ -1229,3 +1229,53 @@ class TestScreenerScaleValidation:
         client.screener.screen(min_revenue=500_000_000)
         assert route.called
         client.close()
+
+
+class TestScreenerTierRequired:
+    """SDK-39: end-to-end dispatch of TierRequiredError through the SDK call surface."""
+
+    @respx.mock
+    def test_screener_screen_with_include_on_free_raises_tier_required(self, api_key: str) -> None:
+        """SDK-39: 402 from /screener?include=... surfaces as TierRequiredError with tier attrs."""
+        error_body = {
+            "error": {
+                "code": "tier_required",
+                "message": "Cross-dataset enrichment on the screener is a Pro tier feature.",
+                "status": 402,
+                "current_tier": "free",
+                "required_tier": "pro",
+            }
+        }
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(return_value=httpx.Response(402, json=error_body))
+
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(TierRequiredError) as exc_info:
+            client.screener.screen(include="labor_context")
+        e = exc_info.value
+        assert e.status_code == 402
+        assert e.current_tier == "free"
+        assert e.required_tier == "pro"
+        client.close()
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_async_screener_screen_with_include_on_free_raises_tier_required(self, api_key: str) -> None:
+        """SDK-39 async parity: AsyncThesmaClient surfaces TierRequiredError identically."""
+        error_body = {
+            "error": {
+                "code": "tier_required",
+                "message": "Cross-dataset enrichment on the screener is a Pro tier feature.",
+                "status": 402,
+                "current_tier": "free",
+                "required_tier": "pro",
+            }
+        }
+        respx.get(f"{BASE}/v1/us/sec/screener").mock(return_value=httpx.Response(402, json=error_body))
+
+        async with AsyncThesmaClient(api_key=api_key) as client:
+            with pytest.raises(TierRequiredError) as exc_info:
+                await client.screener.screen(include="labor_context")
+        e = exc_info.value
+        assert e.status_code == 402
+        assert e.current_tier == "free"
+        assert e.required_tier == "pro"
