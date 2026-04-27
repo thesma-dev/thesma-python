@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._generated.models import SearchPaginatedResponse, SectionChangeResponse, SectionDetail
 from thesma._types import DataResponse, PaginatedResponse
-from thesma.client import ThesmaClient
+from thesma.client import AsyncThesmaClient, ThesmaClient
 
 BASE = "https://api.thesma.dev"
 
@@ -211,3 +212,145 @@ class TestSectionsSearch:
         assert "page=1" in str(request.url)
         assert "per_page=20" in str(request.url)
         client.close()
+
+    @respx.mock
+    def test_search_with_cik_filter(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", cik="320193")
+        request = route.calls.last.request
+        assert "q=risk" in str(request.url)
+        assert "cik=320193" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_with_filing_type_filter(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", filing_type="10-K")
+        request = route.calls.last.request
+        assert request.url.params["filing_type"] == "10-K"
+        client.close()
+
+    @respx.mock
+    def test_search_with_section_type_filter(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", section_type="item_1a")
+        request = route.calls.last.request
+        assert "section_type=item_1a" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_with_year_filter(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", year=2024)
+        request = route.calls.last.request
+        assert "year=2024" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_with_min_similarity(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", min_similarity=0.7)
+        request = route.calls.last.request
+        assert "min_similarity=0.7" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_min_similarity_zero_not_stripped(self, api_key: str) -> None:
+        """0.0 is a meaningful filter (match-anything); only None is stripped."""
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", min_similarity=0.0)
+        request = route.calls.last.request
+        assert "min_similarity=0.0" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_year_zero_not_stripped(self, api_key: str) -> None:
+        """year=0 is forwarded; _strip_none strips only None, not falsy ints."""
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", year=0)
+        request = route.calls.last.request
+        assert "year=0" in str(request.url)
+        client.close()
+
+    @respx.mock
+    def test_search_empty_string_filter_not_stripped(self, api_key: str) -> None:
+        """Empty strings ship through; only None is stripped."""
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk", cik="")
+        request = route.calls.last.request
+        assert request.url.params["cik"] == ""
+        client.close()
+
+    @respx.mock
+    def test_search_omits_unset_filters(self, api_key: str) -> None:
+        """All five new kwargs default to None and are stripped from the URL."""
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="risk")
+        url = str(route.calls.last.request.url)
+        assert "q=risk" in url
+        assert "cik=" not in url
+        assert "filing_type=" not in url
+        assert "section_type=" not in url
+        assert "year=" not in url
+        assert "min_similarity=" not in url
+        client.close()
+
+    @respx.mock
+    def test_search_combined_filters(self, api_key: str) -> None:
+        """Multiple filters compose without dropping any."""
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(
+            query="risk",
+            cik="320193",
+            filing_type="10-K",
+            year=2024,
+        )
+        url = str(route.calls.last.request.url)
+        assert "q=risk" in url
+        assert "cik=320193" in url
+        assert "filing_type=10-K" in url
+        assert "year=2024" in url
+        client.close()
+
+    @respx.mock
+    @pytest.mark.asyncio
+    async def test_async_search_with_filters(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        async with AsyncThesmaClient(api_key=api_key) as client:
+            await client.sections.search(query="risk", cik="320193", filing_type="10-K")
+        url = str(route.calls.last.request.url)
+        assert "q=risk" in url
+        assert "cik=320193" in url
+        assert "filing_type=10-K" in url

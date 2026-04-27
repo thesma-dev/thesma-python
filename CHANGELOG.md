@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0.1] - 2026-04-26
+
+### Added
+- `client.sections.search()` now accepts five additional optional filters
+  matching the underlying api: `cik`, `filing_type`, `section_type`, `year`,
+  and `min_similarity`. All five are pass-through and server-validated;
+  `min_similarity` defaults to `0.3` server-side when omitted. Exposes the
+  `/v1/us/sec/sections/search?cik=...&filing_type=...&section_type=...&year=...&min_similarity=...`
+  query surface that has been live on the api since launch but was not
+  reachable through the SDK.
+
 ## [0.11.0.0] - 2026-04-25
 
 ### Breaking
