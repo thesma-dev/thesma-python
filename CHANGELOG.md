@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1.0] - 2026-04-26
+
+### Added
+- `client.webhooks` resource restored. govdata-api `0.11.1` (T-219) opened
+  webhook-management routes to API-key authentication in addition to portal
+  JWT, which makes a programmatic webhook surface workable from the SDK.
+  The resource exposes 10 methods covering the full post-S-14 webhook
+  surface: `list_event_types()`, `list()`, `create()`, `get()`, `update()`,
+  `delete()`, `list_deliveries()`, `rotate_secret()`, `send_test()`,
+  `replay_delivery()`. SDK-36 (`0.11.0.0`) had removed an earlier, broken
+  version of this resource that 403'd against the live api; the restored
+  version is built against the current OpenAPI surface and works under
+  API-key auth.
+- Webhook calls under API-key auth consume the key's burst + daily
+  rate-limit budget (under JWT auth they bypassed rate limits per
+  `middleware/rate_limit.py` shape). Customers driving heavy webhook
+  lifecycle traffic from the SDK should account for the additional quota
+  usage.
+
 ## [0.11.0.1] - 2026-04-26
 
 ### Added
