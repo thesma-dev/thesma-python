@@ -762,3 +762,31 @@ class TestFinancialsStatementAll:
         assert isinstance(resp, EnrichedFinancialDataResponse)
         assert isinstance(resp.data, FinancialStatementResponse)
         client.close()
+
+
+class TestFinancialsByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for both ``get`` and ``time_series``."""
+
+    @respx.mock
+    def test_get_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/financials").mock(
+            return_value=httpx.Response(200, json=FINANCIAL_STATEMENT_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        resp = client.financials.get(identifier="AAPL", statement="income")
+
+        assert route.called
+        assert isinstance(resp, EnrichedFinancialDataResponse)
+        assert resp.data.company.cik == "0000320193"
+        client.close()
+
+    @respx.mock
+    def test_time_series_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/financials/revenue").mock(
+            return_value=httpx.Response(200, json=TIME_SERIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.financials.time_series(identifier="AAPL", metric="revenue")
+
+        assert route.called
+        client.close()

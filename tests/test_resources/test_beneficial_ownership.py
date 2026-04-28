@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._types import PaginatedResponse
 from thesma.client import ThesmaClient
+from thesma.errors import NotFoundError
 
 BASE = "https://api.thesma.dev"
 
@@ -25,11 +27,6 @@ PAGINATED_OWNERSHIP_JSON = {
         },
     ],
     "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
-}
-
-EMPTY_OWNERSHIP_JSON = {
-    "data": [],
-    "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 0},
 }
 
 
@@ -62,15 +59,22 @@ class TestBeneficialOwnershipList:
         client.close()
 
     @respx.mock
-    def test_list_empty(self, api_key: str) -> None:
+    def test_list_unknown_identifier_raises_not_found(self, api_key: str) -> None:
+        """SDK-40 / api 0.12.0: single-company endpoint now 404s on unknown CIK
+        (previously returned 200 + empty list). Cross-company feed via
+        ``list_all`` is the alternative for subjects outside the tracked
+        universe."""
         respx.get(f"{BASE}/v1/us/sec/companies/9999999999/beneficial-ownership").mock(
-            return_value=httpx.Response(200, json=EMPTY_OWNERSHIP_JSON),
+            return_value=httpx.Response(
+                404,
+                json={
+                    "error": {"code": "not_found", "message": "Company '9999999999' not found."},
+                },
+            ),
         )
         client = ThesmaClient(api_key=api_key)
-        result = client.beneficial_ownership.list("9999999999")
-
-        assert result.data == []
-        assert result.pagination.total == 0
+        with pytest.raises(NotFoundError):
+            client.beneficial_ownership.list("9999999999")
         client.close()
 
     @respx.mock
@@ -82,6 +86,19 @@ class TestBeneficialOwnershipList:
         client.beneficial_ownership.list("0000789019")
 
         assert route.called
+        client.close()
+
+    @respx.mock
+    def test_list_by_ticker(self, api_key: str) -> None:
+        """SDK-40: ticker forwarded as path identifier; canonical CIK in response."""
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/beneficial-ownership").mock(
+            return_value=httpx.Response(200, json=PAGINATED_OWNERSHIP_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.beneficial_ownership.list(identifier="AAPL")
+
+        assert route.called
+        assert result.data[0].cik == "0000320193"
         client.close()
 
 

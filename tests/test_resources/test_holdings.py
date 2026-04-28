@@ -233,3 +233,42 @@ class TestFundChanges:
         assert route.called
         assert isinstance(result, PaginatedResponse)
         client.close()
+
+
+class TestHoldingsByIdentifier:
+    """SDK-40: ``identifier=`` on company-side methods. Fund methods stay on ``cik=``."""
+
+    @respx.mock
+    def test_holders_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/holders").mock(
+            return_value=httpx.Response(200, json=PAGINATED_HOLDERS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.holdings.holders(identifier="AAPL")
+
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_holder_changes_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/institutional-changes").mock(
+            return_value=httpx.Response(200, json=PAGINATED_CHANGES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.holdings.holder_changes(identifier="AAPL")
+
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_fund_holdings_still_uses_cik_kwarg(self, api_key: str) -> None:
+        """AC #8 regression guard: fund methods are NOT renamed (fund CIKs are
+        out of T-221 scope), so ``cik=`` continues to work."""
+        route = respx.get(f"{BASE}/v1/us/sec/funds/0001067983/holdings").mock(
+            return_value=httpx.Response(200, json=PAGINATED_FUND_HOLDINGS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.holdings.fund_holdings(cik="0001067983")
+
+        assert route.called
+        client.close()

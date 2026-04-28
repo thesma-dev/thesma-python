@@ -16,14 +16,17 @@ class ProxyVotes:
 
     def list(
         self,
-        cik: str,
+        identifier: str,
         *,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[ProxyVoteItem]:
         """List proxy votes for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/proxy-votes``
+        ``GET /v1/us/sec/companies/{identifier}/proxy-votes``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback).
         """
         params: dict[str, Any] = {
             "page": page,
@@ -31,7 +34,7 @@ class ProxyVotes:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/proxy-votes",
+            f"/v1/us/sec/companies/{identifier}/proxy-votes",
             params=params,
             response_model=PaginatedResponse[ProxyVoteItem],
         )

@@ -17,7 +17,7 @@ class Events:
 
     def list(
         self,
-        cik: str,
+        identifier: str,
         *,
         from_date: str | None = None,
         to_date: str | None = None,
@@ -27,7 +27,10 @@ class Events:
     ) -> PaginatedResponse[EventListItem]:
         """List events for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/events``
+        ``GET /v1/us/sec/companies/{identifier}/events``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback for stale tickers).
         """
         params: dict[str, Any] = {
             "from": from_date,
@@ -38,7 +41,7 @@ class Events:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/events",
+            f"/v1/us/sec/companies/{identifier}/events",
             params=params,
             response_model=PaginatedResponse[EventListItem],
         )

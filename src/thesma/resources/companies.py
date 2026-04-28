@@ -87,10 +87,16 @@ class Companies:
             response_model=PaginatedResponse[CompanyListItem],
         )
 
-    def get(self, cik: str, *, include: str | None = None) -> EnrichedCompanyDataResponse:
-        """Get a single company by CIK.
+    def get(self, identifier: str, *, include: str | None = None) -> EnrichedCompanyDataResponse:
+        """Get a single company by CIK or ticker.
 
-        ``GET /v1/us/sec/companies/{cik}``
+        ``GET /v1/us/sec/companies/{identifier}``
+
+        ``identifier`` accepts a CIK (zero-padded or stripped 1-10 digits)
+        or a current ticker symbol (case-insensitive). Stale tickers fall
+        back to ``TickerAlias`` lookups (e.g. ``FB`` → META). The response
+        ``cik`` field always returns the canonical zero-padded form
+        regardless of how the resource was identified.
 
         ``include`` is a comma-separated list of enrichment / expansion
         surfaces. Post-S1 the accepted set is 9 values (up from 2):
@@ -156,7 +162,7 @@ class Companies:
         params: dict[str, Any] = {"include": include}
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}",
+            f"/v1/us/sec/companies/{identifier}",
             params=params,
             response_model=EnrichedCompanyDataResponse,
         )

@@ -110,3 +110,18 @@ class TestInsiderHoldingsList:
         request = route.calls.last.request
         assert "as_of=" not in str(request.url)
         client.close()
+
+
+class TestInsiderHoldingsByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for path-param ``list``."""
+
+    @respx.mock
+    def test_list_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/insider-holdings").mock(
+            return_value=httpx.Response(200, json=PAGINATED_HOLDINGS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_holdings.list(identifier="AAPL")
+
+        assert route.called
+        client.close()

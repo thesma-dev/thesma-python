@@ -354,3 +354,30 @@ class TestSectionsSearch:
         assert "q=risk" in url
         assert "cik=320193" in url
         assert "filing_type=10-K" in url
+
+
+class TestSectionsByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for path-param ``list_by_company``
+    and ``entities``. ``search`` keeps ``cik=`` (query-param filter)."""
+
+    @respx.mock
+    def test_list_by_company_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/sections").mock(
+            return_value=httpx.Response(200, json=PAGINATED_SECTIONS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.list_by_company(identifier="AAPL")
+
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_entities_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/sections/item_1a/entities").mock(
+            return_value=httpx.Response(200, json=ENTITIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.entities(identifier="AAPL", section_type="item_1a")
+
+        assert route.called
+        client.close()

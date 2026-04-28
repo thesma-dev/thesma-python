@@ -16,14 +16,14 @@ from thesma._types import DataResponse, PaginatedResponse
 
 
 class Financials:
-    """Resource for ``/v1/us/sec/companies/{cik}/financials`` endpoints."""
+    """Resource for ``/v1/us/sec/companies/{identifier}/financials`` endpoints."""
 
     def __init__(self, client: Any) -> None:
         self._client = client
 
     def get(
         self,
-        cik: str,
+        identifier: str,
         *,
         statement: str | None = None,
         period: str | None = None,
@@ -40,7 +40,11 @@ class Financials:
     ):
         """Get a financial statement for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/financials``
+        ``GET /v1/us/sec/companies/{identifier}/financials``
+
+        ``identifier`` accepts a CIK (zero-padded or stripped) or current
+        ticker symbol (case-insensitive); stale tickers fall back via
+        ``TickerAlias``.
 
         ``include`` is a comma-separated list of enrichment surfaces —
         ``"labor_context"`` and/or ``"lending_context"`` (e.g.
@@ -126,14 +130,14 @@ class Financials:
             response_model = EnrichedFinancialDataResponse
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/financials",
+            f"/v1/us/sec/companies/{identifier}/financials",
             params=params,
             response_model=response_model,
         )
 
     def time_series(
         self,
-        cik: str,
+        identifier: str,
         metric: str,
         *,
         period: str | None = None,
@@ -142,7 +146,9 @@ class Financials:
     ) -> DataResponse[TimeSeriesResponse]:
         """Get a time series for a single financial metric.
 
-        ``GET /v1/us/sec/companies/{cik}/financials/{metric}``
+        ``GET /v1/us/sec/companies/{identifier}/financials/{metric}``
+
+        ``identifier`` accepts a CIK or ticker (see ``get`` for details).
         """
         params: dict[str, Any] = {
             "period": period,
@@ -151,7 +157,7 @@ class Financials:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/financials/{metric}",
+            f"/v1/us/sec/companies/{identifier}/financials/{metric}",
             params=params,
             response_model=DataResponse[TimeSeriesResponse],
         )

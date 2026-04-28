@@ -9,7 +9,7 @@ import respx
 from thesma._generated.models import EnrichedCompanyData, EnrichedCompanyDataResponse
 from thesma._types import PaginatedResponse
 from thesma.client import ThesmaClient
-from thesma.errors import BadRequestError
+from thesma.errors import BadRequestError, NotFoundError
 
 BASE = "https://api.thesma.dev"
 
@@ -325,6 +325,98 @@ class TestCompaniesGet:
         result = client.companies.get("0000320193")
 
         assert isinstance(result.data, EnrichedCompanyData)
+        client.close()
+
+
+_META_DETAIL_JSON = {
+    "data": {
+        "cik": "0001326801",
+        "name": "Meta Platforms, Inc.",
+        "ticker": "META",
+        "sic_code": "7372",
+        "company_tier": "sp500",
+        "exchange": "NASDAQ",
+        "domicile": "us",
+    },
+}
+
+_BRK_B_DETAIL_JSON = {
+    "data": {
+        "cik": "0001067983",
+        "name": "Berkshire Hathaway Inc.",
+        "ticker": "BRK.B",
+        "sic_code": "6311",
+        "company_tier": "sp500",
+        "exchange": "NYSE",
+        "domicile": "us",
+    },
+}
+
+
+class TestCompaniesGetByIdentifier:
+    """SDK-40 / api 0.12.0: ``identifier=`` accepts CIK or ticker."""
+
+    @respx.mock
+    def test_get_by_ticker_uppercase(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/AAPL").mock(
+            return_value=httpx.Response(200, json=COMPANY_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get(identifier="AAPL")
+
+        # Canonical zero-padded CIK comes back regardless of the addressing form.
+        assert result.data.cik == "0000320193"
+        assert result.data.ticker == "AAPL"
+        client.close()
+
+    @respx.mock
+    def test_get_by_ticker_lowercase(self, api_key: str) -> None:
+        """Case-insensitive at the api layer — SDK forwards verbatim."""
+        respx.get(f"{BASE}/v1/us/sec/companies/aapl").mock(
+            return_value=httpx.Response(200, json=COMPANY_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get(identifier="aapl")
+
+        assert result.data.cik == "0000320193"
+        client.close()
+
+    @respx.mock
+    def test_get_by_stale_ticker_alias_fb_to_meta(self, api_key: str) -> None:
+        """Stale ticker resolves via TickerAlias to the current owner."""
+        respx.get(f"{BASE}/v1/us/sec/companies/FB").mock(
+            return_value=httpx.Response(200, json=_META_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get(identifier="FB")
+
+        assert result.data.cik == "0001326801"
+        assert result.data.ticker == "META"
+        client.close()
+
+    @respx.mock
+    def test_get_by_brk_dot_b_path_routing(self, api_key: str) -> None:
+        """Dot-containing ticker forwards correctly through the SDK's f-string URL."""
+        respx.get(f"{BASE}/v1/us/sec/companies/BRK.B").mock(
+            return_value=httpx.Response(200, json=_BRK_B_DETAIL_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.get(identifier="BRK.B")
+
+        assert result.data.cik == "0001067983"
+        client.close()
+
+    @respx.mock
+    def test_get_unknown_identifier_raises_not_found(self, api_key: str) -> None:
+        respx.get(f"{BASE}/v1/us/sec/companies/ZZZZZ").mock(
+            return_value=httpx.Response(
+                404,
+                json={"error": {"code": "not_found", "message": "Company 'ZZZZZ' not found."}},
+            ),
+        )
+        client = ThesmaClient(api_key=api_key)
+        with pytest.raises(NotFoundError):
+            client.companies.get(identifier="ZZZZZ")
         client.close()
 
 

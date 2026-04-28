@@ -16,7 +16,7 @@ class InsiderHoldings:
 
     def list(
         self,
-        cik: str,
+        identifier: str,
         *,
         as_of: str | None = None,
         page: int = 1,
@@ -24,7 +24,10 @@ class InsiderHoldings:
     ) -> PaginatedResponse[InsiderHoldingListItem]:
         """List insider holdings for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/insider-holdings``
+        ``GET /v1/us/sec/companies/{identifier}/insider-holdings``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback).
         """
         params: dict[str, Any] = {
             "as_of": as_of,
@@ -33,7 +36,7 @@ class InsiderHoldings:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/insider-holdings",
+            f"/v1/us/sec/companies/{identifier}/insider-holdings",
             params=params,
             response_model=PaginatedResponse[InsiderHoldingListItem],
         )

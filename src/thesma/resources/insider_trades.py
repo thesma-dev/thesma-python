@@ -16,7 +16,7 @@ class InsiderTrades:
 
     def list(
         self,
-        cik: str,
+        identifier: str,
         *,
         from_date: str | None = None,
         to_date: str | None = None,
@@ -29,7 +29,10 @@ class InsiderTrades:
     ) -> PaginatedResponse[InsiderTradeAggregateListItem] | PaginatedResponse[InsiderTradeListItem]:
         """List insider trades for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/insider-trades``
+        ``GET /v1/us/sec/companies/{identifier}/insider-trades``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback).
 
         By default, rows are aggregated transaction events — same-day 10b5-1
         tranches collapse into one row keyed on
@@ -60,7 +63,7 @@ class InsiderTrades:
         )
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/insider-trades",
+            f"/v1/us/sec/companies/{identifier}/insider-trades",
             params=params,
             response_model=response_model,
         )

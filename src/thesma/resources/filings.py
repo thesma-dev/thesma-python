@@ -31,7 +31,7 @@ class Filings:
 
     def list(
         self,
-        cik: str,
+        identifier: str,
         *,
         filing_type: str | None = None,
         start_date: str | datetime.date | None = None,
@@ -42,7 +42,10 @@ class Filings:
     ) -> PaginatedResponse[FilingListItem]:
         """List filings for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/filings``
+        ``GET /v1/us/sec/companies/{identifier}/filings``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback for stale tickers).
         """
         params: dict[str, Any] = {
             "type": filing_type,
@@ -54,7 +57,7 @@ class Filings:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/filings",
+            f"/v1/us/sec/companies/{identifier}/filings",
             params=params,
             response_model=PaginatedResponse[FilingListItem],
         )

@@ -16,14 +16,17 @@ class Compensation:
 
     def get(
         self,
-        cik: str,
+        identifier: str,
         *,
         year: int | None = None,
         include: str | None = None,
     ) -> EnrichedCompensationDataResponse:
         """Get executive compensation for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/compensation``
+        ``GET /v1/us/sec/companies/{identifier}/compensation``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback).
 
         ``include`` accepts ``"labor_context"`` only — compensation does
         NOT carry ``lending_context``. Post-S3 the ``labor_context``
@@ -44,18 +47,20 @@ class Compensation:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/compensation",
+            f"/v1/us/sec/companies/{identifier}/compensation",
             params=params,
             response_model=EnrichedCompensationDataResponse,
         )
 
-    def board(self, cik: str) -> DataResponse[BoardResponse]:
+    def board(self, identifier: str) -> DataResponse[BoardResponse]:
         """Get board of directors for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/board``
+        ``GET /v1/us/sec/companies/{identifier}/board``
+
+        ``identifier`` accepts a CIK or ticker (see ``get`` for details).
         """
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/board",
+            f"/v1/us/sec/companies/{identifier}/board",
             response_model=DataResponse[BoardResponse],
         )

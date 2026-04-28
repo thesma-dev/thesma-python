@@ -383,3 +383,18 @@ class TestInsiderTradesAggregation:
         assert row.price_per_share == 150.0
         assert "flat=true" in str(route.calls.last.request.url)
         client.close()
+
+
+class TestInsiderTradesByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for path-param ``list``."""
+
+    @respx.mock
+    def test_list_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/insider-trades").mock(
+            return_value=httpx.Response(200, json=PAGINATED_TRADES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.insider_trades.list(identifier="AAPL")
+
+        assert route.called
+        client.close()

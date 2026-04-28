@@ -146,6 +146,36 @@ class TestFilingsContent:
         client.close()
 
 
+class TestFilingsByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for path-param ``list``.
+    ``list_all`` keeps ``cik=`` (query-param filter)."""
+
+    @respx.mock
+    def test_list_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/filings").mock(
+            return_value=httpx.Response(200, json=PAGINATED_FILINGS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.filings.list(identifier="AAPL")
+
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_list_all_still_uses_cik_query_filter(self, api_key: str) -> None:
+        """AC #9 regression guard: ``list_all`` is the cross-company query-param
+        filter and is NOT renamed; ``cik=`` continues to work."""
+        route = respx.get(f"{BASE}/v1/us/sec/filings").mock(
+            return_value=httpx.Response(200, json=PAGINATED_FILINGS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.filings.list_all(cik="0000320193")
+
+        assert route.called
+        assert "cik=0000320193" in str(route.calls.last.request.url)
+        client.close()
+
+
 class TestDateConversion:
     def test_none_returns_none(self) -> None:
         assert _to_date_str(None) is None
