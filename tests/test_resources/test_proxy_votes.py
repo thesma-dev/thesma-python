@@ -78,3 +78,15 @@ class TestProxyVotesList:
 
         assert route.called
         client.close()
+
+    @respx.mock
+    def test_list_by_ticker(self, api_key: str) -> None:
+        """SDK-40: ``identifier=`` accepts ticker for path-param ``list``."""
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/proxy-votes").mock(
+            return_value=httpx.Response(200, json=PAGINATED_VOTES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.proxy_votes.list(identifier="AAPL")
+
+        assert route.called
+        client.close()

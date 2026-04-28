@@ -23,14 +23,17 @@ class Sections:
 
     def list_by_company(
         self,
-        cik: str,
+        identifier: str,
         *,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[SectionSummary]:
         """List sections across a company's filings.
 
-        ``GET /v1/us/sec/companies/{cik}/sections``
+        ``GET /v1/us/sec/companies/{identifier}/sections``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback for stale tickers).
         """
         params: dict[str, Any] = {
             "page": page,
@@ -38,7 +41,7 @@ class Sections:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/sections",
+            f"/v1/us/sec/companies/{identifier}/sections",
             params=params,
             response_model=PaginatedResponse[SectionSummary],
         )
@@ -78,7 +81,7 @@ class Sections:
 
     def entities(
         self,
-        cik: str,
+        identifier: str,
         section_type: str,
         *,
         page: int = 1,
@@ -86,7 +89,9 @@ class Sections:
     ) -> PaginatedResponse[EntityResponse]:
         """List named entities extracted from a company's sections.
 
-        ``GET /v1/us/sec/companies/{cik}/sections/{section_type}/entities``
+        ``GET /v1/us/sec/companies/{identifier}/sections/{section_type}/entities``
+
+        ``identifier`` accepts a CIK or ticker (see ``list_by_company``).
         """
         params: dict[str, Any] = {
             "page": page,
@@ -94,7 +99,7 @@ class Sections:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/sections/{section_type}/entities",
+            f"/v1/us/sec/companies/{identifier}/sections/{section_type}/entities",
             params=params,
             response_model=PaginatedResponse[EntityResponse],
         )

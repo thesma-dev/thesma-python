@@ -120,3 +120,29 @@ class TestCompensationBoard:
         assert isinstance(result.data, BoardResponse)
         assert len(result.data.members) == 1
         client.close()
+
+
+class TestCompensationByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for both ``get`` and ``board``."""
+
+    @respx.mock
+    def test_get_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/compensation").mock(
+            return_value=httpx.Response(200, json=COMPENSATION_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.compensation.get(identifier="AAPL")
+
+        assert route.called
+        client.close()
+
+    @respx.mock
+    def test_board_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/board").mock(
+            return_value=httpx.Response(200, json=BOARD_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.compensation.board(identifier="AAPL")
+
+        assert route.called
+        client.close()

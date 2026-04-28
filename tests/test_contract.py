@@ -19,26 +19,26 @@ SPEC_URL = "https://api.thesma.dev/openapi.json"
 # Only includes endpoints implemented in SDK-04.
 ENDPOINT_MAP: dict[str, tuple[str, str]] = {
     "/v1/us/sec/companies": ("companies", "list"),
-    "/v1/us/sec/companies/{cik}": ("companies", "get"),
-    "/v1/us/sec/companies/{cik}/filings": ("filings", "list"),
+    "/v1/us/sec/companies/{identifier}": ("companies", "get"),
+    "/v1/us/sec/companies/{identifier}/filings": ("filings", "list"),
     "/v1/us/sec/filings": ("filings", "list_all"),
     "/v1/us/sec/filings/{accession_number}": ("filings", "get"),
     "/v1/us/sec/filings/{accession_number}/content": ("filings", "content"),
     "/v1/us/sec/financials/fields": ("financials", "fields"),
-    "/v1/us/sec/companies/{cik}/financials": ("financials", "get"),
-    "/v1/us/sec/companies/{cik}/financials/{metric}": ("financials", "time_series"),
-    "/v1/us/sec/companies/{cik}/ratios": ("ratios", "get"),
-    "/v1/us/sec/companies/{cik}/ratios/{ratio}": ("ratios", "time_series"),
+    "/v1/us/sec/companies/{identifier}/financials": ("financials", "get"),
+    "/v1/us/sec/companies/{identifier}/financials/{metric}": ("financials", "time_series"),
+    "/v1/us/sec/companies/{identifier}/ratios": ("ratios", "get"),
+    "/v1/us/sec/companies/{identifier}/ratios/{ratio}": ("ratios", "time_series"),
     "/v1/us/sec/screener": ("screener", "screen"),
 }
 
 # Per-endpoint mapping of API param names to SDK param names.
 # Only entries where the SDK name differs from the API name.
 _ENDPOINT_RENAMES: dict[str, dict[str, str]] = {
-    "/v1/us/sec/companies/{cik}/filings": {"type": "filing_type", "from": "start_date", "to": "end_date"},
+    "/v1/us/sec/companies/{identifier}/filings": {"type": "filing_type", "from": "start_date", "to": "end_date"},
     "/v1/us/sec/filings": {"type": "filing_type", "from": "start_date", "to": "end_date"},
-    "/v1/us/sec/companies/{cik}/financials/{metric}": {"from": "from_year", "to": "to_year"},
-    "/v1/us/sec/companies/{cik}/ratios/{ratio}": {"from": "from_year", "to": "to_year"},
+    "/v1/us/sec/companies/{identifier}/financials/{metric}": {"from": "from_year", "to": "to_year"},
+    "/v1/us/sec/companies/{identifier}/ratios/{ratio}": {"from": "from_year", "to": "to_year"},
     "/v1/us/sec/screener": {"sort": "sort_by"},
 }
 
@@ -180,16 +180,16 @@ def test_no_pre_s4_url_literals_in_resources() -> None:
 def test_s4_new_paths_present_in_spec(openapi_spec: dict[str, Any]) -> None:
     """Post-S4 paths exist in the OpenAPI spec."""
     paths = openapi_spec.get("paths", {})
-    assert "/v1/us/sec/companies/{cik}/compensation" in paths
-    assert "/v1/us/sec/companies/{cik}/holders" in paths
+    assert "/v1/us/sec/companies/{identifier}/compensation" in paths
+    assert "/v1/us/sec/companies/{identifier}/holders" in paths
 
 
 @pytest.mark.contract
 def test_s4_old_paths_absent_from_spec(openapi_spec: dict[str, Any]) -> None:
     """Pre-S4 paths are gone from the OpenAPI spec."""
     paths = openapi_spec.get("paths", {})
-    assert "/v1/us/sec/companies/{cik}/executive-compensation" not in paths
-    assert "/v1/us/sec/companies/{cik}/institutional-holders" not in paths
+    assert "/v1/us/sec/companies/{identifier}/executive-compensation" not in paths
+    assert "/v1/us/sec/companies/{identifier}/institutional-holders" not in paths
 
 
 def test_company_list_item_has_detail_url() -> None:

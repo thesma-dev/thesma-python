@@ -3,7 +3,7 @@
   "info": {
     "title": "Thesma API",
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
-    "version": "0.11.0"
+    "version": "0.12.0"
   },
   "servers": [
     {
@@ -58,22 +58,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/beneficial-ownership": {
+    "/v1/us/sec/companies/{identifier}/beneficial-ownership": {
       "get": {
         "tags": [
           "Beneficial Ownership"
         ],
         "summary": "List Company Beneficial Ownership",
         "description": "Returns beneficial ownership filings for a company, sorted by filing date descending.",
-        "operationId": "list_company_beneficial_ownership_v1_us_sec_companies__cik__beneficial_ownership_get",
+        "operationId": "list_company_beneficial_ownership_v1_us_sec_companies__identifier__beneficial_ownership_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -3127,22 +3127,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}": {
+    "/v1/us/sec/companies/{identifier}": {
       "get": {
         "tags": [
           "Companies"
         ],
         "summary": "Get Company",
-        "description": "Return detailed information for a single company by CIK.\n\nWhen ``?include=<comma,list>`` is set, each listed expander runs\nconcurrently via :func:`safe_expand` + ``asyncio.gather``. Successful\nexpanders' payloads replace their HATEOAS ``*_url`` link fields\ninside ``data``; failures emit a typed ``{\"error\": {...}}`` slot.\n``labor_context`` / ``lending_context`` continue to ride the\npre-S1 inline ``safe_enrich`` path so their byte-level response\nshape is preserved.",
-        "operationId": "get_company_v1_us_sec_companies__cik__get",
+        "description": "Return detailed information for a single company by CIK or ticker.\n\nWhen ``?include=<comma,list>`` is set, each listed expander runs\nconcurrently via :func:`safe_expand` + ``asyncio.gather``. Successful\nexpanders' payloads replace their HATEOAS ``*_url`` link fields\ninside ``data``; failures emit a typed ``{\"error\": {...}}`` slot.\n``labor_context`` / ``lending_context`` continue to ride the\npre-S1 inline ``safe_enrich`` path so their byte-level response\nshape is preserved.",
+        "operationId": "get_company_v1_us_sec_companies__identifier__get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -3188,22 +3188,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/filings": {
+    "/v1/us/sec/companies/{identifier}/filings": {
       "get": {
         "tags": [
           "Companies"
         ],
         "summary": "Get Company Filings",
         "description": "Redirect to the filings list filtered by this company's CIK.",
-        "operationId": "get_company_filings_v1_us_sec_companies__cik__filings_get",
+        "operationId": "get_company_filings_v1_us_sec_companies__identifier__filings_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           }
         ],
@@ -3229,22 +3229,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/compensation": {
+    "/v1/us/sec/companies/{identifier}/compensation": {
       "get": {
         "tags": [
           "Compensation"
         ],
         "summary": "Get Compensation",
         "description": "Get executive compensation data from DEF 14A proxy statements.",
-        "operationId": "get_compensation_v1_us_sec_companies__cik__compensation_get",
+        "operationId": "get_compensation_v1_us_sec_companies__identifier__compensation_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -3308,22 +3308,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/board": {
+    "/v1/us/sec/companies/{identifier}/board": {
       "get": {
         "tags": [
           "Compensation"
         ],
         "summary": "Get Board",
         "description": "Get board of directors from DEF 14A proxy statements.",
-        "operationId": "get_board_v1_us_sec_companies__cik__board_get",
+        "operationId": "get_board_v1_us_sec_companies__identifier__board_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -3582,22 +3582,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/events": {
+    "/v1/us/sec/companies/{identifier}/events": {
       "get": {
         "tags": [
           "Events"
         ],
         "summary": "List Company Events",
         "description": "List 8-K event filings for a company with optional filtering by item code, category, and date range.",
-        "operationId": "list_company_events_v1_us_sec_companies__cik__events_get",
+        "operationId": "list_company_events_v1_us_sec_companies__identifier__events_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -4348,22 +4348,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/financials": {
+    "/v1/us/sec/companies/{identifier}/financials": {
       "get": {
         "tags": [
           "Financials"
         ],
         "summary": "Get Financials",
         "description": "Return a financial statement (income, balance sheet, or cash flow) for a company. Values are reported in the filer's presentation currency with no FX conversion. See [Reporting basis and comparability](https://docs.thesma.dev/datasets/sec-edgar/xbrl-mapping#reporting-basis-and-comparability) for details on taxonomy (us-gaap vs ifrs-full), currency, presentation format, and the six comparability caveats \u2014 including the bank-extension caveat that applies to Nu Holdings and other IFRS-reporting banks.",
-        "operationId": "get_financials_v1_us_sec_companies__cik__financials_get",
+        "operationId": "get_financials_v1_us_sec_companies__identifier__financials_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -4505,7 +4505,7 @@
                       "$ref": "#/components/schemas/EnrichedMultiStatementPaginatedResponse"
                     }
                   ],
-                  "title": "Response Get Financials V1 Us Sec Companies  Cik  Financials Get"
+                  "title": "Response Get Financials V1 Us Sec Companies  Identifier  Financials Get"
                 }
               }
             }
@@ -4523,24 +4523,15 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/financials/{metric}": {
+    "/v1/us/sec/companies/{identifier}/financials/{metric}": {
       "get": {
         "tags": [
           "Financials"
         ],
         "summary": "Get Financial Metric",
         "description": "Return a time series for a single financial metric across periods.",
-        "operationId": "get_financial_metric_v1_us_sec_companies__cik__financials__metric__get",
+        "operationId": "get_financial_metric_v1_us_sec_companies__identifier__financials__metric__get",
         "parameters": [
-          {
-            "name": "cik",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cik"
-            }
-          },
           {
             "name": "metric",
             "in": "path",
@@ -4548,6 +4539,15 @@
             "schema": {
               "type": "string",
               "title": "Metric"
+            }
+          },
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
             }
           },
           {
@@ -4623,22 +4623,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/institutional-changes": {
+    "/v1/us/sec/companies/{identifier}/institutional-changes": {
       "get": {
         "tags": [
           "Holding Changes"
         ],
         "summary": "List Company Institutional Changes",
         "description": "List institutional position changes for a company \u2014 which funds are buying/selling.\n\nNote: ``pct_change`` is the percentage change in share count, not market value.",
-        "operationId": "list_company_institutional_changes_v1_us_sec_companies__cik__institutional_changes_get",
+        "operationId": "list_company_institutional_changes_v1_us_sec_companies__identifier__institutional_changes_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -4835,22 +4835,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/holders": {
+    "/v1/us/sec/companies/{identifier}/holders": {
       "get": {
         "tags": [
           "Holdings"
         ],
         "summary": "List Holders",
         "description": "List institutional holders of a company from 13F filings.\n\nReturns one row per (filing, CUSIP, position_type). Sub-manager attribution\nwithin a filing is not exposed; see SEC EDGAR directly for regulatory\nattribution analysis.",
-        "operationId": "list_holders_v1_us_sec_companies__cik__holders_get",
+        "operationId": "list_holders_v1_us_sec_companies__identifier__holders_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -5102,22 +5102,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/insider-holdings": {
+    "/v1/us/sec/companies/{identifier}/insider-holdings": {
       "get": {
         "tags": [
           "Insider Holdings"
         ],
         "summary": "List Company Insider Holdings",
         "description": "List insider holdings for a company from Form 4 filings.",
-        "operationId": "list_company_insider_holdings_v1_us_sec_companies__cik__insider_holdings_get",
+        "operationId": "list_company_insider_holdings_v1_us_sec_companies__identifier__insider_holdings_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -5208,22 +5208,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/insider-trades": {
+    "/v1/us/sec/companies/{identifier}/insider-trades": {
       "get": {
         "tags": [
           "Insider Trades"
         ],
         "summary": "List Company Insider Trades",
         "description": "List insider trades for a company from Form 4 filings.\n\nDefault mode collapses same-day 10b5-1 slices into distinct transaction events, keyed on\n``(person, date, type, security, ownership)``. Use ``?flat=true`` for raw per-slice rows.",
-        "operationId": "list_company_insider_trades_v1_us_sec_companies__cik__insider_trades_get",
+        "operationId": "list_company_insider_trades_v1_us_sec_companies__identifier__insider_trades_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -5370,7 +5370,7 @@
                       "$ref": "#/components/schemas/PaginatedResponse_InsiderTradeListItem_"
                     }
                   ],
-                  "title": "Response List Company Insider Trades V1 Us Sec Companies  Cik  Insider Trades Get"
+                  "title": "Response List Company Insider Trades V1 Us Sec Companies  Identifier  Insider Trades Get"
                 }
               }
             }
@@ -5870,22 +5870,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/proxy-votes": {
+    "/v1/us/sec/companies/{identifier}/proxy-votes": {
       "get": {
         "tags": [
           "Proxy Votes"
         ],
         "summary": "Get Proxy Votes",
         "description": "Get proxy voting results from DEF 14A filings.",
-        "operationId": "get_proxy_votes_v1_us_sec_companies__cik__proxy_votes_get",
+        "operationId": "get_proxy_votes_v1_us_sec_companies__identifier__proxy_votes_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -5970,22 +5970,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/ratios": {
+    "/v1/us/sec/companies/{identifier}/ratios": {
       "get": {
         "tags": [
           "Ratios"
         ],
         "summary": "Get Ratios",
         "description": "Return financial ratios for a company in a given period.",
-        "operationId": "get_ratios_v1_us_sec_companies__cik__ratios_get",
+        "operationId": "get_ratios_v1_us_sec_companies__identifier__ratios_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -6063,24 +6063,15 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/ratios/{ratio}": {
+    "/v1/us/sec/companies/{identifier}/ratios/{ratio}": {
       "get": {
         "tags": [
           "Ratios"
         ],
         "summary": "Get Ratio Time Series",
         "description": "Return a time series for a single financial ratio across periods.",
-        "operationId": "get_ratio_time_series_v1_us_sec_companies__cik__ratios__ratio__get",
+        "operationId": "get_ratio_time_series_v1_us_sec_companies__identifier__ratios__ratio__get",
         "parameters": [
-          {
-            "name": "cik",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cik"
-            }
-          },
           {
             "name": "ratio",
             "in": "path",
@@ -6088,6 +6079,15 @@
             "schema": {
               "type": "string",
               "title": "Ratio"
+            }
+          },
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
             }
           },
           {
@@ -6169,7 +6169,7 @@
           "Screener"
         ],
         "summary": "Screen Companies",
-        "description": "Screen companies by financial ratio thresholds and cross-dataset signals.",
+        "description": "**Cross-dataset enrichment** (`?include=labor_context` / `?include=lending_context`) on the screener requires a Pro tier subscription. See [pricing](https://thesma.dev/pricing). Single-resource enrichment on `/companies/{cik}` and similar endpoints remains available on all tiers including Free. Multiple values must be comma-separated (`?include=labor_context,lending_context`); repeating the query key (`?include=labor_context&include=lending_context`) keeps only the last value. The screener consumes the `labor_context` and `lending_context` values; other values from the broader `?include=` vocabulary are accepted syntactically but have no effect on screener responses.",
         "operationId": "screen_companies_v1_us_sec_screener_get",
         "parameters": [
           {
@@ -8240,22 +8240,22 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/sections": {
+    "/v1/us/sec/companies/{identifier}/sections": {
       "get": {
         "tags": [
           "Sections"
         ],
         "summary": "List Company Sections",
         "description": "List available sections for a company.",
-        "operationId": "list_company_sections_v1_us_sec_companies__cik__sections_get",
+        "operationId": "list_company_sections_v1_us_sec_companies__identifier__sections_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cik"
+              "title": "Identifier"
             }
           },
           {
@@ -8580,24 +8580,15 @@
         }
       }
     },
-    "/v1/us/sec/companies/{cik}/sections/{section_type}/entities": {
+    "/v1/us/sec/companies/{identifier}/sections/{section_type}/entities": {
       "get": {
         "tags": [
           "Sections"
         ],
         "summary": "List Section Entities",
         "description": "List named entities extracted from a section type across all filings for a company.",
-        "operationId": "list_section_entities_v1_us_sec_companies__cik__sections__section_type__entities_get",
+        "operationId": "list_section_entities_v1_us_sec_companies__identifier__sections__section_type__entities_get",
         "parameters": [
-          {
-            "name": "cik",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cik"
-            }
-          },
           {
             "name": "section_type",
             "in": "path",
@@ -8605,6 +8596,15 @@
             "schema": {
               "type": "string",
               "title": "Section Type"
+            }
+          },
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
             }
           },
           {

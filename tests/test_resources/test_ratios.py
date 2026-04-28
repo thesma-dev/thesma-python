@@ -92,3 +92,19 @@ class TestRatiosTimeSeries:
         request = route.calls.last.request
         assert "period=quarterly" in str(request.url)
         client.close()
+
+
+class TestRatiosByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for path-param methods."""
+
+    @respx.mock
+    def test_get_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/ratios").mock(
+            return_value=httpx.Response(200, json=RATIO_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.ratios.get(identifier="AAPL")
+
+        assert route.called
+        assert result.data.company.cik == "0000320193"
+        client.close()

@@ -9,14 +9,14 @@ from thesma._types import DataResponse
 
 
 class Ratios:
-    """Resource for ``/v1/us/sec/companies/{cik}/ratios`` endpoints."""
+    """Resource for ``/v1/us/sec/companies/{identifier}/ratios`` endpoints."""
 
     def __init__(self, client: Any) -> None:
         self._client = client
 
     def get(
         self,
-        cik: str,
+        identifier: str,
         *,
         period: str | None = None,
         year: int | None = None,
@@ -24,7 +24,10 @@ class Ratios:
     ) -> DataResponse[RatioResponse]:
         """Get financial ratios for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/ratios``
+        ``GET /v1/us/sec/companies/{identifier}/ratios``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback for stale tickers).
         """
         params: dict[str, Any] = {
             "period": period,
@@ -33,14 +36,14 @@ class Ratios:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/ratios",
+            f"/v1/us/sec/companies/{identifier}/ratios",
             params=params,
             response_model=DataResponse[RatioResponse],
         )
 
     def time_series(
         self,
-        cik: str,
+        identifier: str,
         ratio: str,
         *,
         period: str | None = None,
@@ -49,7 +52,9 @@ class Ratios:
     ) -> DataResponse[RatioTimeSeriesResponse]:
         """Get a time series for a single financial ratio.
 
-        ``GET /v1/us/sec/companies/{cik}/ratios/{ratio}``
+        ``GET /v1/us/sec/companies/{identifier}/ratios/{ratio}``
+
+        ``identifier`` accepts a CIK or ticker (see ``get`` for details).
         """
         params: dict[str, Any] = {
             "period": period,
@@ -58,7 +63,7 @@ class Ratios:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/ratios/{ratio}",
+            f"/v1/us/sec/companies/{identifier}/ratios/{ratio}",
             params=params,
             response_model=DataResponse[RatioTimeSeriesResponse],
         )

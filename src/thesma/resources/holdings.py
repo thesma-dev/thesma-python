@@ -22,7 +22,7 @@ class Holdings:
 
     def holders(
         self,
-        cik: str,
+        identifier: str,
         *,
         quarter: str | None = None,
         page: int = 1,
@@ -30,7 +30,10 @@ class Holdings:
     ) -> PaginatedResponse[HolderListItem]:
         """List institutional holders for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/holders``
+        ``GET /v1/us/sec/companies/{identifier}/holders``
+
+        ``identifier`` accepts a CIK or ticker (case-insensitive, with
+        ``TickerAlias`` fallback for stale tickers).
 
         Each row carries ``report_quarter`` (``"YYYY-QN"`` format, e.g.
         ``"2025-Q3"``) and ``filed_at`` (UTC ``datetime``) — the temporal
@@ -43,21 +46,23 @@ class Holdings:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/holders",
+            f"/v1/us/sec/companies/{identifier}/holders",
             params=params,
             response_model=PaginatedResponse[HolderListItem],
         )
 
     def holder_changes(
         self,
-        cik: str,
+        identifier: str,
         *,
         page: int = 1,
         per_page: int = 25,
     ) -> PaginatedResponse[CompanyPositionChange]:
         """List institutional position changes for a company.
 
-        ``GET /v1/us/sec/companies/{cik}/institutional-changes``
+        ``GET /v1/us/sec/companies/{identifier}/institutional-changes``
+
+        ``identifier`` accepts a CIK or ticker (see ``holders`` for details).
         """
         params: dict[str, Any] = {
             "page": page,
@@ -65,7 +70,7 @@ class Holdings:
         }
         return self._client.request(  # type: ignore[no-any-return]
             "GET",
-            f"/v1/us/sec/companies/{cik}/institutional-changes",
+            f"/v1/us/sec/companies/{identifier}/institutional-changes",
             params=params,
             response_model=PaginatedResponse[CompanyPositionChange],
         )

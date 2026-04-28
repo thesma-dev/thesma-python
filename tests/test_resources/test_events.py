@@ -215,3 +215,19 @@ class TestEventsCategories:
         assert isinstance(result.data[0], EventCategory)
         assert result.data[0].name == "earnings"
         client.close()
+
+
+class TestEventsListByIdentifier:
+    """SDK-40: ``identifier=`` accepts ticker for path-param ``list``."""
+
+    @respx.mock
+    def test_list_by_ticker(self, api_key: str) -> None:
+        route = respx.get(f"{BASE}/v1/us/sec/companies/AAPL/events").mock(
+            return_value=httpx.Response(200, json=PAGINATED_EVENTS_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.events.list(identifier="AAPL")
+
+        assert route.called
+        assert result.data[0].cik == "0000320193"
+        client.close()

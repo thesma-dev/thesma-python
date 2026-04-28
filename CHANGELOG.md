@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0.0] - 2026-04-28
+
+### Breaking
+- All company-resource methods now accept their path identifier as
+  ``identifier=`` (was ``cik=``), reflecting govdata-api ``0.12.0``'s
+  T-221 path-param rename. Callers using the keyword form
+  (``client.companies.get(cik="0000320193")``) must rename to
+  ``identifier=`` (positional callers are unaffected). The new parameter
+  also accepts ticker symbols (``"AAPL"``, case-insensitive) and stale
+  tickers via ``TickerAlias`` fallback (``"FB"`` resolves to META's CIK)
+  — the response ``cik`` field always carries the canonical zero-padded
+  form regardless of how the resource was addressed. Affected resources:
+  ``companies``, ``financials``, ``ratios``, ``events``,
+  ``insider_trades``, ``insider_holdings``, ``holdings`` (only the
+  company-side ``holders`` and ``holder_changes`` methods — the fund
+  methods still use ``cik=``), ``compensation``, ``proxy_votes``,
+  ``beneficial_ownership``, ``sections`` (only ``list_by_company`` and
+  ``entities`` — ``search`` keeps its ``cik=`` query-param filter),
+  ``filings`` (only ``list`` — ``list_all`` keeps its ``cik=`` query
+  filter).
+
+### Changed
+- ``client.beneficial_ownership.list(identifier=...)`` (the company-scoped
+  method) now raises ``NotFoundError`` for unknown CIKs, where previously
+  it returned an empty list. Consistent with all other company-resource
+  methods. Use ``client.beneficial_ownership.list_all()`` (the
+  cross-company feed) to query 13D/13G filings for subjects outside the
+  tracked universe — that method is unchanged.
+
 ## [0.11.1.1] - 2026-04-27
 
 ### Added
