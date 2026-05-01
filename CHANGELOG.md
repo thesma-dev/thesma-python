@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0.0] - 2026-04-30
+
+### Breaking
+- ``client.filings.list_all`` and ``client.sections.search`` now accept
+  the company filter as ``identifier=`` (was ``cik=``), reflecting
+  govdata-api ``0.14.0``'s T-230 query-param rename. The new parameter
+  also accepts ticker symbols (``"AAPL"``, case-insensitive) and stale
+  tickers via ``TickerAlias`` fallback (``"FB"`` resolves to META's CIK).
+  Callers using the keyword form (``cik="0000320193"``) must rename to
+  ``identifier="0000320193"``; positional callers are unaffected. Unlike
+  the ``/companies/{identifier}/*`` cluster (SDK-40), the query-filter
+  contract on miss is silent 200-empty (NOT 4xx) — matches every other
+  query-filter on these routes.
+- The ``"other"`` value is removed from ``company_tier`` on every
+  response model, reflecting govdata-api ``0.13.0``'s T-227 retirement
+  of that tier. The field is now ``Optional`` — companies not in any
+  tracked Russell index are returned with ``company_tier=None`` rather
+  than ``"other"``. Equality checks against the literal ``"other"``
+  will silently never match, and ``CompanyTier.other`` now raises
+  ``AttributeError``. Update call sites to handle ``None`` (e.g.
+  ``if company.company_tier is None: ...``) before upgrading.
+
+### Added
+- ``client.companies.list(in_index=...)`` and
+  ``client.screener.screen(in_index=...)`` accept a new boolean filter
+  per govdata-api ``0.13.0``'s T-227. ``in_index=True`` returns
+  companies in any tracked Russell index (``company_tier IS NOT NULL``);
+  ``in_index=False`` returns unindexed companies (``company_tier IS NULL``).
+  Composes with the existing ``tier=`` filter via AND.
+
+### Changed
+- CLI ``--tier`` option on ``thesma companies list`` and ``thesma
+  screener screen`` now uses ``click.Choice`` enforcement against the
+  four accepted REQUEST values (``sp500``, ``russell1000``,
+  ``russell2000``, ``russell3000``), matching the
+  ``--exchange``/``--domicile``/``--taxonomy`` precedent. Invalid
+  values now reject locally with a Click error rather than
+  round-tripping a 400 from the api. Help text describes the inclusion
+  semantics (``russell3000`` returns the
+  ``sp500 ∪ russell1000 ∪ russell2000`` superset; ``russell2000`` is
+  literal russell2000 only — aligned across ``/companies`` and
+  ``/screener`` per govdata-api T-226).
+
+### Internal
+- Refreshed ``tests/fixtures/openapi.json`` against
+  ``https://api.thesma.dev/openapi.json`` (api ``0.14.0``). Picks up
+  description-text refreshes (T-225, T-226), the new ``?in_index=``
+  filter on ``/v1/us/sec/companies`` and ``/v1/us/sec/screener``
+  (T-227), and the path-parameter metadata for the renamed query
+  filters (T-230).
+
 ## [0.12.0.0] - 2026-04-28
 
 ### Breaking

@@ -17,7 +17,15 @@ def screener_group() -> None:
 
 @screener_group.command("screen")
 @click.option("--sic", multiple=True, help="Filter by SIC code(s). Repeat for multiple.")
-@click.option("--tier", default=None, help="Filter by index tier.")
+@click.option(
+    "--tier",
+    default=None,
+    type=click.Choice(["sp500", "russell1000", "russell2000", "russell3000"], case_sensitive=False),
+    help=(
+        "Filter by index tier: sp500, russell1000 (includes sp500), russell2000, "
+        "russell3000 (sp500 + russell1000 + russell2000)."
+    ),
+)
 @click.option(
     "--exchange",
     multiple=True,

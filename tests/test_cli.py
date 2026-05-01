@@ -217,6 +217,34 @@ class TestCompaniesListJson:
         assert result.exit_code != 0
         mock_client.companies.list.assert_not_called()
 
+    def test_cli_companies_list_invalid_tier_rejected(self, runner: CliRunner) -> None:
+        """AC #8: ``--tier bogus`` rejects locally with Click's invalid-value
+        error, exit code 2, no network call."""
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--tier", "bogus"], mock_client)
+        assert result.exit_code == 2
+        assert "invalid" in result.output.lower() or "Invalid" in result.output
+        mock_client.companies.list.assert_not_called()
+
+    def test_cli_companies_list_tier_help_text(self, runner: CliRunner) -> None:
+        """AC #9: ``--help`` output contains the four-tier-with-semantics
+        help string."""
+        result = runner.invoke(cli, ["companies", "list", "--help"])
+        assert result.exit_code == 0
+        assert "Filter by index tier" in result.output
+        assert "russell3000" in result.output
+
+    @pytest.mark.parametrize("tier", ["sp500", "russell1000", "russell2000", "russell3000"])
+    def test_cli_companies_list_accepts_all_four_tiers(self, runner: CliRunner, tier: str) -> None:
+        """The Choice list contains the request-side superset (russell3000)
+        even though the response-side enum only carries the three stored
+        values."""
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["companies", "list", "--tier", tier], mock_client)
+        assert result.exit_code == 0
+        call_kwargs = mock_client.companies.list.call_args
+        assert call_kwargs.kwargs.get("tier") == tier
+
 
 class TestCompaniesListCsv:
     def test_outputs_valid_csv_with_headers(self, runner: CliRunner) -> None:
@@ -493,6 +521,22 @@ class TestScreenerScreen:
         assert "--max-industry-quits-rate" in result.output
         assert "--min-industry-openings-rate" in result.output
         assert "--max-industry-openings-rate" in result.output
+
+    def test_cli_screener_invalid_tier_rejected(self, runner: CliRunner) -> None:
+        """SDK-42 AC #8 mirror: ``--tier bogus`` rejects locally on screener."""
+        mock_client = _make_mock_client()
+        result = _invoke(runner, ["screener", "screen", "--tier", "bogus"], mock_client)
+        assert result.exit_code == 2
+        assert "invalid" in result.output.lower() or "Invalid" in result.output
+        mock_client.screener.screen.assert_not_called()
+
+    def test_cli_screener_tier_help_text(self, runner: CliRunner) -> None:
+        """SDK-42 AC #9 mirror: ``--help`` output contains the four-tier
+        help string on screener."""
+        result = runner.invoke(cli, ["screener", "screen", "--help"])
+        assert result.exit_code == 0
+        assert "Filter by index tier" in result.output
+        assert "russell3000" in result.output
 
     def test_cli_screener_screen_exchange(self, runner: CliRunner) -> None:
         mock_client = _make_mock_client()

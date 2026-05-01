@@ -1,11 +1,14 @@
-"""Introspection tests pinning the SDK-40 ``cik`` → ``identifier`` rename.
+"""Introspection tests pinning the SDK-40 ``cik`` → ``identifier`` rename
+plus the SDK-42 follow-on rename of two query-param filters.
 
 Verifies in one shot that:
 
-* All 17 path-param company-resource methods take ``identifier=`` as a kwarg
-  and no longer accept ``cik=``.
-* All 7 OOS methods (fund-CIK methods + ``?cik=`` query-param filters) still
-  take ``cik=`` — guards against an over-rename via global find-replace.
+* The 17 path-param company-resource methods (SDK-40) AND the two query-
+  param filters renamed by SDK-42 (``filings.list_all`` and
+  ``sections.search``) take ``identifier=`` as a kwarg and no longer
+  accept ``cik=``.
+* The two fund-CIK path methods on ``holdings`` still take ``cik=``
+  (intentionally out of scope for both SDK-40 and SDK-42).
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ import pytest
 
 from thesma.client import ThesmaClient
 
-# AC #10: the 17 renamed methods take ``identifier=`` as a kwarg.
+# 17 SDK-40 path-param methods + 2 SDK-42 query-param filters.
 RENAMED_METHODS = [
     ("companies", "get"),
     ("financials", "get"),
@@ -35,29 +38,22 @@ RENAMED_METHODS = [
     ("sections", "list_by_company"),
     ("sections", "entities"),
     ("filings", "list"),
-]
-
-# Methods that genuinely accept a ``cik`` parameter and are out of T-221 scope:
-# the two fund-CIK path methods, plus the two cross-company query-param ``?cik=``
-# filters that exist today (``filings.list_all``, ``sections.search``).
-#
-# The spec's exclusion table also listed ``events.list_all``,
-# ``insider_trades.list_all``, and ``beneficial_ownership.list_all`` as
-# ``?cik=`` filter methods, but inspection shows those three do not actually
-# take a ``cik`` kwarg — there is nothing to assert about non-renaming for
-# them, so they are not in this fixture. Their non-renaming is implicitly
-# guaranteed by the fact that they have no ``cik`` parameter to rename.
-NOT_RENAMED_METHODS = [
-    ("holdings", "fund_holdings"),
-    ("holdings", "fund_changes"),
+    # SDK-42 (T-230) query-param filter renames:
     ("filings", "list_all"),
     ("sections", "search"),
 ]
 
+# Fund-CIK path methods that still take ``cik=`` — out of both T-221 and
+# T-230 scope; the path segment is literally ``/funds/{cik}``.
+NOT_RENAMED_METHODS = [
+    ("holdings", "fund_holdings"),
+    ("holdings", "fund_changes"),
+]
+
 
 @pytest.mark.parametrize("resource_name,method_name", RENAMED_METHODS)
-def test_company_resource_methods_use_identifier_kwarg(resource_name: str, method_name: str, api_key: str) -> None:
-    """Pin AC #10: every renamed method takes ``identifier`` as a kwarg, not ``cik``."""
+def test_resource_methods_use_identifier_kwarg(resource_name: str, method_name: str, api_key: str) -> None:
+    """Every renamed method takes ``identifier`` as a kwarg, not ``cik``."""
     client = ThesmaClient(api_key=api_key)
     try:
         resource = getattr(client, resource_name)
@@ -72,13 +68,14 @@ def test_company_resource_methods_use_identifier_kwarg(resource_name: str, metho
 
 
 @pytest.mark.parametrize("resource_name,method_name", NOT_RENAMED_METHODS)
-def test_non_company_resource_methods_keep_cik_kwarg(resource_name: str, method_name: str, api_key: str) -> None:
-    """Pin AC #8/#9: fund methods and query-param filters still use ``cik`` kwarg."""
+def test_fund_methods_keep_cik_kwarg(resource_name: str, method_name: str, api_key: str) -> None:
+    """Fund-CIK path methods still use ``cik`` kwarg (out of scope for the
+    SDK-40 + SDK-42 identifier-rename arc)."""
     client = ThesmaClient(api_key=api_key)
     try:
         resource = getattr(client, resource_name)
         method = getattr(resource, method_name)
         sig = inspect.signature(method)
-        assert "cik" in sig.parameters, f"{resource_name}.{method_name} should still take 'cik' (not in T-221 scope)"
+        assert "cik" in sig.parameters, f"{resource_name}.{method_name} should still take 'cik' (out of scope)"
     finally:
         client.close()

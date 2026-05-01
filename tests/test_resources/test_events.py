@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._generated.models import EventCategory
@@ -231,3 +232,15 @@ class TestEventsListByIdentifier:
         assert route.called
         assert result.data[0].cik == "0000320193"
         client.close()
+
+    def test_list_all_does_not_accept_cik_kwarg(self, api_key: str) -> None:
+        """SDK-42 regression guard: ``events.list_all`` is a global,
+        non-company-scoped feed (T-230 did not add an identifier filter).
+        Locks the kwarg surface so a future absorber doesn't drift the
+        signature in either direction."""
+        client = ThesmaClient(api_key=api_key)
+        try:
+            with pytest.raises(TypeError, match="cik"):
+                client.events.list_all(cik="0000320193")  # type: ignore[call-arg]
+        finally:
+            client.close()

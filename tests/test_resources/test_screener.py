@@ -208,6 +208,86 @@ class TestScreenerScreen:
         client.close()
 
 
+class TestScreenerTierAndIndex:
+    """SDK-42: T-226 aligned ``/screener?tier=`` semantics with ``/companies``;
+    T-227 added ``?in_index=`` to ``/screener`` (mirrors ``/companies``)."""
+
+    @respx.mock
+    def test_screen_tier_russell3000_returns_superset(self, api_key: str) -> None:
+        """T-226: ``tier="russell3000"`` is a request-side superset; the
+        response carries mixed sp500/russell1000/russell2000 stored tiers."""
+        mixed_json = {
+            "data": [
+                {
+                    "cik": "0000320193",
+                    "name": "Apple Inc.",
+                    "ticker": "AAPL",
+                    "company_tier": "sp500",
+                    "fiscal_year": 2024,
+                    "financials": SCREENER_JSON["data"][0]["financials"],
+                    "ratios": SCREENER_JSON["data"][0]["ratios"],
+                },
+                {
+                    "cik": "0001067839",
+                    "name": "Mid-Cap Co.",
+                    "ticker": "MIDC",
+                    "company_tier": "russell1000",
+                    "fiscal_year": 2024,
+                    "financials": SCREENER_JSON["data"][0]["financials"],
+                    "ratios": SCREENER_JSON["data"][0]["ratios"],
+                },
+                {
+                    "cik": "0001234567",
+                    "name": "Small-Cap Co.",
+                    "ticker": "SMLC",
+                    "company_tier": "russell2000",
+                    "fiscal_year": 2024,
+                    "financials": SCREENER_JSON["data"][0]["financials"],
+                    "ratios": SCREENER_JSON["data"][0]["ratios"],
+                },
+            ],
+            "pagination": {"page": 1, "per_page": 25, "total": 3, "total_pages": 1},
+        }
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=mixed_json),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.screener.screen(tier="russell3000")
+
+        assert "tier=russell3000" in str(route.calls.last.request.url)
+        # ScreenerResultItem uses ``extra='allow'`` passthrough for company_tier,
+        # so the field is a plain string (not a CompanyTier enum). Compare
+        # raw values rather than ``.value`` access.
+        assert {row.company_tier for row in result.data} == {"sp500", "russell1000", "russell2000"}
+        client.close()
+
+    @respx.mock
+    def test_screen_in_index_true_sends_query_param(self, api_key: str) -> None:
+        """T-227: ``screen(in_index=True)`` round-trips the boolean filter."""
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(in_index=True)
+
+        url = str(route.calls.last.request.url)
+        assert "in_index=true" in url.lower()
+        client.close()
+
+    @respx.mock
+    def test_screen_in_index_false_sends_query_param(self, api_key: str) -> None:
+        """T-227: ``screen(in_index=False)`` round-trips the boolean filter."""
+        route = respx.get(f"{BASE}/v1/us/sec/screener").mock(
+            return_value=httpx.Response(200, json=SCREENER_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.screener.screen(in_index=False)
+
+        url = str(route.calls.last.request.url)
+        assert "in_index=false" in url.lower()
+        client.close()
+
+
 class TestScreenerEnhancements:
     @respx.mock
     def test_new_params_passed_to_api(self, api_key: str) -> None:

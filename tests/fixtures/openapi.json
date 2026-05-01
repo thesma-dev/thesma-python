@@ -3,7 +3,7 @@
   "info": {
     "title": "Thesma API",
     "description": "Developer-friendly REST API for SEC EDGAR financial data.",
-    "version": "0.12.0"
+    "version": "0.14.0"
   },
   "servers": [
     {
@@ -2868,7 +2868,7 @@
           "Companies"
         ],
         "summary": "List Companies",
-        "description": "List companies with optional filtering by ticker, name, SIC code, tier, FIPS code, exchange, domicile, taxonomy, or currency.",
+        "description": "List companies with a known exchange listing (covered universe). Filter by ticker, name (search), SIC code, tier, FIPS code, exchange, domicile, taxonomy, or currency.",
         "operationId": "list_companies_v1_us_sec_companies_get",
         "parameters": [
           {
@@ -2941,10 +2941,28 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by company tier: sp500, russell1000 (includes sp500), russell2000, russell3000 (all tradeable)",
+              "description": "Filter by company tier: sp500, russell1000 (includes sp500), russell2000, russell3000 (sp500 + russell1000 + russell2000)",
               "title": "Tier"
             },
-            "description": "Filter by company tier: sp500, russell1000 (includes sp500), russell2000, russell3000 (all tradeable)"
+            "description": "Filter by company tier: sp500, russell1000 (includes sp500), russell2000, russell3000 (sp500 + russell1000 + russell2000)"
+          },
+          {
+            "name": "in_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Predicate filter on Russell-index membership. `true` returns companies in any of sp500/russell1000/russell2000 (company_tier IS NOT NULL); `false` returns unindexed companies (company_tier IS NULL). Composes with all other filters via AND.",
+              "title": "In Index"
+            },
+            "description": "Predicate filter on Russell-index membership. `true` returns companies in any of sp500/russell1000/russell2000 (company_tier IS NOT NULL); `false` returns unindexed companies (company_tier IS NULL). Composes with all other filters via AND."
           },
           {
             "name": "state_fips",
@@ -4101,11 +4119,11 @@
           "Filings"
         ],
         "summary": "List Filings",
-        "description": "List SEC filings with optional filtering by CIK, filing type, and date range.",
+        "description": "List SEC filings with optional filtering by company (CIK or ticker), filing type, and date range.",
         "operationId": "list_filings_v1_us_sec_filings_get",
         "parameters": [
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "query",
             "required": false,
             "schema": {
@@ -4117,10 +4135,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by company CIK",
-              "title": "Cik"
+              "description": "Filter by company CIK or ticker symbol",
+              "title": "Identifier"
             },
-            "description": "Filter by company CIK"
+            "description": "Filter by company CIK or ticker symbol"
           },
           {
             "name": "type",
@@ -6437,10 +6455,28 @@
                   "type": "null"
                 }
               ],
-              "description": "Company tier: sp500, russell1000",
+              "description": "Filter by company tier: sp500, russell1000 (includes sp500), russell2000, russell3000 (sp500 + russell1000 + russell2000)",
               "title": "Tier"
             },
-            "description": "Company tier: sp500, russell1000"
+            "description": "Filter by company tier: sp500, russell1000 (includes sp500), russell2000, russell3000 (sp500 + russell1000 + russell2000)"
+          },
+          {
+            "name": "in_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Predicate filter on Russell-index membership. `true` returns companies in any of sp500/russell1000/russell2000 (company_tier IS NOT NULL); `false` returns unindexed companies (company_tier IS NULL). Composes with all other filters via AND.",
+              "title": "In Index"
+            },
+            "description": "Predicate filter on Russell-index membership. `true` returns companies in any of sp500/russell1000/russell2000 (company_tier IS NOT NULL); `false` returns unindexed companies (company_tier IS NULL). Composes with all other filters via AND."
           },
           {
             "name": "search",
@@ -8734,7 +8770,7 @@
             "description": "Search query text (min 3 characters after stripping whitespace)."
           },
           {
-            "name": "cik",
+            "name": "identifier",
             "in": "query",
             "required": false,
             "schema": {
@@ -8746,10 +8782,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter to a specific company CIK.",
-              "title": "Cik"
+              "description": "Filter to a specific company by CIK or ticker symbol.",
+              "title": "Identifier"
             },
-            "description": "Filter to a specific company CIK."
+            "description": "Filter to a specific company by CIK or ticker symbol."
           },
           {
             "name": "filing_type",
@@ -11260,15 +11296,21 @@
             "description": "Standard Industrial Classification code."
           },
           "company_tier": {
-            "type": "string",
-            "enum": [
-              "sp500",
-              "russell1000",
-              "russell2000",
-              "other"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "sp500",
+                  "russell1000",
+                  "russell2000"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Company Tier",
-            "description": "Index membership tier."
+            "description": "Index membership tier. Null for companies not in any Russell index."
           },
           "exchange": {
             "anyOf": [
@@ -11336,7 +11378,6 @@
         "required": [
           "cik",
           "name",
-          "company_tier",
           "detail_url"
         ],
         "title": "CompanyListItem",

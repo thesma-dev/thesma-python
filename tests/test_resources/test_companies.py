@@ -301,6 +301,133 @@ class TestCompaniesList:
         client.close()
 
 
+class TestCompaniesListTierAndIndex:
+    """SDK-42: T-227 dropped ``"other"`` from CompanyTier and made the field
+    Optional; added ``?in_index=`` filter. T-226 confirmed ``russell3000``
+    is a request-side superset that returns mixed stored tiers."""
+
+    @respx.mock
+    def test_list_tier_russell3000_returns_superset(self, api_key: str) -> None:
+        """AC #7: ``tier="russell3000"`` is a request-side superset; the SDK
+        passes it through unmodified and parses mixed sp500/russell1000/
+        russell2000 rows in the response."""
+        mixed_json = {
+            "data": [
+                {
+                    "cik": "0000320193",
+                    "name": "Apple Inc.",
+                    "ticker": "AAPL",
+                    "sic_code": "3571",
+                    "company_tier": "sp500",
+                    "exchange": "NASDAQ",
+                    "domicile": "us",
+                    "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0000320193",
+                },
+                {
+                    "cik": "0001067839",
+                    "name": "Mid-Cap Co.",
+                    "ticker": "MIDC",
+                    "sic_code": "3711",
+                    "company_tier": "russell1000",
+                    "exchange": "NYSE",
+                    "domicile": "us",
+                    "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0001067839",
+                },
+                {
+                    "cik": "0001234567",
+                    "name": "Small-Cap Co.",
+                    "ticker": "SMLC",
+                    "sic_code": "3711",
+                    "company_tier": "russell2000",
+                    "exchange": "NYSE",
+                    "domicile": "us",
+                    "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0001234567",
+                },
+            ],
+            "pagination": {"page": 1, "per_page": 25, "total": 3, "total_pages": 1},
+        }
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=mixed_json),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.list(tier="russell3000")
+
+        assert "tier=russell3000" in str(route.calls.last.request.url)
+        assert {row.company_tier.value for row in result.data} == {"sp500", "russell1000", "russell2000"}
+        client.close()
+
+    @respx.mock
+    def test_list_unindexed_company_company_tier_is_none(self, api_key: str) -> None:
+        """AC #5: a company response carrying ``"company_tier": null`` parses
+        as ``company_tier=None`` (T-227 made the field Optional)."""
+        unindexed_json = {
+            "data": [
+                {
+                    "cik": "0000999999",
+                    "name": "Unlisted Co.",
+                    "ticker": "UNLC",
+                    "sic_code": "3711",
+                    "company_tier": None,
+                    "exchange": "NYSE",
+                    "domicile": "us",
+                    "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0000999999",
+                },
+            ],
+            "pagination": {"page": 1, "per_page": 25, "total": 1, "total_pages": 1},
+        }
+        respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=unindexed_json),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.companies.list(in_index=False)
+
+        assert result.data[0].company_tier is None
+        client.close()
+
+    def test_company_tier_other_raises_validation_error(self) -> None:
+        """AC #5: locks the T-227 literal-drop. The retired ``"other"`` value
+        no longer round-trips through ``CompanyListItem.model_validate``."""
+        from pydantic import ValidationError
+
+        from thesma._generated.models import CompanyListItem
+
+        with pytest.raises(ValidationError):
+            CompanyListItem.model_validate(
+                {
+                    "cik": "0000999999",
+                    "name": "Should Not Parse Co.",
+                    "company_tier": "other",
+                    "detail_url": "https://api.thesma.dev/v1/us/sec/companies/0000999999",
+                },
+            )
+
+    @respx.mock
+    def test_list_in_index_true_sends_query_param(self, api_key: str) -> None:
+        """T-227 ``?in_index=true`` filters to companies in any tracked tier."""
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(in_index=True)
+
+        url = str(route.calls.last.request.url)
+        assert "in_index=true" in url.lower()
+        client.close()
+
+    @respx.mock
+    def test_list_in_index_false_sends_query_param(self, api_key: str) -> None:
+        """T-227 ``?in_index=false`` filters to companies with null tier."""
+        route = respx.get(f"{BASE}/v1/us/sec/companies").mock(
+            return_value=httpx.Response(200, json=PAGINATED_COMPANIES_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.companies.list(in_index=False)
+
+        url = str(route.calls.last.request.url)
+        assert "in_index=false" in url.lower()
+        client.close()
+
+
 class TestCompaniesGet:
     @respx.mock
     def test_get_sends_correct_url(self, api_key: str) -> None:

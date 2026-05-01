@@ -108,7 +108,7 @@ class Sections:
         self,
         *,
         query: str,
-        cik: str | None = None,
+        identifier: str | None = None,
         filing_type: str | None = None,
         section_type: str | None = None,
         year: int | None = None,
@@ -123,9 +123,12 @@ class Sections:
         :param query: Search text. The api requires at least 3 characters
             after whitespace stripping; shorter queries return ``400`` →
             :class:`thesma.errors.BadRequestError`.
-        :param cik: Optional CIK to scope the search to one company. The
-            api zero-pads to 10 digits server-side, so ``"320193"`` and
-            ``"0000320193"`` are equivalent. Pass-through.
+        :param identifier: Optional CIK (zero-padded or stripped 1-10
+            digits) or current ticker symbol (case-insensitive) to scope
+            the search to one company. Stale tickers fall back to
+            ``TickerAlias`` (e.g. ``"FB"`` → META). Unknown identifiers
+            return an empty result set, not a 4xx — consistent with every
+            other query-filter param on this route.
         :param filing_type: Optional filing-type filter (e.g. ``"10-K"``,
             ``"10-Q"``, ``"20-F"``). Case-sensitive — use the canonical
             form. Pass-through.
@@ -142,7 +145,7 @@ class Sections:
         """
         params: dict[str, Any] = {
             "q": query,
-            "cik": cik,
+            "identifier": identifier,
             "filing_type": filing_type,
             "section_type": section_type,
             "year": year,
