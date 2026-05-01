@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 
 from thesma._types import PaginatedResponse
@@ -398,3 +399,14 @@ class TestInsiderTradesByIdentifier:
 
         assert route.called
         client.close()
+
+    def test_list_all_does_not_accept_cik_kwarg(self, api_key: str) -> None:
+        """SDK-42 regression guard: T-230 did NOT add a company filter to
+        ``insider_trades.list_all``. Locks the kwarg surface so a future
+        absorber doesn't drift the signature."""
+        client = ThesmaClient(api_key=api_key)
+        try:
+            with pytest.raises(TypeError, match="cik"):
+                client.insider_trades.list_all(cik="0000320193")  # type: ignore[call-arg]
+        finally:
+            client.close()

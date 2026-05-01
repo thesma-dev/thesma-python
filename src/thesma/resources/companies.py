@@ -24,6 +24,7 @@ class Companies:
         search: str | None = None,
         sic: str | list[str] | None = None,
         tier: str | None = None,
+        in_index: bool | None = None,
         exchange: str | list[str] | None = None,
         domicile: str | None = None,
         taxonomy: str | None = None,
@@ -53,6 +54,12 @@ class Companies:
         return 400. Companies with no parsed financials are excluded
         from filtered results on either filter.
 
+        ``in_index`` is a boolean predicate on Russell-index membership.
+        ``True`` returns only companies in any tracked tier
+        (``company_tier IS NOT NULL``); ``False`` returns only unindexed
+        companies (``company_tier IS NULL``). Composes with ``tier`` and
+        every other filter via AND.
+
         ``search`` filters by company name substring OR ticker prefix,
         case-insensitive. The value is passed through to the API
         verbatim — the server trims whitespace, escapes SQL LIKE
@@ -70,6 +77,7 @@ class Companies:
             "search": search,
             "sic": sic,
             "tier": tier,
+            "in_index": in_index,
             "exchange": exchange,
             "domicile": domicile,
             "taxonomy": taxonomy,

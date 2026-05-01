@@ -214,15 +214,15 @@ class TestSectionsSearch:
         client.close()
 
     @respx.mock
-    def test_search_with_cik_filter(self, api_key: str) -> None:
+    def test_search_with_identifier_filter(self, api_key: str) -> None:
         route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
             return_value=httpx.Response(200, json=SEARCH_JSON),
         )
         client = ThesmaClient(api_key=api_key)
-        client.sections.search(query="risk", cik="320193")
+        client.sections.search(query="risk", identifier="320193")
         request = route.calls.last.request
         assert "q=risk" in str(request.url)
-        assert "cik=320193" in str(request.url)
+        assert "identifier=320193" in str(request.url)
         client.close()
 
     @respx.mock
@@ -300,9 +300,9 @@ class TestSectionsSearch:
             return_value=httpx.Response(200, json=SEARCH_JSON),
         )
         client = ThesmaClient(api_key=api_key)
-        client.sections.search(query="risk", cik="")
+        client.sections.search(query="risk", identifier="")
         request = route.calls.last.request
-        assert request.url.params["cik"] == ""
+        assert request.url.params["identifier"] == ""
         client.close()
 
     @respx.mock
@@ -315,7 +315,7 @@ class TestSectionsSearch:
         client.sections.search(query="risk")
         url = str(route.calls.last.request.url)
         assert "q=risk" in url
-        assert "cik=" not in url
+        assert "identifier=" not in url
         assert "filing_type=" not in url
         assert "section_type=" not in url
         assert "year=" not in url
@@ -331,13 +331,13 @@ class TestSectionsSearch:
         client = ThesmaClient(api_key=api_key)
         client.sections.search(
             query="risk",
-            cik="320193",
+            identifier="320193",
             filing_type="10-K",
             year=2024,
         )
         url = str(route.calls.last.request.url)
         assert "q=risk" in url
-        assert "cik=320193" in url
+        assert "identifier=320193" in url
         assert "filing_type=10-K" in url
         assert "year=2024" in url
         client.close()
@@ -349,16 +349,17 @@ class TestSectionsSearch:
             return_value=httpx.Response(200, json=SEARCH_JSON),
         )
         async with AsyncThesmaClient(api_key=api_key) as client:
-            await client.sections.search(query="risk", cik="320193", filing_type="10-K")
+            await client.sections.search(query="risk", identifier="320193", filing_type="10-K")
         url = str(route.calls.last.request.url)
         assert "q=risk" in url
-        assert "cik=320193" in url
+        assert "identifier=320193" in url
         assert "filing_type=10-K" in url
 
 
 class TestSectionsByIdentifier:
-    """SDK-40: ``identifier=`` accepts ticker for path-param ``list_by_company``
-    and ``entities``. ``search`` keeps ``cik=`` (query-param filter)."""
+    """SDK-40 + SDK-42: ``identifier=`` is the kwarg name on path-param
+    methods (``list_by_company``, ``entities`` from SDK-40) and on the
+    ``search`` query filter (renamed in SDK-42)."""
 
     @respx.mock
     def test_list_by_company_by_ticker(self, api_key: str) -> None:
@@ -381,3 +382,45 @@ class TestSectionsByIdentifier:
 
         assert route.called
         client.close()
+
+    @respx.mock
+    def test_search_with_ticker_identifier(self, api_key: str) -> None:
+        """AC #4: ``identifier=AAPL`` is sent literally on the search filter —
+        the SDK does NOT mangle ticker input before send."""
+        route = respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=SEARCH_JSON),
+        )
+        client = ThesmaClient(api_key=api_key)
+        client.sections.search(query="revenue", identifier="AAPL")
+
+        assert route.called
+        url = str(route.calls.last.request.url)
+        assert "identifier=AAPL" in url
+        assert "q=revenue" in url
+        client.close()
+
+    @respx.mock
+    def test_search_unknown_identifier_returns_empty(self, api_key: str) -> None:
+        """AC: unknown identifier on sections.search returns 200 with empty
+        data — silent-filter contract per T-230."""
+        empty_json = {
+            "data": [],
+            "pagination": {"page": 1, "per_page": 20, "has_more": False},
+        }
+        respx.get(f"{BASE}/v1/us/sec/sections/search").mock(
+            return_value=httpx.Response(200, json=empty_json),
+        )
+        client = ThesmaClient(api_key=api_key)
+        result = client.sections.search(query="revenue", identifier="ZZZZZ")
+
+        assert result.data == []
+        client.close()
+
+    def test_search_rejects_cik_kwarg(self, api_key: str) -> None:
+        """AC: post-rename, ``search(cik=...)`` raises TypeError."""
+        client = ThesmaClient(api_key=api_key)
+        try:
+            with pytest.raises(TypeError, match="cik"):
+                client.sections.search(query="revenue", cik="0000320193")  # type: ignore[call-arg]
+        finally:
+            client.close()

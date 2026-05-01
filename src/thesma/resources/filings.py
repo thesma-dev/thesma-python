@@ -65,7 +65,7 @@ class Filings:
     def list_all(
         self,
         *,
-        cik: str | None = None,
+        identifier: str | None = None,
         filing_type: str | None = None,
         start_date: str | datetime.date | None = None,
         end_date: str | datetime.date | None = None,
@@ -76,9 +76,16 @@ class Filings:
         """List filings across all companies.
 
         ``GET /v1/us/sec/filings``
+
+        :param identifier: Filter results to a single company by CIK
+            (zero-padded or stripped 1-10 digits) or current ticker symbol
+            (case-insensitive). Stale tickers fall back to ``TickerAlias``
+            (e.g. ``"FB"`` → META). Unknown identifiers return an empty
+            result set, not a 4xx — consistent with every other
+            query-filter param on this route.
         """
         params: dict[str, Any] = {
-            "cik": cik,
+            "identifier": identifier,
             "type": filing_type,
             "from": _to_date_str(start_date),
             "to": _to_date_str(end_date),
